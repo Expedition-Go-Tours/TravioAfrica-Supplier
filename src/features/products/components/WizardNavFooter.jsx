@@ -93,6 +93,8 @@ export default function WizardNavFooter() {
 
       toast.success(id && id !== "new" ? "Product updated successfully!" : "Product created successfully!");
       useProductBuilderStore.getState().markSaved();
+      // Clear the saved draft so it doesn't reappear on next visit
+      localStorage.removeItem("product-builder-draft");
     } catch (err) {
       console.error("❌ [WizardNavFooter] API call failed:", err);
       console.error("   Error name:", err.name);

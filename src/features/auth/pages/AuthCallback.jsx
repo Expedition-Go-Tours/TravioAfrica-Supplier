@@ -81,9 +81,14 @@ export default function AuthCallback() {
         setStatus("success");
         toast.success(`Welcome back, ${user.name || user.email || ""}!`);
 
+        // Check if there's a saved return URL (e.g., from a 401 on the product builder)
+        const returnUrl = localStorage.getItem("auth_return_url");
+        const redirectTo = returnUrl || "/";
+
         // Give the user a moment to see the success state, then redirect
         setTimeout(() => {
-          navigate("/", { replace: true });
+          localStorage.removeItem("auth_return_url");
+          navigate(redirectTo, { replace: true });
         }, 1500);
       })
       .catch((err) => {
@@ -133,10 +138,14 @@ export default function AuthCallback() {
 
         {status === "success" && (
           <button
-            onClick={() => navigate("/", { replace: true })}
+            onClick={() => {
+              const returnUrl = localStorage.getItem("auth_return_url");
+              localStorage.removeItem("auth_return_url");
+              navigate(returnUrl || "/", { replace: true });
+            }}
             className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#044b3b] text-white rounded-lg text-sm font-medium hover:bg-[#033629] transition-colors"
           >
-            <span>Go to Dashboard</span>
+            <span>{localStorage.getItem("auth_return_url") ? "Continue Where You Left Off" : "Go to Dashboard"}</span>
             <ArrowRight size={16} />
           </button>
         )}

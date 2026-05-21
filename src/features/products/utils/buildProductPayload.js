@@ -4,14 +4,17 @@
  * Only sends fields the backend reads from req.body.
  */
 export const buildProductPayload = (product) => {
-  // Convert duration to minutes
-  let durationMinutes = Number(product.duration) || 0;
+  // Build duration object for backend (backend only handles .hours and .days)
+  // NOTE: Backend has a bug where it returns the entire object if both are falsy.
+  // We only send ONE property to avoid triggering that bug.
+  const durationPayload = {};
   if (product.durationUnit === "hours") {
-    durationMinutes = durationMinutes * 60;
+    durationPayload.hours = Number(product.duration) || 0;
   } else if (product.durationUnit === "days") {
-    durationMinutes = durationMinutes * 24 * 60;
+    durationPayload.days = Number(product.duration) || 0;
   } else if (product.durationUnit === "weeks") {
-    durationMinutes = durationMinutes * 7 * 24 * 60;
+    // Backend doesn't understand weeks — convert to days
+    durationPayload.days = (Number(product.duration) || 0) * 7;
   }
 
   // Extract photo URLs
@@ -81,13 +84,7 @@ export const buildProductPayload = (product) => {
       subcategory: product.subcategory || "",
       activityType: product.activityType || "Guided Tour",
       difficulty: product.difficulty || "Easy",
-      duration: {
-        hours:
-          product.durationUnit === "hours" ? Number(product.duration) || 0 : undefined,
-        days:
-          product.durationUnit === "days" ? Number(product.duration) || 0 : undefined,
-        minutes: durationMinutes,
-      },
+      duration: durationPayload,
       groupSize: {
         min: product.bookingRules?.minGroupSize ?? 1,
         max: product.bookingRules?.maxGroupSize ?? 20,

@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { RotateCcw, X } from "lucide-react";
 import { useProductBuilderStore } from "@/features/products/stores/productBuilderStore";
 import WizardStepLayout from "@/features/products/components/WizardStepLayout";
 import ProductTypeStep from "@/features/products/components/ProductTypeStep";
@@ -25,11 +26,35 @@ const STEPS = [
 export default function ProductBuilderPage() {
   const { id, step } = useParams();
   const navigate = useNavigate();
-  const { currentStep, setStep, reset, loadDraft } = useProductBuilderStore();
+  const { currentStep, setStep, reset, loadDraft, hasHydrated } = useProductBuilderStore();
 
-  // Map URL step param to step index (default to 0 if missing or invalid)
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+
+  // Map URL step param to step index
   const foundIndex = STEPS.findIndex((s) => s.id === step);
   const stepIndex = foundIndex !== -1 ? foundIndex : 0;
+
+  // Check for saved draft on initial hydration
+  useEffect(() => {
+    if (!hasHydrated) return;
+
+    // Only show banner when creating NEW product (not editing)
+    if (id && id !== "new") return;
+
+    // Check if there's meaningful saved data (more than just defaults)
+    const saved = localStorage.getItem("product-builder-draft");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const savedProduct = parsed.state?.product;
+        if (savedProduct && savedProduct.title && savedProduct.title.trim().length > 0) {
+          setShowRestoreBanner(true);
+        }
+      } catch {
+        // Invalid JSON, ignore
+      }
+    }
+  }, [hasHydrated, id]);
 
   // Sync URL with store
   useEffect(() => {
@@ -54,17 +79,75 @@ export default function ProductBuilderPage() {
     }
   }, [id]);
 
-  // Reset on unmount
-  useEffect(() => {
-    return () => {
-      // Optional: reset();
-    };
-  }, []);
+  const handleRestoreDraft = () => {
+    const saved = localStorage.getItem("product-builder-draft");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const savedState = parsed.state;
+        if (savedState) {
+          loadDraft(savedState.product);
+          const savedStep = savedState.currentStep ?? 0;
+          setStep(savedStep);
+          const stepId = STEPS[savedStep]?.id;
+          if (stepId) {
+            navigate(`/products/build/new/${stepId}`, { replace: true });
+          }
+        }
+      } catch {
+        // Invalid, clear it
+        localStorage.removeItem("product-builder-draft");
+      }
+    }
+    setShowRestoreBanner(false);
+  };
+
+  const handleDismissBanner = () => {
+    localStorage.removeItem("product-builder-draft");
+    reset();
+    setShowRestoreBanner(false);
+  };
 
   const CurrentStepComponent = STEPS[currentStep]?.component;
 
   return (
     <div className="p-4 md:p-6">
+      {/* Draft Restore Banner */}
+      {showRestoreBanner && (
+        <div className="mb-4 p-4 bg-[#fffbeb] border border-[#ffc400] rounded-lg flex items-start gap-3">
+          <RotateCcw size={18} className="text-[#b45309] mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-[#1e293b]">
+              You have an unsaved draft
+            </p>
+            <p className="text-xs text-[#64748b] mt-0.5">
+              Would you like to continue where you left off? All your inputs are preserved.
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={handleRestoreDraft}
+                className="px-3 py-1.5 bg-[#044b3b] text-white rounded-md text-xs font-medium hover:bg-[#033629] transition-colors"
+              >
+                Continue Editing
+              </button>
+              <button
+                onClick={handleDismissBanner}
+                className="px-3 py-1.5 border border-[#eaeaea] rounded-md text-xs font-medium text-[#64748b] hover:bg-[#f8fafc] transition-colors"
+              >
+                Start New
+              </button>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowRestoreBanner(false)}
+            className="text-[#9e9e9e] hover:text-[#64748b]"
+            aria-label="Dismiss"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-[#1e293b]">

@@ -65,6 +65,11 @@ api.interceptors.response.use(
 
     // Handle 401 Unauthorized
     if (error.response?.status === 401) {
+      // Save current URL so we can return here after re-authentication
+      if (typeof window !== "undefined") {
+        localStorage.setItem("auth_return_url", window.location.pathname + window.location.search);
+      }
+
       // Clear local auth state so the UI knows the user is logged out.
       localStorage.removeItem("auth_token");
       localStorage.removeItem("auth_user");
