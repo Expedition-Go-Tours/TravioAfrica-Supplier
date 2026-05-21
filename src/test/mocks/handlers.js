@@ -270,4 +270,56 @@ export const handlers = [
       total: 0,
     });
   }),
+
+  // Geoapify Geocoding (free tier autocomplete)
+  http.get('https://api.geoapify.com/v1/geocode/autocomplete', ({ request }) => {
+    const url = new URL(request.url);
+    const text = url.searchParams.get('text') || '';
+
+    if (text.toLowerCase().includes('arusha')) {
+      return HttpResponse.json({
+        features: [
+          {
+            type: 'Feature',
+            properties: {
+              formatted: 'Arusha, Tanzania',
+              name: 'Arusha',
+              city: 'Arusha',
+              country: 'Tanzania',
+              state: 'Arusha Region',
+            },
+            geometry: {
+              type: 'Point',
+              coordinates: [36.683, -3.3869],
+            },
+          },
+        ],
+      });
+    }
+
+    return HttpResponse.json({ features: [] });
+  }),
+
+  // Nominatim Geocoding (OpenStreetMap fallback)
+  http.get('https://nominatim.openstreetmap.org/search', ({ request }) => {
+    const url = new URL(request.url);
+    const q = url.searchParams.get('q') || '';
+
+    if (q.toLowerCase().includes('arusha')) {
+      return HttpResponse.json([
+        {
+          display_name: 'Arusha, Tanzania',
+          lat: '-3.3869',
+          lon: '36.683',
+          address: {
+            city: 'Arusha',
+            country: 'Tanzania',
+            state: 'Arusha Region',
+          },
+        },
+      ]);
+    }
+
+    return HttpResponse.json([]);
+  }),
 ];

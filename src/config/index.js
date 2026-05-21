@@ -93,6 +93,7 @@ const env = {
   // Maps
   VITE_GOOGLE_MAPS_API_KEY: getEnv('VITE_GOOGLE_MAPS_API_KEY', ''),
   VITE_MAPBOX_ACCESS_TOKEN: getEnv('VITE_MAPBOX_ACCESS_TOKEN', ''),
+  VITE_GEOAPIFY_API_KEY: getEnv('VITE_GEOAPIFY_API_KEY', ''),
 
   // Third-party
   VITE_STRIPE_PUBLIC_KEY: getEnv('VITE_STRIPE_PUBLIC_KEY', ''),
@@ -183,6 +184,7 @@ export const config = {
   maps: {
     googleMapsApiKey: env.VITE_GOOGLE_MAPS_API_KEY,
     mapboxAccessToken: env.VITE_MAPBOX_ACCESS_TOKEN,
+    geoapifyApiKey: env.VITE_GEOAPIFY_API_KEY,
   },
 
   integrations: {

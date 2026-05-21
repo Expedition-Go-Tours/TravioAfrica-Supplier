@@ -1,4 +1,5 @@
 import { useProductBuilderStore } from "@/features/products/stores/productBuilderStore";
+import LocationAutocomplete from "@/components/shared/LocationAutocomplete";
 
 const CATEGORIES = [
   { value: "safari", label: "Safari" },
@@ -48,8 +49,21 @@ export default function ProductBasicsStep() {
     updateProduct({ [field]: value });
   };
 
+  const handleLocationSelect = (result) => {
+    updateProduct({
+      city: result.city || "",
+      country: result.country || "",
+      region: result.region || "",
+      latitude: result.latitude,
+      longitude: result.longitude,
+    });
+  };
+
   return (
     <div className="space-y-6">
+      {/* Location Autocomplete */}
+      <LocationAutocomplete onSelect={handleLocationSelect} />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Title */}
         <div className="md:col-span-2">
