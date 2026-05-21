@@ -5,6 +5,7 @@ import { retryWithBackoff, isRetryableError, handleApiError } from "./errorHandl
 const api = axios.create({
   baseURL: config.api.baseURL,
   timeout: config.api.timeout,
+  withCredentials: true, // Required: send & accept cookies on every request
   headers: {
     "Content-Type": "application/json",
   },
@@ -63,12 +64,22 @@ api.interceptors.response.use(
 
     // Handle 401 Unauthorized
     if (error.response?.status === 401) {
-      // Clear auth state but DO NOT redirect automatically.
-      // Let the calling component handle the error display so the
-      // user can see the failed request in the Network tab.
+      // Clear local auth state. The primary session is the HTTP-only
+      // __session cookie, so we also need the backend to clear it.
       localStorage.removeItem("auth_token");
       localStorage.removeItem("auth_user");
-      console.error("🔒 401 Unauthorized - Auth token cleared. Please log in again.");
+
+      // Avoid redirect loops: only redirect if we are not already on the
+      // auth callback or login-related route.
+      const path = window.location.pathname;
+      const isAuthPage = path === "/auth/callback" || path.startsWith("/auth/");
+      if (!isAuthPage) {
+        // Redirect to the main site login. After login, the user can click
+        // "Become a supplier" again and be redirected back with a fresh
+        // Firebase ID token in ?token=...
+        console.error("🔒 401 Unauthorized - Session expired. Redirecting to main site login.");
+        window.location.href = "https://travioafrica.com/login?redirect=supplier";
+      }
       return Promise.reject(error);
     }
 

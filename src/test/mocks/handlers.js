@@ -69,6 +69,26 @@ export const handlers = [
     return HttpResponse.json({ message: 'Logged out successfully' });
   }),
 
+  // Cross-domain auth callback — verify Firebase token and create session
+  http.post(`${API_BASE_URL}/auth/verify-token`, async ({ request }) => {
+    const body = await request.json();
+
+    if (!body.token || body.token.length < 10) {
+      return HttpResponse.json(
+        { error: 'No token provided' },
+        { status: 400 }
+      );
+    }
+
+    // Simulate Firebase token verification (accept any non-empty token in tests)
+    return HttpResponse.json({
+      success: true,
+      user: mockUsers[0],
+      token: 'mock-session-token',
+      message: 'Session established',
+    });
+  }),
+
   // Bookings endpoints
   http.get(`${API_BASE_URL}/bookings`, ({ request }) => {
     const url = new URL(request.url);

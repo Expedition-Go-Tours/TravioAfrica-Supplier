@@ -14,6 +14,9 @@ import NotificationsPage from "@/features/notifications/pages/NotificationsPage"
 import UsersPage from "@/features/users/pages/UsersPage";
 import SettingsPage from "@/features/settings/pages/SettingsPage";
 
+// Auth Pages (rendered outside AppShell)
+import AuthCallback from "@/features/auth/pages/AuthCallback";
+
 // Error Pages
 import NotFoundPage from "@/pages/errors/NotFoundPage";
 import ServerErrorPage from "@/pages/errors/ServerErrorPage";
@@ -23,6 +26,9 @@ import NetworkErrorPage from "@/pages/errors/NetworkErrorPage";
 export default function AppRoutes() {
   return (
     <Routes>
+      {/* Auth Callback (without AppShell — full-screen auth bridge) */}
+      <Route path="/auth/callback" element={<AuthCallback />} />
+
       {/* Error Pages (without AppShell) */}
       <Route path="/error/404" element={<NotFoundPage />} />
       <Route path="/error/500" element={<ServerErrorPage />} />
