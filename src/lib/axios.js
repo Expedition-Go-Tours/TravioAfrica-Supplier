@@ -1,6 +1,7 @@
 import axios from "axios";
 import config from "@/config";
 import { retryWithBackoff, isRetryableError, handleApiError } from "./errorHandler";
+import { useAuthStore } from "@/stores/authStore";
 
 const api = axios.create({
   baseURL: config.api.baseURL,
@@ -64,22 +65,16 @@ api.interceptors.response.use(
 
     // Handle 401 Unauthorized
     if (error.response?.status === 401) {
-      // Clear local auth state. The primary session is the HTTP-only
-      // __session cookie, so we also need the backend to clear it.
+      // Clear local auth state so the UI knows the user is logged out.
       localStorage.removeItem("auth_token");
       localStorage.removeItem("auth_user");
+      useAuthStore.getState().setUnauthenticated();
 
-      // Avoid redirect loops: only redirect if we are not already on the
-      // auth callback or login-related route.
-      const path = window.location.pathname;
-      const isAuthPage = path === "/auth/callback" || path.startsWith("/auth/");
-      if (!isAuthPage) {
-        // Redirect to the main site login. After login, the user can click
-        // "Become a supplier" again and be redirected back with a fresh
-        // Firebase ID token in ?token=...
-        console.error("🔒 401 Unauthorized - Session expired. Redirecting to main site login.");
-        window.location.href = "https://travioafrica.com/login?redirect=supplier";
-      }
+      // DO NOT redirect automatically — that destroys the user's form data
+      // and prevents them from seeing what went wrong.
+      // Let the calling component (e.g. WizardNavFooter) handle the error
+      // gracefully and show a "Session expired" message inline.
+      console.error("🔒 401 Unauthorized - Session expired. Please log in again.");
       return Promise.reject(error);
     }
 
