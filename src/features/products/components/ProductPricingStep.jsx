@@ -71,16 +71,21 @@ export default function ProductPricingStep() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#1e293b] mb-2">Currency</label>
+          <label className="block text-sm font-medium text-[#1e293b] mb-2">
+            Currency <span className="text-[#dc3545]">*</span>
+          </label>
           <select
             value={pricing.currency}
             onChange={(e) => updateNested("pricing.currency", e.target.value)}
-            className="w-full px-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] bg-white focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b]"
+            className={`w-full px-4 py-2.5 border rounded-lg text-sm text-[#1e293b] bg-white focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b] ${
+              errors.currency ? "border-[#dc3545]" : "border-[#eaeaea]"
+            }`}
           >
             {CURRENCIES.map((c) => (
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>
+          {errors.currency && <p className="mt-1 text-xs text-[#dc3545]">{errors.currency}</p>}
         </div>
 
         <div>
@@ -131,6 +136,9 @@ export default function ProductPricingStep() {
 
       {/* Pricing Tiers */}
       <div>
+        {errors.pricingSchedule && (
+          <p className="mb-2 text-xs text-[#dc3545]">{errors.pricingSchedule}</p>
+        )}
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-[#1e293b]">Pricing Tiers</h3>
           <button

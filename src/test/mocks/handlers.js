@@ -36,13 +36,15 @@ const mockProducts = [
   },
 ];
 
+// Simulated real user for integration testing
 const mockUsers = [
   {
-    id: '1',
-    name: 'Test User',
-    email: 'test@example.com',
-    role: 'ADMIN',
+    id: 'firebase-uid-qwabs94',
+    name: 'Qwabs User',
+    email: 'qwabs94@gmail.com',
+    role: 'SUPPLIER',
     status: 'active',
+    photoURL: 'https://ui-avatars.com/api/?name=Qwabs+User&background=044b3b&color=fff',
   },
 ];
 

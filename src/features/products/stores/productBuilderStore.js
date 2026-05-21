@@ -197,6 +197,7 @@ export const useProductBuilderStore = create((set, get) => ({
       case 1: // Basics
         if (!product.title?.trim()) errors.title = "Title is required";
         if (!product.description?.trim()) errors.description = "Description is required";
+        if (product.description?.trim().length > 0 && product.description.trim().length < 50) errors.description = "Description must be at least 50 characters";
         if (!product.category) errors.category = "Category is required";
         if (!product.subcategory?.trim()) errors.subcategory = "Subcategory is required";
         if (!product.activityType) errors.activityType = "Activity type is required";
@@ -204,6 +205,14 @@ export const useProductBuilderStore = create((set, get) => ({
         if (!product.country?.trim()) errors.country = "Country is required";
         if (!product.metaTitle?.trim()) errors.metaTitle = "Meta title is required";
         if (!product.duration) errors.duration = "Duration is required";
+        if (product.latitude !== null && product.latitude !== undefined && product.latitude !== '') {
+          const lat = Number(product.latitude);
+          if (Number.isNaN(lat) || lat < -90 || lat > 90) errors.latitude = "Latitude must be a number between -90 and 90";
+        }
+        if (product.longitude !== null && product.longitude !== undefined && product.longitude !== '') {
+          const lng = Number(product.longitude);
+          if (Number.isNaN(lng) || lng < -180 || lng > 180) errors.longitude = "Longitude must be a number between -180 and 180";
+        }
         break;
       case 2: // Content
         if (!product.content.itinerary?.trim()) errors.itinerary = "Itinerary is required";
@@ -215,6 +224,8 @@ export const useProductBuilderStore = create((set, get) => ({
         if (!product.pricing.basePrice || Number(product.pricing.basePrice) <= 0) errors.basePrice = "Base price must be greater than 0";
         if (!product.pricing.startDate) errors.pricingStartDate = "Pricing start date is required";
         if (!product.pricing.endDate) errors.pricingEndDate = "Pricing end date is required";
+        if (!product.pricing.currency || product.pricing.currency.length !== 3) errors.currency = "Valid 3-letter currency code is required (e.g. USD)";
+        if (!product.pricing.tiers || product.pricing.tiers.length === 0) errors.pricingSchedule = "At least one pricing schedule is required";
         break;
       case 5: // Schedule
         if (!product.schedule.operatingDays?.length) errors.operatingDays = "At least one operating day is required";

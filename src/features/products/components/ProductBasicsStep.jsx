@@ -278,8 +278,11 @@ export default function ProductBasicsStep() {
             value={product.latitude ?? ""}
             onChange={(e) => handleChange("latitude", e.target.value === "" ? null : Number(e.target.value))}
             placeholder="e.g., -33.9249"
-            className="w-full px-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b]"
+            className={`w-full px-4 py-2.5 border rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b] ${
+              errors.latitude ? "border-[#dc3545]" : "border-[#eaeaea]"
+            }`}
           />
+          {errors.latitude && <p className="mt-1 text-xs text-[#dc3545]">{errors.latitude}</p>}
         </div>
 
         <div>
@@ -290,8 +293,11 @@ export default function ProductBasicsStep() {
             value={product.longitude ?? ""}
             onChange={(e) => handleChange("longitude", e.target.value === "" ? null : Number(e.target.value))}
             placeholder="e.g., 18.4241"
-            className="w-full px-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b]"
+            className={`w-full px-4 py-2.5 border rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b] ${
+              errors.longitude ? "border-[#dc3545]" : "border-[#eaeaea]"
+            }`}
           />
+          {errors.longitude && <p className="mt-1 text-xs text-[#dc3545]">{errors.longitude}</p>}
         </div>
 
         {/* Meta Title */}

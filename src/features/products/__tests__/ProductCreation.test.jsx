@@ -34,7 +34,7 @@ describe('Product Creation Flow', () => {
     const store = useProductBuilderStore.getState();
     store.updateProduct({
       title: 'Test Safari',
-      description: 'A great safari',
+      description: 'A great safari experience that takes you through the wilderness to see wildlife in their natural habitat. This is an unforgettable journey.',
       category: 'safari',
       subcategory: 'Wildlife',
       activityType: 'Guided Tour',

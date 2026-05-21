@@ -25,11 +25,20 @@ export default function ProductReviewStep() {
       case 1:
         if (!product.title) stepErrors.title = "Title required";
         if (!product.description) stepErrors.description = "Description required";
+        if (product.description?.trim().length > 0 && product.description.trim().length < 50) stepErrors.description = "Description must be at least 50 characters";
         if (!product.subcategory) stepErrors.subcategory = "Subcategory required";
         if (!product.activityType) stepErrors.activityType = "Activity type required";
         if (!product.city) stepErrors.city = "City required";
         if (!product.country) stepErrors.country = "Country required";
         if (!product.metaTitle) stepErrors.metaTitle = "Meta title required";
+        if (product.latitude !== null && product.latitude !== undefined && product.latitude !== '') {
+          const lat = Number(product.latitude);
+          if (Number.isNaN(lat) || lat < -90 || lat > 90) stepErrors.latitude = "Latitude must be between -90 and 90";
+        }
+        if (product.longitude !== null && product.longitude !== undefined && product.longitude !== '') {
+          const lng = Number(product.longitude);
+          if (Number.isNaN(lng) || lng < -180 || lng > 180) stepErrors.longitude = "Longitude must be between -180 and 180";
+        }
         break;
       case 2:
         if (!product.content.itinerary?.trim()) stepErrors.itinerary = "Itinerary required";
@@ -41,6 +50,8 @@ export default function ProductReviewStep() {
         if (product.pricing.basePrice <= 0) stepErrors.price = "Base price required";
         if (!product.pricing.startDate) stepErrors.pricingStartDate = "Pricing start date required";
         if (!product.pricing.endDate) stepErrors.pricingEndDate = "Pricing end date required";
+        if (!product.pricing.currency || product.pricing.currency.length !== 3) stepErrors.currency = "Valid 3-letter currency code required";
+        if (!product.pricing.tiers || product.pricing.tiers.length === 0) stepErrors.pricingSchedule = "At least one pricing schedule required";
         break;
       case 5:
         if (!product.schedule.operatingDays.length) stepErrors.days = "Operating days required";
