@@ -1,4 +1,4 @@
-import { Upload, X, Image as ImageIcon, GripVertical, Star, Video } from "lucide-react";
+import { Upload, X, Image as ImageIcon, GripVertical, Star } from "lucide-react";
 import { useProductBuilderStore } from "@/features/products/stores/productBuilderStore";
 
 export default function ProductPhotosStep() {
@@ -106,20 +106,6 @@ export default function ProductPhotosStep() {
         </div>
       )}
 
-      {/* Video URL */}
-      <div>
-        <label className="block text-sm font-medium text-[#1e293b] mb-2">
-          <span className="flex items-center gap-2"><Video size={16} className="text-[#64748b]" /> Promotional Video URL</span>
-        </label>
-        <input
-          type="url"
-          value={product.videoUrl}
-          onChange={(e) => updateProduct({ videoUrl: e.target.value })}
-          placeholder="https://youtube.com/watch?v=..."
-          className="w-full px-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b]"
-        />
-        <p className="text-xs text-[#64748b] mt-1">Add a YouTube or Vimeo URL to showcase your tour experience.</p>
-      </div>
     </div>
   );
 }

@@ -82,23 +82,6 @@ export default function ProductBasicsStep() {
           {errors.title && <p className="mt-1 text-xs text-[#dc3545]">{errors.title}</p>}
         </div>
 
-        {/* Slug */}
-        <div>
-          <label className="block text-sm font-medium text-[#1e293b] mb-2">
-            URL Slug
-          </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9e9e9e] text-sm">/tours/</span>
-            <input
-              type="text"
-              value={product.slug}
-              onChange={(e) => handleChange("slug", e.target.value)}
-              placeholder="serengeti-safari-adventure"
-              className="w-full pl-14 pr-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b]"
-            />
-          </div>
-        </div>
-
         {/* Category */}
         <div>
           <label className="block text-sm font-medium text-[#1e293b] mb-2">
@@ -354,20 +337,6 @@ export default function ProductBasicsStep() {
           placeholder="wildlife, luxury, family-friendly (comma separated)"
           className="w-full px-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b]"
         />
-      </div>
-
-      {/* Short Summary */}
-      <div>
-        <label className="block text-sm font-medium text-[#1e293b] mb-2">Short Summary</label>
-        <textarea
-          value={product.shortSummary}
-          onChange={(e) => handleChange("shortSummary", e.target.value)}
-          rows={2}
-          placeholder="Brief summary for listings (max 200 characters)"
-          maxLength={200}
-          className="w-full px-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b] resize-none"
-        />
-        <p className="text-xs text-[#9e9e9e] mt-1">{product.shortSummary?.length || 0}/200</p>
       </div>
 
       {/* Full Description */}

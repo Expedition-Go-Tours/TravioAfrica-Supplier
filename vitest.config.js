@@ -14,6 +14,7 @@ export default defineConfig({
       '**/dist/**',
       '**/e2e/**', // Exclude E2E tests (run with Playwright)
       '**/.{idea,git,cache,output,temp}/**',
+      '**/Expedition-Go-Backend-v2-main/**', // Exclude backend inspection folder
     ],
     coverage: {
       provider: 'v8',

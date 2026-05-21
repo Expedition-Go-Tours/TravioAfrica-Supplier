@@ -4,16 +4,13 @@
  * Only sends fields the backend reads from req.body.
  */
 export const buildProductPayload = (product) => {
-  // Build duration object for backend (backend only handles .hours and .days)
-  // NOTE: Backend has a bug where it returns the entire object if both are falsy.
-  // We only send ONE property to avoid triggering that bug.
+  // Build duration object for backend
   const durationPayload = {};
   if (product.durationUnit === "hours") {
     durationPayload.hours = Number(product.duration) || 0;
   } else if (product.durationUnit === "days") {
     durationPayload.days = Number(product.duration) || 0;
   } else if (product.durationUnit === "weeks") {
-    // Backend doesn't understand weeks — convert to days
     durationPayload.days = (Number(product.duration) || 0) * 7;
   }
 
@@ -21,6 +18,12 @@ export const buildProductPayload = (product) => {
   const photoUrls = (product.photos || [])
     .map((p) => (typeof p === "string" ? p : p?.url))
     .filter(Boolean);
+
+  // Find the hero photo URL (backend coverPhoto must be a URL string)
+  const heroPhoto = product.heroImage
+    ? product.photos.find((p) => p.id === product.heroImage)
+    : null;
+  const coverPhotoUrl = heroPhoto?.url || (photoUrls.length > 0 ? photoUrls[0] : null);
 
   // Build age groups from pricing tiers
   const ageGroups = (product.pricing?.tiers || []).map((tier) => ({
@@ -62,23 +65,19 @@ export const buildProductPayload = (product) => {
     );
   }
 
-  // Backend createTour reads ONLY these fields from req.body:
-  // title, description, categorization, theme, productContent,
-  // schedulesAndPricing, bookingAndTickets, photos, coverPhoto,
-  // tags, status, latitude, longitude
   const payload = {
     title: product.title || "",
     description: product.description || "",
+    metaTitle: product.metaTitle || product.title || "",
+    metaDescription:
+      product.metaDescription || product.description?.substring(0, 160) || "",
     status: (product.status || "draft").toUpperCase(),
     tags: product.tags || [],
     photos: photoUrls,
-    coverPhoto:
-      product.heroImage || (photoUrls.length > 0 ? photoUrls[0] : null),
+    coverPhoto: coverPhotoUrl,
     latitude: product.latitude || null,
     longitude: product.longitude || null,
 
-    // Nested: categorization (backend extracts category, subcategory,
-    // activityType, difficulty, durationMinutes from here)
     categorization: {
       category: product.category || "",
       subcategory: product.subcategory || "",
@@ -92,15 +91,12 @@ export const buildProductPayload = (product) => {
       transportMode,
     },
 
-    // Nested: theme (backend extracts primaryTheme from here)
     theme: {
       primary: product.primaryTheme || product.theme || "",
       secondary: product.secondaryThemes || [],
       tags: product.tags || [],
     },
 
-    // Nested: productContent (backend extracts city, country, region
-    // from productContent.location)
     productContent: {
       highlights: product.content?.highlights || [],
       included: product.content?.included || [],
@@ -119,10 +115,6 @@ export const buildProductPayload = (product) => {
       },
     },
 
-    // Nested: schedulesAndPricing
-    // Backend validatePricing expects:
-    // schedulesAndPricing.pricingSchedules.currency
-    // schedulesAndPricing.pricingSchedules.schedules (array)
     schedulesAndPricing: {
       travelerDetails: {
         pricingModel: product.pricing?.pricingModel || "perPerson",
@@ -150,7 +142,6 @@ export const buildProductPayload = (product) => {
       capacityPerSlot: product.schedule?.capacityPerSlot ?? 20,
     },
 
-    // Nested: bookingAndTickets
     bookingAndTickets: {
       instantBooking: product.bookingRules?.instantBooking ?? false,
       minAdvanceBookingHours:
