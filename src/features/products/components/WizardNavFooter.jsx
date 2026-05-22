@@ -144,17 +144,33 @@ function buildFormData(product) {
   };
   formData.append("bookingAndTickets", JSON.stringify(bookingAndTickets));
 
-  // Photos as file objects
+  // Photos as file objects (newly selected files only)
   (product.photos || []).forEach((photo) => {
     if (photo.file) {
       formData.append("photos", photo.file);
     }
   });
 
-  // Cover photo: send index so backend knows which uploaded file is the hero
-  const heroIndex = product.photos?.findIndex((p) => p.id === product.heroImage);
-  if (heroIndex >= 0) {
-    formData.append("coverPhotoIndex", String(heroIndex));
+  // Existing photo URLs that should be kept (avoids re-sending full URLs as files)
+  const existingUrls = (product.photos || [])
+    .filter((p) => !p.file && p.url && !p.url.startsWith("blob:"))
+    .map((p) => p.url);
+  if (existingUrls.length > 0) {
+    formData.append("existingPhotos", JSON.stringify(existingUrls));
+  }
+
+  // Cover photo: send URL for existing photos or index among uploaded files
+  const heroPhoto = product.photos?.find((p) => p.id === product.heroImage);
+  if (heroPhoto) {
+    if (heroPhoto.url && !heroPhoto.url.startsWith("blob:")) {
+      formData.append("coverPhoto", heroPhoto.url);
+    } else if (heroPhoto.file) {
+      const uploadedFiles = product.photos.filter((p) => p.file);
+      const uploadIndex = uploadedFiles.findIndex((p) => p.id === product.heroImage);
+      if (uploadIndex >= 0) {
+        formData.append("coverPhotoIndex", String(uploadIndex));
+      }
+    }
   }
 
   return formData;
