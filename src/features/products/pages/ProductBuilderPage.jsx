@@ -101,7 +101,12 @@ function tourToProduct(tour) {
     longitude: tour.longitude,
     metaTitle: tour.metaTitle || tour.title || "",
     metaDescription: tour.metaDescription || "",
-    photos: tour.photos || [],
+    photos: (tour.photos || []).map((url) => ({
+      id: url,
+      url,
+      file: null,
+      alt: '',
+    })),
     heroImage: null,
     videoUrl: "",
     pricing: {

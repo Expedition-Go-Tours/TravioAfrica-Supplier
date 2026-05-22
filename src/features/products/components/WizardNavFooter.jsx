@@ -155,29 +155,36 @@ function buildFormData(product) {
 
   // Photos as file objects (newly selected files only)
   (product.photos || []).forEach((photo) => {
-    if (photo.file) {
-      formData.append("photos", photo.file);
+    const file = typeof photo === 'object' && photo.file instanceof File ? photo.file : null;
+    if (file) {
+      formData.append("photos", file);
     }
   });
 
   // Existing photo URLs that should be kept
   const existingUrls = (product.photos || [])
-    .filter((p) => !p.file && p.url && !p.url.startsWith("blob:"))
-    .map((p) => p.url);
+    .filter((p) => {
+      if (typeof p === 'string') return !p.startsWith('blob:');
+      return !(p.file instanceof File) && p.url && !p.url.startsWith('blob:');
+    })
+    .map((p) => (typeof p === 'string' ? p : p.url));
   if (existingUrls.length > 0) {
     formData.append("existingPhotos", JSON.stringify(existingUrls));
   }
 
   // Cover photo: send URL for existing photos or index among uploaded files
-  const heroPhoto = product.photos?.find((p) => p.id === product.heroImage);
-  if (heroPhoto) {
-    if (heroPhoto.url && !heroPhoto.url.startsWith("blob:")) {
-      formData.append("coverPhoto", heroPhoto.url);
-    } else if (heroPhoto.file) {
-      const uploadedFiles = product.photos.filter((p) => p.file);
+  const heroPhoto = product.photos?.find((p) => {
+    const id = typeof p === 'object' ? p.id : null;
+    return id === product.heroImage;
+  });
+  if (heroPhoto && typeof heroPhoto === 'object') {
+    if (heroPhoto.url && !heroPhoto.url.startsWith('blob:')) {
+      formData.append('coverPhoto', heroPhoto.url);
+    } else if (heroPhoto.file instanceof File) {
+      const uploadedFiles = product.photos.filter((p) => typeof p === 'object' && p.file instanceof File);
       const uploadIndex = uploadedFiles.findIndex((p) => p.id === product.heroImage);
       if (uploadIndex >= 0) {
-        formData.append("coverPhotoIndex", String(uploadIndex));
+        formData.append('coverPhotoIndex', String(uploadIndex));
       }
     }
   }

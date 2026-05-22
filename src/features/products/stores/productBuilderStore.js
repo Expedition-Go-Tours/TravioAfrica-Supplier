@@ -315,7 +315,13 @@ export const useProductBuilderStore = create(
     {
       name: "product-builder-draft",
       partialize: (state) => ({
-        product: state.product,
+        product: {
+          ...state.product,
+          photos: (state.product.photos || []).map((p) => ({
+            ...p,
+            file: undefined,
+          })),
+        },
         currentStep: state.currentStep,
         completedSteps: state.completedSteps,
       }),
