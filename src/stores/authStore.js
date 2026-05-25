@@ -29,6 +29,9 @@ export const useAuthStore = create(
         if (token) {
           localStorage.setItem("auth_token", token);
         }
+        if (user) {
+          localStorage.setItem("auth_user", JSON.stringify(user));
+        }
         set({ user, token, isAuthenticated: true, isLoading: false });
       },
 
@@ -101,4 +104,12 @@ export function initAuthFromStorage() {
     // Partial state — clear it to avoid stale data
     useAuthStore.getState().setUnauthenticated();
   }
+}
+
+/**
+ * Check if the current user has the admin role.
+ */
+export function isAdminUser() {
+  const user = useAuthStore.getState().user;
+  return user?.roles?.includes("admin") || false;
 }
