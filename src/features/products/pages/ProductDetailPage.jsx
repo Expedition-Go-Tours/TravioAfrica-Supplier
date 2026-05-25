@@ -14,6 +14,7 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -158,9 +159,12 @@ export default function ProductDetailPage() {
               </div>
             ))}
             {tour.photos.length > 4 && (
-              <div className="rounded-lg overflow-hidden bg-[#f8fafc] flex items-center justify-center min-h-[145px]">
+              <button
+                onClick={() => setGalleryOpen(true)}
+                className="rounded-lg overflow-hidden bg-[#f8fafc] flex items-center justify-center min-h-[145px] cursor-pointer hover:bg-[#eef2f6] transition-colors w-full"
+              >
                 <span className="text-sm text-[#64748b]">+{tour.photos.length - 4} more photos</span>
-              </div>
+              </button>
             )}
           </div>
         </div>
@@ -486,6 +490,47 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Photo Gallery Modal */}
+      {galleryOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setGalleryOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-4 md:p-6 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-[#1e293b]">All Photos</h2>
+              <button
+                onClick={() => setGalleryOpen(false)}
+                className="p-1 text-[#64748b] hover:text-[#1e293b] rounded-lg hover:bg-[#f8fafc] transition-colors"
+              >
+                <XIcon size={20} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {tour.photos.map((photo, i) => (
+                <div key={i} className="rounded-lg overflow-hidden bg-[#f8fafc]">
+                  <img
+                    src={photo}
+                    alt={`${tour.title} - Photo ${i + 1}`}
+                    className="w-full h-48 object-cover"
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      const placeholder = document.createElement('div');
+                      placeholder.className = 'flex items-center justify-center h-48 text-[#9e9e9e]';
+                      placeholder.textContent = '📷';
+                      e.target.parentElement.appendChild(placeholder);
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
