@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Edit, Trash2, Loader2, AlertCircle, MapPin, Clock, Users, Star, Globe, DollarSign, Calendar, Check, X as XIcon, Languages, Camera } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Loader2, AlertCircle, MapPin, Clock, Users, Star, Globe, DollarSign, Calendar, Check, X as XIcon, Languages, Camera, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { getMyProduct, deleteProduct } from "@/features/products/api";
 import StatusBadge from "@/components/shared/StatusBadge";
@@ -15,6 +15,7 @@ export default function ProductDetailPage() {
   const [error, setError] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
 
   useEffect(() => {
     if (!id) return;
@@ -36,6 +37,17 @@ export default function ProductDetailPage() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    const handleKey = (e) => {
+      if (e.key === "Escape") setLightboxIndex(null);
+      if (e.key === "ArrowLeft" && lightboxIndex > 0) setLightboxIndex(lightboxIndex - 1);
+      if (e.key === "ArrowRight" && lightboxIndex < tour.photos.length - 1) setLightboxIndex(lightboxIndex + 1);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [lightboxIndex, tour?.photos?.length]);
 
   const handleDelete = () => {
     if (!window.confirm("Are you sure you want to delete this product? This action cannot be undone.")) return;
@@ -142,11 +154,15 @@ export default function ProductDetailPage() {
         <div className="mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {tour.photos.slice(0, 4).map((photo, i) => (
-              <div key={i} className={`rounded-lg overflow-hidden bg-[#f8fafc] ${i === 0 ? "md:row-span-2" : ""}`}>
+              <button
+                key={i}
+                onClick={() => setLightboxIndex(i)}
+                className={`rounded-lg overflow-hidden bg-[#f8fafc] text-left ${i === 0 ? "md:row-span-2" : ""}`}
+              >
                 <img
                   src={photo}
                   alt={`${tour.title} - Photo ${i + 1}`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover hover:opacity-90 transition-opacity"
                   style={{ minHeight: i === 0 ? "300px" : "145px" }}
                   onError={(e) => {
                     e.target.style.display = "none";
@@ -156,14 +172,22 @@ export default function ProductDetailPage() {
                     e.target.parentElement.appendChild(placeholder);
                   }}
                 />
-              </div>
+              </button>
             ))}
             {tour.photos.length > 4 && (
               <button
                 onClick={() => setGalleryOpen(true)}
-                className="rounded-lg overflow-hidden bg-[#f8fafc] flex items-center justify-center min-h-[145px] cursor-pointer hover:bg-[#eef2f6] transition-colors w-full"
+                className="relative rounded-lg overflow-hidden min-h-[145px] cursor-pointer group w-full"
               >
-                <span className="text-sm text-[#64748b]">+{tour.photos.length - 4} more photos</span>
+                <img
+                  src={tour.photos[4]}
+                  alt={`${tour.title} - Photo 5`}
+                  className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-50 transition-opacity"
+                  onError={(e) => { e.target.style.display = "none"; }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
+                  <span className="text-sm font-medium text-[#1e293b]">+{tour.photos.length - 4} more photos</span>
+                </div>
               </button>
             )}
           </div>
@@ -512,7 +536,11 @@ export default function ProductDetailPage() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {tour.photos.map((photo, i) => (
-                <div key={i} className="rounded-lg overflow-hidden bg-[#f8fafc]">
+                <button
+                  key={i}
+                  onClick={() => { setGalleryOpen(false); setLightboxIndex(i); }}
+                  className="rounded-lg overflow-hidden bg-[#f8fafc] text-left hover:opacity-90 transition-opacity"
+                >
                   <img
                     src={photo}
                     alt={`${tour.title} - Photo ${i + 1}`}
@@ -525,9 +553,51 @@ export default function ProductDetailPage() {
                       e.target.parentElement.appendChild(placeholder);
                     }}
                   />
-                </div>
+                </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {lightboxIndex !== null && tour.photos[lightboxIndex] && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setLightboxIndex(null)}
+        >
+          <button
+            onClick={(e) => { e.stopPropagation(); setLightboxIndex(null); }}
+            className="absolute top-4 right-4 p-2 text-white/70 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+          >
+            <XIcon size={24} />
+          </button>
+          {lightboxIndex > 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex - 1); }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-2 text-white/70 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+            >
+              <ChevronLeft size={32} />
+            </button>
+          )}
+          {lightboxIndex < tour.photos.length - 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex + 1); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-white/70 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+            >
+              <ChevronRight size={32} />
+            </button>
+          )}
+          <div className="max-w-5xl max-h-[85vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={tour.photos[lightboxIndex]}
+              alt={`${tour.title} - Photo ${lightboxIndex + 1}`}
+              className="max-w-full max-h-[80vh] object-contain rounded-lg"
+              onError={(e) => { e.target.style.display = "none"; }}
+            />
+            <p className="mt-3 text-sm text-white/70">
+              {lightboxIndex + 1} / {tour.photos.length}
+            </p>
           </div>
         </div>
       )}
