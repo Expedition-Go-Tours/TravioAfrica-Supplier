@@ -56,6 +56,8 @@ export default function ProductDetailPage() {
   // Reorder photos so coverPhoto is always first (hero image)
   const displayPhotos = (() => {
     const photos = tour?.photos || [];
+    // If coverPhoto exists but photos array is empty, still show the coverPhoto
+    if (tour?.coverPhoto && photos.length === 0) return [tour.coverPhoto];
     if (!tour?.coverPhoto || photos.length === 0) return photos;
     // Backend may apply different Cloudinary transformations to coverPhoto vs photos,
     // so compare by public ID (the part after /v1/ or the last path segment).
@@ -71,6 +73,11 @@ export default function ProductDetailPage() {
 
   // Helper function to get image URL (backend already returns optimized Cloudinary URLs)
   const getImageUrl = (url) => {
+    if (!url) return url;
+    // Handle bare public IDs (when backend Cloudinary env is not configured)
+    if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('blob:')) {
+      return url;
+    }
     return url;
   };
 

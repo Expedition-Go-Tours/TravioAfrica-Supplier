@@ -92,7 +92,13 @@ export default function ProductsListPage() {
         });
     };
 
-    attempt(isAuthenticated)
+    // Always try the supplier endpoint first so supplier-owned tours
+    // (including DRAFT/INACTIVE) are returned with complete photo data.
+    attempt(true)
+      .catch(() => {
+        // If supplier endpoint fails (not authenticated), fall back to public
+        return attempt(false);
+      })
       .catch((err) => {
         setError(err.response?.data?.message || err.message || "Failed to load products");
       })
@@ -274,23 +280,29 @@ export default function ProductsListPage() {
                   </div>
 
                   {/* Image overlaid on top — falls back through Cloudinary → proxy → placeholder */}
-                  {(product.coverPhoto || product.photos?.[0]) && (
-                    <img
-                      src={product.coverPhoto || product.photos[0]}
-                      alt={product.title}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      loading="eager"
-                      data-proxy={`${config.api.baseURL}/tours/${product.id}/photo`}
-                      onError={(e) => {
-                        const proxy = e.target.dataset.proxy;
-                        if (proxy && e.target.src !== proxy) {
-                          e.target.src = proxy;
-                        } else {
-                          e.target.style.display = "none";
-                        }
-                      }}
-                    />
-                  )}
+                  {(() => {
+                    const photoUrl = product.coverPhoto || product.photos?.find(p => p);
+                    if (!photoUrl) return null;
+                    const src = photoUrl.startsWith('http://') || photoUrl.startsWith('https://')
+                      ? photoUrl
+                      : `${config.api.baseURL}/tours/${product.id}/photo`;
+                    return (
+                      <img
+                        src={src}
+                        alt={product.title}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                        onError={(e) => {
+                          const proxy = `${config.api.baseURL}/tours/${product.id}/photo`;
+                          if (e.target.src !== proxy) {
+                            e.target.src = proxy;
+                          } else {
+                            e.target.style.display = "none";
+                          }
+                        }}
+                      />
+                    );
+                  })()}
 
                   <div className="absolute top-3 left-3">
                     <StatusBadge status={product.status} label={PRODUCT_STATUSES[product.status]?.label} size="sm" />
