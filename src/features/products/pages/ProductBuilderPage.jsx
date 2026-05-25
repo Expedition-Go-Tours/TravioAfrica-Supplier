@@ -109,8 +109,16 @@ function tourToProduct(tour) {
     })),
     heroImage: (() => {
       if (!tour.coverPhoto) return null;
-      const idx = (tour.photos || []).findIndex((url) => url === tour.coverPhoto);
-      return idx >= 0 ? `photo_${idx}_${tour.coverPhoto}` : null;
+      // Backend may apply different Cloudinary transformations to coverPhoto vs photos,
+      // so compare by public ID (the part after /v1/ or the last path segment).
+      const extractId = (url) => {
+        if (!url) return '';
+        const m = url.match(/\/(?:v\d+\/)?([^/]+)$/);
+        return m ? m[1] : url;
+      };
+      const coverId = extractId(tour.coverPhoto);
+      const idx = (tour.photos || []).findIndex((url) => extractId(url) === coverId);
+      return idx >= 0 ? `photo_${idx}_${tour.photos[idx]}` : null;
     })(),
     videoUrl: "",
     pricing: {

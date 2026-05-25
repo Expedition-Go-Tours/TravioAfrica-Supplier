@@ -265,21 +265,26 @@ export default function ProductsListPage() {
                 className="aspect-[16/9] bg-[#f8fafc] flex items-center justify-center relative cursor-pointer"
                 onClick={() => navigate(`/products/${product.id}`)}
               >
-                {product.coverPhoto ? (
-                  <img
-                    src={product.coverPhoto}
-                    alt={product.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                      e.target.parentElement.innerHTML = `<div class="w-12 h-12 rounded-full bg-[#eaeaea] flex items-center justify-center"><span class="text-2xl text-[#9e9e9e]">🏞️</span></div>`;
-                    }}
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-[#eaeaea] flex items-center justify-center">
-                    <span className="text-2xl text-[#9e9e9e]">🏞️</span>
-                  </div>
-                )}
+                {(() => {
+                  const thumb = product.coverPhoto || product.photos?.[0] || null;
+                  return thumb ? (
+                    <img
+                      src={thumb}
+                      alt={product.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = "none";
+                        e.target.nextElementSibling?.style?.display !== undefined && (e.target.nextElementSibling.style.display = "flex");
+                      }}
+                    />
+                  ) : null;
+                })()}
+                <div
+                  className="w-12 h-12 rounded-full bg-[#eaeaea] flex items-center justify-center"
+                  style={{ display: product.coverPhoto || product.photos?.[0] ? "none" : "flex" }}
+                >
+                  <span className="text-2xl text-[#9e9e9e]">🏞️</span>
+                </div>
                 <div className="absolute top-3 left-3">
                   <StatusBadge status={product.status} label={PRODUCT_STATUSES[product.status]?.label} size="sm" />
                 </div>

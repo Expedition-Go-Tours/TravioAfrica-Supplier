@@ -57,7 +57,15 @@ export default function ProductDetailPage() {
   const displayPhotos = (() => {
     const photos = tour?.photos || [];
     if (!tour?.coverPhoto || photos.length === 0) return photos;
-    const rest = photos.filter((p) => p !== tour.coverPhoto);
+    // Backend may apply different Cloudinary transformations to coverPhoto vs photos,
+    // so compare by public ID (the part after /v1/ or the last path segment).
+    const extractId = (url) => {
+      if (!url) return '';
+      const m = url.match(/\/(?:v\d+\/)?([^/]+)$/);
+      return m ? m[1] : url;
+    };
+    const coverId = extractId(tour.coverPhoto);
+    const rest = photos.filter((p) => extractId(p) !== coverId);
     return [tour.coverPhoto, ...rest];
   })();
 
