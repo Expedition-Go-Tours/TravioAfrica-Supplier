@@ -22,7 +22,18 @@ try {
   console.warn('Swagger spec generation failed:', e.message);
 }
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://*.cloudinary.com", "https://*.googleusercontent.com", "https://*.gravatar.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      connectSrc: ["'self'"],
+    },
+  },
+}));
 app.use(hpp());
 app.use(compression());
 app.use(cookieParser());
