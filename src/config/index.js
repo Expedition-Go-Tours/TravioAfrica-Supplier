@@ -9,6 +9,9 @@ function getEnv(key, defaultValue) {
   if (value === undefined || value === null || value === '') {
     return defaultValue;
   }
+  if (typeof value === 'string' && value.startsWith('__REPLACE_WITH_')) {
+    return defaultValue;
+  }
   return value;
 }
 

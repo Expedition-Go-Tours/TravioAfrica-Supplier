@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, AlertCircle, Mail } from "lucide-react";
 import { toast } from "sonner";
-import { auth, googleProvider, signInWithPopup } from "@/lib/firebase";
+import { auth, googleProvider, signInWithPopup, getFirebaseStatus } from "@/lib/firebase";
 import api from "@/lib/axios";
 import { useAuthStore } from "@/stores/authStore";
+
+const fbStatus = getFirebaseStatus();
 
 async function exchangeToken(idToken) {
   const response = await api.post(
@@ -55,7 +57,13 @@ export default function LoginPage() {
     setError("");
 
     if (!auth || !googleProvider) {
-      setError("Authentication service is unavailable. Please try again later.");
+      if (fbStatus.error) {
+        setError(`Sign-in unavailable: ${fbStatus.error}`);
+      } else if (!fbStatus.hasConfig) {
+        setError("Sign-in is not configured. Contact the administrator.");
+      } else {
+        setError("Authentication service is unavailable. Please try again later.");
+      }
       return;
     }
 

@@ -1,4 +1,4 @@
-import { initializeApp, getApps } from "firebase/app";
+import { initializeApp } from "firebase/app";
 import {
   getAuth,
   GoogleAuthProvider,
@@ -17,19 +17,32 @@ const firebaseConfig = {
   messagingSenderId: config.auth.firebase.messagingSenderId,
 };
 
-let app;
-let auth;
-let googleProvider;
+let app = null;
+let auth = null;
+let googleProvider = null;
+let initError = null;
 
-try {
-  const existing = getApps();
-  app = existing.length > 0 ? existing[0] : initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  googleProvider = new GoogleAuthProvider();
-} catch (err) {
-  console.warn("Firebase initialization failed:", err);
-  auth = null;
-  googleProvider = null;
+const hasValidConfig = firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId;
+
+if (hasValidConfig) {
+  try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    googleProvider = new GoogleAuthProvider();
+    googleProvider.setCustomParameters({ prompt: "select_account" });
+  } catch (err) {
+    initError = err.message || String(err);
+  }
+} else {
+  initError = "Missing Firebase configuration values. Check VITE_FIREBASE_* env vars.";
+}
+
+export function getFirebaseStatus() {
+  return {
+    ready: !!(auth && googleProvider),
+    error: initError,
+    hasConfig: hasValidConfig,
+  };
 }
 
 export {
