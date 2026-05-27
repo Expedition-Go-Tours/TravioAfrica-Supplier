@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useAuthStore, isSupplierUser, isAdminUser } from "@/stores/authStore";
+import { useAuthStore, isAdminUser, canAccessSupplierDashboard } from "@/stores/authStore";
 import { Loader2 } from "lucide-react";
 
 export default function ProtectedRoute({ requireAdmin = false }) {
@@ -21,25 +21,14 @@ export default function ProtectedRoute({ requireAdmin = false }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  const isSupplier = isSupplierUser();
   const isAdmin = isAdminUser();
 
   if (requireAdmin && !isAdmin) {
     return <Navigate to="/" replace />;
   }
 
-  if (!isSupplier && !isAdmin) {
+  if (!isAdmin && !canAccessSupplierDashboard(supplierProfile)) {
     return <Navigate to="/supplier/status" replace />;
-  }
-
-  if (isSupplier && !isAdmin) {
-    if (!supplierProfile) {
-      return <Navigate to="/supplier/status" replace />;
-    }
-    const activeStatuses = ["ACTIVE", "APPROVED"];
-    if (!activeStatuses.includes(supplierProfile.status)) {
-      return <Navigate to="/supplier/status" replace />;
-    }
   }
 
   return <Outlet />;

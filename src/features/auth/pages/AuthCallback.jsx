@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, CheckCircle2, AlertCircle, ArrowRight, Shield } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
-import { useAuthStore } from "@/stores/authStore";
+import { useAuthStore, canAccessSupplierDashboard } from "@/stores/authStore";
 
 /**
  * AuthCallback
@@ -84,18 +84,12 @@ export default function AuthCallback() {
         setStatus("success");
         toast.success(`Welcome back, ${user.name || user.email || ""}!`);
 
-        // Determine redirect based on supplier status
-        const hasSupplierRole = user.roles?.includes("supplier");
-        const isVerified = supplierProfile?.status === "ACTIVE" || supplierProfile?.status === "APPROVED";
-
         const returnUrl = localStorage.getItem("auth_return_url");
         let redirectTo = "/";
 
         if (returnUrl) {
           redirectTo = returnUrl;
-        } else if (!hasSupplierRole) {
-          redirectTo = "/supplier/status";
-        } else if (!isVerified) {
+        } else if (!canAccessSupplierDashboard(supplierProfile)) {
           redirectTo = "/supplier/status";
         }
 

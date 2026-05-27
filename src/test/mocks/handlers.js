@@ -85,9 +85,10 @@ export const handlers = [
     // Simulate Firebase token verification (accept any non-empty token in tests)
     return HttpResponse.json({
       success: true,
-      user: mockUsers[0],
-      token: 'mock-session-token',
-      message: 'Session established',
+      user: { ...mockUsers[0], roles: ["supplier"] },
+      supplierProfile: { id: "sp-001", status: "ACTIVE" },
+      token: "mock-session-token",
+      message: "Session established",
     });
   }),
 

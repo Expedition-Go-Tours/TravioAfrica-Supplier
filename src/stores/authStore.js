@@ -130,12 +130,20 @@ export function isSupplierUser() {
   return user?.roles?.includes("supplier") || false;
 }
 
+/** Supplier statuses that can access the dashboard. */
+export const SUPPLIER_DASHBOARD_STATUSES = ["ACTIVE", "APPROVED"];
+
 /**
- * Check if the current user is a verified (ACTIVE) supplier.
+ * Whether a supplier profile is allowed into the dashboard.
+ */
+export function canAccessSupplierDashboard(supplierProfile) {
+  return SUPPLIER_DASHBOARD_STATUSES.includes(supplierProfile?.status);
+}
+
+/**
+ * Check if the current user is an approved or active supplier.
  */
 export function isVerifiedSupplier() {
-  const { user, supplierProfile } = useAuthStore.getState();
-  if (!user?.roles?.includes("supplier")) return false;
-  if (!supplierProfile) return false;
-  return supplierProfile.status === "ACTIVE";
+  const { supplierProfile } = useAuthStore.getState();
+  return canAccessSupplierDashboard(supplierProfile);
 }

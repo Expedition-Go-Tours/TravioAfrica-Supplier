@@ -4,7 +4,7 @@ import { Loader2, AlertCircle, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { auth, googleProvider, signInWithPopup, getFirebaseStatus } from "@/lib/firebase";
 import api from "@/lib/axios";
-import { useAuthStore } from "@/stores/authStore";
+import { useAuthStore, canAccessSupplierDashboard } from "@/stores/authStore";
 
 const fbStatus = getFirebaseStatus();
 
@@ -21,17 +21,13 @@ async function exchangeToken(idToken) {
   };
 }
 
-function redirectAfterLogin(navigate, userData, supplierProfile) {
+function redirectAfterLogin(navigate, supplierProfile) {
   const returnUrl = localStorage.getItem("auth_return_url");
-  const hasSupplierRole = userData.roles?.includes("supplier");
-  const isVerified =
-    supplierProfile?.status === "ACTIVE" ||
-    supplierProfile?.status === "APPROVED";
 
   if (returnUrl) {
     localStorage.removeItem("auth_return_url");
     navigate(returnUrl, { replace: true });
-  } else if (hasSupplierRole && isVerified) {
+  } else if (canAccessSupplierDashboard(supplierProfile)) {
     navigate("/", { replace: true });
   } else {
     navigate("/supplier/status", { replace: true });
@@ -40,7 +36,7 @@ function redirectAfterLogin(navigate, userData, supplierProfile) {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, supplierProfile } = useAuthStore();
   const login = useAuthStore((state) => state.login);
 
   const [email, setEmail] = useState("");
@@ -49,9 +45,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      navigate("/", { replace: true });
+      redirectAfterLogin(navigate, supplierProfile);
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, supplierProfile, navigate]);
 
   const handleGoogleSignIn = async () => {
     setError("");
@@ -79,7 +75,7 @@ export default function LoginPage() {
 
       login(userData, idToken, supplierProfile);
       toast.success(`Welcome back, ${userData.name || userData.email}!`);
-      redirectAfterLogin(navigate, userData, supplierProfile);
+      redirectAfterLogin(navigate, supplierProfile);
     } catch (err) {
       if (err.code === "auth/popup-closed-by-user") return;
       if (err.code === "auth/unauthorized-domain") {

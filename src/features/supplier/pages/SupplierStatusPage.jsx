@@ -12,7 +12,7 @@ import {
   FileText,
   RefreshCw,
 } from "lucide-react";
-import { useAuthStore, isSupplierUser } from "@/stores/authStore";
+import { useAuthStore, isSupplierUser, canAccessSupplierDashboard } from "@/stores/authStore";
 import api from "@/lib/axios";
 
 const STATUS_CONFIG = {
@@ -35,7 +35,7 @@ const STATUS_CONFIG = {
     color: "text-[#1e40af]",
     bg: "bg-[#dbeafe]",
     title: "Application Approved",
-    description: "Your application has been approved! An admin will activate your account shortly.",
+    description: "Your application has been approved! You can now access the supplier dashboard.",
   },
   ACTIVE: {
     icon: CheckCircle2,
@@ -85,6 +85,12 @@ export default function SupplierStatusPage() {
       })
       .finally(() => setLoading(false));
   }, [isSupplier, supplierProfile, setSupplierProfile]);
+
+  useEffect(() => {
+    if (canAccessSupplierDashboard(supplierProfile)) {
+      navigate("/", { replace: true });
+    }
+  }, [supplierProfile, navigate]);
 
   // If not a supplier at all
   if (!isSupplier && !loading) {
@@ -156,8 +162,7 @@ export default function SupplierStatusPage() {
   const status = supplierProfile?.status || "PENDING";
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
   const StatusIcon = config.icon;
-  const isActive = status === "ACTIVE";
-  const canProceed = isActive;
+  const canProceed = canAccessSupplierDashboard(supplierProfile);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] px-4">
