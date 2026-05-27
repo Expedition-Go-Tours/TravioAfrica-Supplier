@@ -1,7 +1,8 @@
 import { initializeApp, getApps } from "firebase/app";
 import {
   getAuth,
-  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
@@ -15,22 +16,25 @@ const firebaseConfig = {
   messagingSenderId: config.auth.firebase.messagingSenderId,
 };
 
-// Only initialize if not already initialized to avoid duplicate app errors
 let app;
 let auth;
+let googleProvider;
 
 try {
   const existing = getApps();
   app = existing.length > 0 ? existing[0] : initializeApp(firebaseConfig);
   auth = getAuth(app);
+  googleProvider = new GoogleAuthProvider();
 } catch (err) {
   console.warn("Firebase initialization failed:", err);
   auth = null;
+  googleProvider = null;
 }
 
 export {
   auth,
-  signInWithEmailAndPassword,
+  googleProvider,
+  signInWithPopup,
   signOut,
   onAuthStateChanged,
 };
