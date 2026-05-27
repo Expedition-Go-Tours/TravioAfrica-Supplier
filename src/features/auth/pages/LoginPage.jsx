@@ -57,9 +57,10 @@ export default function LoginPage() {
     setError("");
 
     if (!auth || !googleProvider) {
-      if (fbStatus.error) {
-        setError(`Sign-in unavailable: ${fbStatus.error}`);
-      } else if (!fbStatus.hasConfig) {
+      const status = getFirebaseStatus();
+      if (status.error) {
+        setError(`Sign-in unavailable: ${status.error}`);
+      } else if (!status.hasConfig) {
         setError("Sign-in is not configured. Contact the administrator.");
       } else {
         setError("Authentication service is unavailable. Please try again later.");
