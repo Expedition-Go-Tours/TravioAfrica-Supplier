@@ -174,6 +174,27 @@ exports.verifyToken = catchAsync(async (req, res, next) => {
   const internalToken = createSessionToken(user);
   sendSessionCookie(res, internalToken);
 
+  // If user has supplier role, fetch their supplier profile status
+  let supplierProfile = null;
+  if (user.roles && user.roles.includes('supplier')) {
+    const profile = await prisma.supplierProfile.findUnique({
+      where: { userId: user.id },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        reviewedAt: true,
+        adminNotes: true,
+        averageRating: true,
+        totalEarnings: true,
+        totalBookings: true,
+      },
+    });
+    if (profile) {
+      supplierProfile = profile;
+    }
+  }
+
   event.emit({
     name: 'user.logged_in',
     userId: user.id,
@@ -185,7 +206,7 @@ exports.verifyToken = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: 'success',
-    data: { user },
+    data: { user, supplierProfile },
   });
 });
 

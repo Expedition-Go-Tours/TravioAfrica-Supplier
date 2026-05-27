@@ -61,7 +61,10 @@ export default function AuthCallback() {
         { withCredentials: true } // required: tells browser to accept the __session cookie
       )
       .then((response) => {
-        const { user, token: backendToken } = response.data;
+        const responseData = response.data?.data || response.data;
+        const user = responseData?.user;
+        const supplierProfile = responseData?.supplierProfile || null;
+        const backendToken = responseData?.token;
 
         if (!user) {
           throw new Error("Backend did not return user data.");
@@ -72,18 +75,29 @@ export default function AuthCallback() {
         // the Authorization header as a backup (e.g., Safari in private mode).
         const authToken = backendToken || token;
         if (authToken) {
-          login(user, authToken);
+          login(user, authToken, supplierProfile);
         } else {
           // Cookie-only mode: just update user state
-          useAuthStore.setState({ user, isAuthenticated: true });
+          useAuthStore.setState({ user, isAuthenticated: true, supplierProfile });
         }
 
         setStatus("success");
         toast.success(`Welcome back, ${user.name || user.email || ""}!`);
 
-        // Check if there's a saved return URL (e.g., from a 401 on the product builder)
+        // Determine redirect based on supplier status
+        const hasSupplierRole = user.roles?.includes("supplier");
+        const isVerified = supplierProfile?.status === "ACTIVE" || supplierProfile?.status === "APPROVED";
+
         const returnUrl = localStorage.getItem("auth_return_url");
-        const redirectTo = returnUrl || "/";
+        let redirectTo = "/";
+
+        if (returnUrl) {
+          redirectTo = returnUrl;
+        } else if (!hasSupplierRole) {
+          redirectTo = "/supplier/status";
+        } else if (!isVerified) {
+          redirectTo = "/supplier/status";
+        }
 
         // Give the user a moment to see the success state, then redirect
         setTimeout(() => {

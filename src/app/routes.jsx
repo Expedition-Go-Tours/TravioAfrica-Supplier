@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import AppShell from "@/components/layout/AppShell";
+import ProtectedRoute from "@/components/shared/ProtectedRoute";
 
 // Pages
 import DashboardPage from "@/features/dashboard/pages/DashboardPage";
@@ -18,6 +19,9 @@ import SettingsPage from "@/features/settings/pages/SettingsPage";
 // Auth Pages (rendered outside AppShell)
 import AuthCallback from "@/features/auth/pages/AuthCallback";
 
+// Supplier Pages (rendered outside AppShell)
+import SupplierStatusPage from "@/features/supplier/pages/SupplierStatusPage";
+
 // Error Pages
 import NotFoundPage from "@/pages/errors/NotFoundPage";
 import ServerErrorPage from "@/pages/errors/ServerErrorPage";
@@ -30,14 +34,17 @@ export default function AppRoutes() {
       {/* Auth Callback (without AppShell — full-screen auth bridge) */}
       <Route path="/auth/callback" element={<AuthCallback />} />
 
+      {/* Supplier Status (without AppShell — full-screen status check) */}
+      <Route path="/supplier/status" element={<SupplierStatusPage />} />
+
       {/* Error Pages (without AppShell) */}
       <Route path="/error/404" element={<NotFoundPage />} />
       <Route path="/error/500" element={<ServerErrorPage />} />
       <Route path="/error/403" element={<ForbiddenPage />} />
       <Route path="/error/network" element={<NetworkErrorPage />} />
 
-      {/* Main App Routes (with AppShell) */}
-      <Route element={<AppShell />}>
+      {/* Main App Routes (with AppShell) — protected for verified suppliers */}
+      <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/bookings" element={<BookingsPage />} />
         <Route path="/products" element={<ProductsListPage />} />
@@ -50,7 +57,7 @@ export default function AppRoutes() {
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/users" element={<UsersPage />} />
         <Route path="/settings" element={<SettingsPage />} />
-        
+
         {/* Catch-all route for 404 */}
         <Route path="*" element={<NotFoundPage />} />
       </Route>

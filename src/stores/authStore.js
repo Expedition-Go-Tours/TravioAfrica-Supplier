@@ -14,25 +14,27 @@ import { persist } from "zustand/middleware";
 
 export const useAuthStore = create(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       token: null,
       isAuthenticated: false,
       isLoading: false,
+      supplierProfile: null,
 
       /**
        * Log in a user.
        * @param {Object} user  - User object (e.g. { uid, email, name, role })
        * @param {string} token - Optional JWT / Firebase ID token for localStorage fallback
+       * @param {Object} supplierProfile - Optional supplier profile (if user is a supplier)
        */
-      login: (user, token) => {
+      login: (user, token, supplierProfile) => {
         if (token) {
           localStorage.setItem("auth_token", token);
         }
         if (user) {
           localStorage.setItem("auth_user", JSON.stringify(user));
         }
-        set({ user, token, isAuthenticated: true, isLoading: false });
+        set({ user, token, isAuthenticated: true, isLoading: false, supplierProfile });
       },
 
       /**
@@ -45,6 +47,11 @@ export const useAuthStore = create(
       },
 
       /**
+       * Set supplier profile data.
+       */
+      setSupplierProfile: (profile) => set({ supplierProfile: profile }),
+
+      /**
        * Set loading state (used during initial session check).
        */
       setLoading: (loading) => set({ isLoading: loading }),
@@ -55,7 +62,7 @@ export const useAuthStore = create(
       setUnauthenticated: () => {
         localStorage.removeItem("auth_token");
         localStorage.removeItem("auth_user");
-        set({ user: null, token: null, isAuthenticated: false, isLoading: false });
+        set({ user: null, token: null, isAuthenticated: false, isLoading: false, supplierProfile: null });
       },
 
       /**
@@ -72,7 +79,7 @@ export const useAuthStore = create(
         }
         localStorage.removeItem("auth_token");
         localStorage.removeItem("auth_user");
-        set({ user: null, token: null, isAuthenticated: false, isLoading: false });
+        set({ user: null, token: null, isAuthenticated: false, isLoading: false, supplierProfile: null });
       },
     }),
     {
@@ -83,6 +90,7 @@ export const useAuthStore = create(
         user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
+        supplierProfile: state.supplierProfile,
       }),
     }
   )
@@ -112,4 +120,22 @@ export function initAuthFromStorage() {
 export function isAdminUser() {
   const user = useAuthStore.getState().user;
   return user?.roles?.includes("admin") || false;
+}
+
+/**
+ * Check if the current user has the supplier role.
+ */
+export function isSupplierUser() {
+  const user = useAuthStore.getState().user;
+  return user?.roles?.includes("supplier") || false;
+}
+
+/**
+ * Check if the current user is a verified (ACTIVE) supplier.
+ */
+export function isVerifiedSupplier() {
+  const { user, supplierProfile } = useAuthStore.getState();
+  if (!user?.roles?.includes("supplier")) return false;
+  if (!supplierProfile) return false;
+  return supplierProfile.status === "ACTIVE";
 }
