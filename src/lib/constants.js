@@ -1,10 +1,10 @@
 // API Base URL
 export const API_BASE_URL = "https://expedition-go-backend-v2.onrender.com/api";
 
-// Booking Statuses (Viator-style)
+// Booking statuses — aligned with backend BookingStatus enum
 export const BOOKING_STATUSES = {
-  AWAITING_CONFIRMATION: {
-    label: "Awaiting Confirmation",
+  PENDING: {
+    label: "Pending",
     color: "warning",
     badgeColor: "#ffc400",
   },
@@ -18,36 +18,43 @@ export const BOOKING_STATUSES = {
     color: "danger",
     badgeColor: "#dc3545",
   },
-  REJECTED: {
-    label: "Rejected",
-    color: "danger",
-    badgeColor: "#dc3545",
-  },
-  REFUND_REQUEST: {
-    label: "Refund Request",
-    color: "warning",
-    badgeColor: "#f97316",
-  },
   REFUNDED: {
     label: "Refunded",
     color: "info",
     badgeColor: "#298dff",
   },
-  REFUND_REJECTED: {
-    label: "Refund Rejected",
+  COMPLETED: {
+    label: "Completed",
+    color: "success",
+    badgeColor: "#00d67f",
+  },
+  NO_SHOW: {
+    label: "No Show",
     color: "danger",
-    badgeColor: "#7429f8",
+    badgeColor: "#dc3545",
   },
-  AMENDMENT_REQUEST: {
-    label: "Amendment Request",
-    color: "info",
-    badgeColor: "#18ddef",
-  },
-  AMENDED: {
-    label: "Amended",
-    color: "secondary",
-    badgeColor: "#0f766e",
-  },
+};
+
+export const SUPPLIER_BOOKING_STATUS_OPTIONS = [
+  { value: "CONFIRMED", label: "Confirmed" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "NO_SHOW", label: "No Show" },
+];
+
+export const REVIEW_STATUSES = {
+  PENDING: { label: "Pending", color: "warning" },
+  APPROVED: { label: "Approved", color: "success" },
+  REJECTED: { label: "Rejected", color: "danger" },
+  FLAGGED: { label: "Flagged", color: "danger" },
+};
+
+export const PAYOUT_STATUSES = {
+  PENDING: { label: "Pending", color: "warning" },
+  APPROVED: { label: "Approved", color: "info" },
+  PROCESSING: { label: "Processing", color: "info" },
+  PAID: { label: "Paid", color: "success" },
+  FAILED: { label: "Failed", color: "danger" },
+  CANCELLED: { label: "Cancelled", color: "muted" },
 };
 
 // Payment Statuses

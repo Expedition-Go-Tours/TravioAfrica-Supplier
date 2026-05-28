@@ -22,10 +22,8 @@ export default function Header() {
   const isAdmin = user?.roles?.includes("admin");
   const isSupplier = user?.roles?.includes("supplier");
 
-  const [suppliers, setSuppliers] = useState([]);
-  const [suppliersLoading, setSuppliersLoading] = useState(false);
-  const [suppliersOpen, setSuppliersOpen] = useState(false);
-  const suppliersRef = useRef(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef(null);
 
   // User dropdown state
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -35,8 +33,8 @@ export default function Header() {
   // Click outside handlers
   useEffect(() => {
     function handleClickOutside(e) {
-      if (suppliersRef.current && !suppliersRef.current.contains(e.target)) {
-        setSuppliersOpen(false);
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false);
       }
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
         if (!logoutLoading) {
@@ -89,101 +87,66 @@ export default function Header() {
       <div className="flex items-center gap-2 sm:gap-4">
         {/* Suppliers Dropdown — Admin sees all, Supplier sees own profile */}
         {(isAdmin || isSupplier) && (
-          <div className="relative" ref={suppliersRef}>
+          <div className="relative" ref={profileRef}>
             <button
-              onClick={() => setSuppliersOpen((open) => !open)}
+              onClick={() => setProfileOpen((open) => !open)}
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[#1e293b] bg-[#f8fafc] border border-[#eaeaea] rounded-lg hover:bg-[#eef2f6] transition-colors"
             >
               <Building2 size={16} className="text-[#64748b]" />
-              <span className="hidden sm:inline">
-                {isAdmin ? "Suppliers" : "My Profile"}
-              </span>
+              <span className="hidden sm:inline">My Profile</span>
               <ChevronDown
                 size={14}
-                className={`text-[#9e9e9e] transition-transform ${suppliersOpen ? "rotate-180" : ""}`}
+                className={`text-[#9e9e9e] transition-transform ${profileOpen ? "rotate-180" : ""}`}
               />
             </button>
-            {suppliersOpen && (
+            {profileOpen && (
               <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl border border-[#eaeaea] shadow-lg z-50 overflow-hidden">
-                {isAdmin ? (
-                  <>
-                    <div className="px-4 py-3 border-b border-[#eaeaea]">
-                      <p className="text-sm font-semibold text-[#1e293b]">Active Suppliers</p>
-                      <p className="text-xs text-[#64748b]">Able to create tours</p>
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
-                      {suppliersLoading ? (
-                        <div className="px-4 py-6 text-center text-sm text-[#64748b]">Loading...</div>
-                      ) : suppliers.length === 0 ? (
-                        <div className="px-4 py-6 text-center text-sm text-[#64748b]">No active suppliers</div>
-                      ) : (
-                        suppliers.map((supplier) => (
-                          <div
-                            key={supplier.id}
-                            className="flex items-center gap-3 px-4 py-3 hover:bg-[#f8fafc] transition-colors border-b border-[#eaeaea] last:border-0"
-                          >
-                            <div className="w-8 h-8 rounded-full bg-[#044b3b] flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
-                              {supplier.name?.charAt(0)?.toUpperCase() || "S"}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-[#1e293b] truncate">{supplier.name}</p>
-                              <p className="text-xs text-[#64748b] truncate">{supplier.email}</p>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="px-4 py-3 border-b border-[#eaeaea]">
-                      <p className="text-sm font-semibold text-[#1e293b]">Supplier Profile</p>
-                      <p className="text-xs text-[#64748b]">Your account status & details</p>
-                    </div>
-                    <div className="px-4 py-4 space-y-3">
-                      {supplierProfile ? (
-                        <>
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[#044b3b] flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
-                              {displayName?.charAt(0)?.toUpperCase() || "S"}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-[#1e293b] truncate">{displayName}</p>
-                              <p className="text-xs text-[#64748b] truncate">{user?.email}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Shield size={14} className="text-[#64748b]" />
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusStyle.bg} ${statusStyle.text}`}>
-                              {statusStyle.label}
-                            </span>
-                          </div>
-                          {supplierProfile.adminNotes && (
-                            <div className="flex items-start gap-2">
-                              <FileText size={14} className="text-[#64748b] mt-0.5 flex-shrink-0" />
-                              <p className="text-xs text-[#64748b]">{supplierProfile.adminNotes}</p>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2 text-xs text-[#64748b]">
-                            <Clock size={14} />
-                            <span>Applied {new Date(supplierProfile.createdAt).toLocaleDateString()}</span>
-                          </div>
-                          {supplierProfile.reviewedAt && (
-                            <div className="flex items-center gap-2 text-xs text-[#64748b]">
-                              <Clock size={14} />
-                              <span>Reviewed {new Date(supplierProfile.reviewedAt).toLocaleDateString()}</span>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-center text-sm text-[#64748b]">
-                          No supplier profile found.
-                          <p className="text-xs mt-1">Apply to become a supplier to see your status here.</p>
+                <div className="px-4 py-3 border-b border-[#eaeaea]">
+                  <p className="text-sm font-semibold text-[#1e293b]">Supplier Profile</p>
+                  <p className="text-xs text-[#64748b]">Your account status and details</p>
+                </div>
+                <div className="px-4 py-4 space-y-3">
+                  {supplierProfile ? (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-[#044b3b] flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
+                          {displayName?.charAt(0)?.toUpperCase() || "S"}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-[#1e293b] truncate">{displayName}</p>
+                          <p className="text-xs text-[#64748b] truncate">{user?.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Shield size={14} className="text-[#64748b]" />
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusStyle.bg} ${statusStyle.text}`}>
+                          {statusStyle.label}
+                        </span>
+                      </div>
+                      {supplierProfile.adminNotes && (
+                        <div className="flex items-start gap-2">
+                          <FileText size={14} className="text-[#64748b] mt-0.5 flex-shrink-0" />
+                          <p className="text-xs text-[#64748b]">{supplierProfile.adminNotes}</p>
                         </div>
                       )}
+                      <div className="flex items-center gap-2 text-xs text-[#64748b]">
+                        <Clock size={14} />
+                        <span>Applied {new Date(supplierProfile.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      {supplierProfile.reviewedAt && (
+                        <div className="flex items-center gap-2 text-xs text-[#64748b]">
+                          <Clock size={14} />
+                          <span>Reviewed {new Date(supplierProfile.reviewedAt).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center text-sm text-[#64748b]">
+                      No supplier profile found.
+                      <p className="text-xs mt-1">Apply to become a supplier to see your status here.</p>
                     </div>
-                  </>
-                )}
+                  )}
+                </div>
               </div>
             )}
           </div>

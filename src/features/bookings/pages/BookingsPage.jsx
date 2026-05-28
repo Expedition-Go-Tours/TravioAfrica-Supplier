@@ -1,45 +1,38 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, Filter, Download, Plus, X, ChevronDown, Calendar } from "lucide-react";
-import { format } from "date-fns";
+import { Search, Filter, X, ChevronDown, Calendar, Loader2, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import DataTable from "@/components/shared/DataTable";
 import StatusBadge from "@/components/shared/StatusBadge";
-import { BOOKING_STATUSES, BOOKING_SORT_OPTIONS, DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/lib/constants";
+import {
+  BOOKING_STATUSES,
+  BOOKING_SORT_OPTIONS,
+  DEFAULT_PAGE_SIZE,
+  PAGE_SIZE_OPTIONS,
+  SUPPLIER_BOOKING_STATUS_OPTIONS,
+} from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { fetchSupplierBookings, updateBookingStatus } from "../api";
+import { getAuthToken } from "@/stores/authStore";
 
-// Mock data for demonstration
-const MOCK_BOOKINGS = [
-  { id: "BK-2026-0001", bookingNumber: "TGA-78234", customerName: "John Smith", customerEmail: "john@example.com", tourName: "Serengeti Safari Adventure", travelDate: "2026-06-15", bookingDate: "2026-05-18", travelers: 4, total: 2400, status: "CONFIRMED", paymentStatus: "PAID", currency: "USD" },
-  { id: "BK-2026-0002", bookingNumber: "TGA-78235", customerName: "Sarah Johnson", customerEmail: "sarah@example.com", tourName: "Zanzibar Beach Escape", travelDate: "2026-06-20", bookingDate: "2026-05-17", travelers: 2, total: 1800, status: "AWAITING_CONFIRMATION", paymentStatus: "PENDING", currency: "USD" },
-  { id: "BK-2026-0003", bookingNumber: "TGA-78236", customerName: "Michael Brown", customerEmail: "michael@example.com", tourName: "Kilimanjaro Trek", travelDate: "2026-07-01", bookingDate: "2026-05-15", travelers: 1, total: 3200, status: "CONFIRMED", paymentStatus: "PAID", currency: "USD" },
-  { id: "BK-2026-0004", bookingNumber: "TGA-78237", customerName: "Emily Davis", customerEmail: "emily@example.com", tourName: "Masai Mara Wildlife Tour", travelDate: "2026-06-10", bookingDate: "2026-05-16", travelers: 3, total: 1950, status: "CANCELLED", paymentStatus: "REFUNDED", currency: "USD" },
-  { id: "BK-2026-0005", bookingNumber: "TGA-78238", customerName: "Robert Wilson", customerEmail: "robert@example.com", tourName: "Victoria Falls Expedition", travelDate: "2026-08-05", bookingDate: "2026-05-14", travelers: 2, total: 2800, status: "CONFIRMED", paymentStatus: "PAID", currency: "USD" },
-  { id: "BK-2026-0006", bookingNumber: "TGA-78239", customerName: "Lisa Anderson", customerEmail: "lisa@example.com", tourName: "Serengeti Safari Adventure", travelDate: "2026-06-22", bookingDate: "2026-05-18", travelers: 5, total: 3000, status: "AMENDMENT_REQUEST", paymentStatus: "PAID", currency: "USD" },
-  { id: "BK-2026-0007", bookingNumber: "TGA-78240", customerName: "David Martinez", customerEmail: "david@example.com", tourName: "Ngorongoro Crater Tour", travelDate: "2026-07-10", bookingDate: "2026-05-12", travelers: 2, total: 1600, status: "REFUND_REQUEST", paymentStatus: "PAID", currency: "USD" },
-  { id: "BK-2026-0008", bookingNumber: "TGA-78241", customerName: "Jennifer Taylor", customerEmail: "jennifer@example.com", tourName: "Zanzibar Beach Escape", travelDate: "2026-09-01", bookingDate: "2026-05-10", travelers: 4, total: 3600, status: "CONFIRMED", paymentStatus: "PENDING", currency: "USD" },
-  { id: "BK-2026-0009", bookingNumber: "TGA-78242", customerName: "James Thomas", customerEmail: "james@example.com", tourName: "Okavango Delta Safari", travelDate: "2026-06-18", bookingDate: "2026-05-18", travelers: 2, total: 4200, status: "CONFIRMED", paymentStatus: "PAID", currency: "USD" },
-  { id: "BK-2026-0010", bookingNumber: "TGA-78243", customerName: "Maria Garcia", customerEmail: "maria@example.com", tourName: "Kilimanjaro Trek", travelDate: "2026-07-15", bookingDate: "2026-05-08", travelers: 3, total: 9600, status: "REJECTED", paymentStatus: "FAILED", currency: "USD" },
-  { id: "BK-2026-0011", bookingNumber: "TGA-78244", customerName: "William Lee", customerEmail: "william@example.com", tourName: "Serengeti Safari Adventure", travelDate: "2026-06-25", bookingDate: "2026-05-17", travelers: 2, total: 1200, status: "AMENDED", paymentStatus: "PAID", currency: "USD" },
-  { id: "BK-2026-0012", bookingNumber: "TGA-78245", customerName: "Patricia White", customerEmail: "patricia@example.com", tourName: "Masai Mara Wildlife Tour", travelDate: "2026-08-20", bookingDate: "2026-05-16", travelers: 1, total: 650, status: "AWAITING_CONFIRMATION", paymentStatus: "PENDING", currency: "USD" },
-  { id: "BK-2026-0013", bookingNumber: "TGA-78246", customerName: "Charles Harris", customerEmail: "charles@example.com", tourName: "Victoria Falls Expedition", travelDate: "2026-09-10", bookingDate: "2026-05-15", travelers: 4, total: 5600, status: "CONFIRMED", paymentStatus: "PAID", currency: "USD" },
-  { id: "BK-2026-0014", bookingNumber: "TGA-78247", customerName: "Linda Clark", customerEmail: "linda@example.com", tourName: "Zanzibar Beach Escape", travelDate: "2026-07-05", bookingDate: "2026-05-14", travelers: 2, total: 1800, status: "REFUND_REJECTED", paymentStatus: "PAID", currency: "USD" },
-  { id: "BK-2026-0015", bookingNumber: "TGA-78248", customerName: "Thomas Robinson", customerEmail: "thomas@example.com", tourName: "Ngorongoro Crater Tour", travelDate: "2026-08-15", bookingDate: "2026-05-13", travelers: 6, total: 4800, status: "CONFIRMED", paymentStatus: "PAID", currency: "USD" },
-];
-
-// Quick filter tabs configuration
 const QUICK_FILTERS = [
-  { key: "ALL", label: "All Bookings", count: null },
-  { key: "AWAITING_CONFIRMATION", label: "Awaiting Confirmation", count: null },
-  { key: "CONFIRMED", label: "Confirmed", count: null },
-  { key: "CANCELLED", label: "Cancelled", count: null },
-  { key: "REFUND_REQUEST", label: "Refund Requests", count: null },
-  { key: "AMENDMENT_REQUEST", label: "Amendment Requests", count: null },
+  { key: "ALL", label: "All Bookings" },
+  { key: "PENDING", label: "Pending" },
+  { key: "CONFIRMED", label: "Confirmed" },
+  { key: "COMPLETED", label: "Completed" },
+  { key: "CANCELLED", label: "Cancelled" },
+  { key: "REFUNDED", label: "Refunded" },
+  { key: "NO_SHOW", label: "No Show" },
 ];
 
 export default function BookingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [bookings, setBookings] = useState([]);
+  const [pagination, setPagination] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
 
-  // URL state
   const page = parseInt(searchParams.get("page") || "0", 10);
   const pageSize = parseInt(searchParams.get("pageSize") || String(DEFAULT_PAGE_SIZE), 10);
   const sortBy = searchParams.get("sortBy") || "NEW_BOOKINGS";
@@ -49,16 +42,43 @@ export default function BookingsPage() {
   const travelDateTo = searchParams.get("travelDateTo") || "";
   const activeTab = searchParams.get("tab") || "ALL";
 
-  // Local state for filters
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedStatuses, setSelectedStatuses] = useState(
-    statusFilters.length > 0 ? statusFilters : []
-  );
+  const [selectedStatuses, setSelectedStatuses] = useState(statusFilters.length > 0 ? statusFilters : []);
   const [dateFrom, setDateFrom] = useState(travelDateFrom);
   const [dateTo, setDateTo] = useState(travelDateTo);
 
-  // Update URL when filters change
+  const apiStatus = activeTab !== "ALL" ? activeTab : selectedStatuses.length === 1 ? selectedStatuses[0] : undefined;
+
+  const loadBookings = useCallback(async () => {
+    if (!getAuthToken()) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await fetchSupplierBookings({
+        page: page + 1,
+        limit: pageSize,
+        ...(apiStatus ? { status: apiStatus } : {}),
+      });
+      setBookings(result.bookings);
+      setPagination(result.pagination);
+    } catch (err) {
+      if (err.code === "AUTH_REQUIRED") return;
+      setError(err.response?.data?.message || err.message || "Failed to load bookings");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, pageSize, apiStatus]);
+
+  useEffect(() => {
+    loadBookings();
+  }, [loadBookings]);
+
   const updateFilters = useCallback(
     (updates) => {
       const params = new URLSearchParams(searchParams);
@@ -77,21 +97,16 @@ export default function BookingsPage() {
     [searchParams, setSearchParams]
   );
 
-  // Handle search submit
-  const handleSearch = () => {
-    updateFilters({ search: localSearch || null, page: 0 });
-  };
+  const handleSearch = () => updateFilters({ search: localSearch || null, page: 0 });
 
-  // Handle status toggle
   const toggleStatus = (status) => {
     const newStatuses = selectedStatuses.includes(status)
       ? selectedStatuses.filter((s) => s !== status)
       : [...selectedStatuses, status];
     setSelectedStatuses(newStatuses);
-    updateFilters({ status: newStatuses.length > 0 ? newStatuses : null, page: 0 });
+    updateFilters({ status: newStatuses.length > 0 ? newStatuses : null, tab: "ALL", page: 0 });
   };
 
-  // Handle date filter apply
   const applyDateFilter = () => {
     updateFilters({
       travelDateFrom: dateFrom || null,
@@ -100,7 +115,6 @@ export default function BookingsPage() {
     });
   };
 
-  // Handle tab click
   const handleTabClick = (tabKey) => {
     if (tabKey === "ALL") {
       setSelectedStatuses([]);
@@ -111,7 +125,6 @@ export default function BookingsPage() {
     }
   };
 
-  // Clear all filters
   const clearFilters = () => {
     setLocalSearch("");
     setSelectedStatuses([]);
@@ -120,16 +133,22 @@ export default function BookingsPage() {
     setSearchParams({});
   };
 
-  // Filter and sort data
-  const filteredData = useMemo(() => {
-    let data = [...MOCK_BOOKINGS];
-
-    // Apply status filter
-    if (selectedStatuses.length > 0) {
-      data = data.filter((b) => selectedStatuses.includes(b.status));
+  const handleStatusUpdate = useCallback(async (bookingId, status) => {
+    setUpdatingId(bookingId);
+    try {
+      await updateBookingStatus(bookingId, { status });
+      toast.success("Booking status updated");
+      await loadBookings();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update booking status");
+    } finally {
+      setUpdatingId(null);
     }
+  }, [loadBookings]);
 
-    // Apply search
+  const filteredData = useMemo(() => {
+    let data = [...bookings];
+
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       data = data.filter(
@@ -141,7 +160,6 @@ export default function BookingsPage() {
       );
     }
 
-    // Apply date range
     if (travelDateFrom) {
       const from = new Date(travelDateFrom);
       data = data.filter((b) => new Date(b.travelDate) >= from);
@@ -151,7 +169,6 @@ export default function BookingsPage() {
       data = data.filter((b) => new Date(b.travelDate) <= to);
     }
 
-    // Apply sorting
     data.sort((a, b) => {
       switch (sortBy) {
         case "OLDEST_FIRST":
@@ -171,23 +188,11 @@ export default function BookingsPage() {
     });
 
     return data;
-  }, [selectedStatuses, searchQuery, travelDateFrom, travelDateTo, sortBy]);
+  }, [bookings, searchQuery, travelDateFrom, travelDateTo, sortBy]);
 
-  // Paginate data
-  const totalItems = filteredData.length;
-  const totalPages = Math.ceil(totalItems / pageSize);
-  const paginatedData = filteredData.slice(page * pageSize, (page + 1) * pageSize);
+  const totalItems = pagination?.totalCount ?? filteredData.length;
+  const totalPages = pagination?.totalPages ?? (Math.ceil(filteredData.length / pageSize) || 1);
 
-  // Calculate tab counts
-  const tabCounts = useMemo(() => {
-    const counts = { ALL: MOCK_BOOKINGS.length };
-    Object.keys(BOOKING_STATUSES).forEach((status) => {
-      counts[status] = MOCK_BOOKINGS.filter((b) => b.status === status).length;
-    });
-    return counts;
-  }, []);
-
-  // Table columns
   const columns = useMemo(
     () => [
       {
@@ -207,10 +212,7 @@ export default function BookingsPage() {
           </div>
         ),
       },
-      {
-        accessorKey: "tourName",
-        header: "Tour",
-      },
+      { accessorKey: "tourName", header: "Tour" },
       {
         accessorKey: "travelDate",
         header: "Travel Date",
@@ -224,9 +226,7 @@ export default function BookingsPage() {
       {
         accessorKey: "travelers",
         header: "Travelers",
-        cell: ({ row }) => (
-          <span className="text-[#1e293b]">{row.original.travelers}</span>
-        ),
+        cell: ({ row }) => <span className="text-[#1e293b]">{row.original.travelers}</span>,
       },
       {
         accessorKey: "total",
@@ -243,7 +243,7 @@ export default function BookingsPage() {
         cell: ({ row }) => (
           <StatusBadge
             status={row.original.status}
-            label={BOOKING_STATUSES[row.original.status]?.label}
+            label={BOOKING_STATUSES[row.original.status]?.label || row.original.status}
           />
         ),
       },
@@ -251,48 +251,51 @@ export default function BookingsPage() {
         accessorKey: "paymentStatus",
         header: "Payment",
         cell: ({ row }) => (
-          <StatusBadge
-            status={row.original.paymentStatus}
-            label={row.original.paymentStatus}
-          />
+          <StatusBadge status={row.original.paymentStatus} label={row.original.paymentStatus} size="sm" />
         ),
       },
       {
         id: "actions",
-        header: "",
-        cell: () => (
-          <button className="text-[#64748b] hover:text-[#044b3b] transition-colors">
-            View
-          </button>
+        header: "Update",
+        cell: ({ row }) => (
+          <select
+            value=""
+            disabled={updatingId === row.original.id}
+            onChange={(e) => {
+              if (e.target.value) handleStatusUpdate(row.original.id, e.target.value);
+            }}
+            className="px-2 py-1.5 border border-[#eaeaea] rounded-lg text-xs text-[#64748b] bg-white focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20"
+          >
+            <option value="">Set status...</option>
+            {SUPPLIER_BOOKING_STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         ),
       },
     ],
-    []
+    [updatingId, handleStatusUpdate]
   );
 
   return (
     <div className="p-4 md:p-6">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-[#1e293b]">Bookings</h1>
-          <p className="text-sm text-[#64748b] mt-1">
-            Manage and track all customer bookings
-          </p>
+          <p className="text-sm text-[#64748b] mt-1">Manage and track customer bookings for your tours</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm font-medium text-[#64748b] hover:bg-[#f8fafc] hover:text-[#1e293b] transition-colors">
-            <Download size={16} />
-            <span className="hidden sm:inline">Export</span>
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-[#044b3b] text-white rounded-lg text-sm font-medium hover:bg-[#033629] transition-colors">
-            <Plus size={16} />
-            <span className="hidden sm:inline">Create Booking</span>
-          </button>
-        </div>
+        <button
+          onClick={loadBookings}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm font-medium text-[#64748b] hover:bg-[#f8fafc] hover:text-[#1e293b] transition-colors disabled:opacity-50"
+        >
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+          Refresh
+        </button>
       </div>
 
-      {/* Quick Filter Tabs */}
       <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-1">
         {QUICK_FILTERS.map((tab) => (
           <button
@@ -305,25 +308,12 @@ export default function BookingsPage() {
             }`}
           >
             {tab.label}
-            {tabCounts[tab.key] !== null && (
-              <span
-                className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
-                  activeTab === tab.key
-                    ? "bg-white/20 text-white"
-                    : "bg-[#f8fafc] text-[#64748b]"
-                }`}
-              >
-                {tabCounts[tab.key] || 0}
-              </span>
-            )}
           </button>
         ))}
       </div>
 
-      {/* Filters Bar */}
       <div className="bg-white rounded-lg border border-[#eaeaea] p-4 mb-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
-          {/* Search */}
           <div className="relative flex-1 min-w-[240px]">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9e9e9e]" />
             <input
@@ -336,7 +326,6 @@ export default function BookingsPage() {
             />
           </div>
 
-          {/* Status Multi-Select Dropdown */}
           <div className="relative">
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -356,15 +345,11 @@ export default function BookingsPage() {
               <ChevronDown size={14} />
             </button>
 
-            {/* Status Dropdown */}
             {showFilters && (
               <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-[#eaeaea] rounded-lg shadow-lg z-50 p-2">
                 <div className="flex items-center justify-between px-2 py-1 border-b border-[#eaeaea] mb-1">
                   <span className="text-xs font-semibold text-[#64748b]">Filter by Status</span>
-                  <button
-                    onClick={() => setShowFilters(false)}
-                    className="text-[#9e9e9e] hover:text-[#1e293b]"
-                  >
+                  <button onClick={() => setShowFilters(false)} className="text-[#9e9e9e] hover:text-[#1e293b]">
                     <X size={14} />
                   </button>
                 </div>
@@ -386,27 +371,20 @@ export default function BookingsPage() {
             )}
           </div>
 
-          {/* Date Range */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9e9e9e]" />
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="pl-9 pr-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b]"
-              />
-            </div>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="px-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20"
+            />
             <span className="text-[#9e9e9e]">to</span>
-            <div className="relative">
-              <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9e9e9e]" />
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="pl-9 pr-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b]"
-              />
-            </div>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="px-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20"
+            />
             <button
               onClick={applyDateFilter}
               className="px-3 py-2.5 bg-[#044b3b] text-white rounded-lg text-sm font-medium hover:bg-[#033629] transition-colors"
@@ -415,11 +393,10 @@ export default function BookingsPage() {
             </button>
           </div>
 
-          {/* Sort */}
           <select
             value={sortBy}
             onChange={(e) => updateFilters({ sortBy: e.target.value })}
-            className="px-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] bg-white focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b]"
+            className="px-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] bg-white focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20"
           >
             {BOOKING_SORT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -428,7 +405,6 @@ export default function BookingsPage() {
             ))}
           </select>
 
-          {/* Clear Filters */}
           {(searchQuery || selectedStatuses.length > 0 || travelDateFrom || travelDateTo) && (
             <button
               onClick={clearFilters}
@@ -441,60 +417,29 @@ export default function BookingsPage() {
         </div>
       </div>
 
-      {/* Active Filters Display */}
-      {(selectedStatuses.length > 0 || travelDateFrom || travelDateTo || searchQuery) && (
-        <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <span className="text-xs text-[#64748b]">Active filters:</span>
-          {searchQuery && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#f8fafc] border border-[#eaeaea] rounded-md text-xs text-[#1e293b]">
-              Search: {searchQuery}
-              <button onClick={() => { setLocalSearch(""); updateFilters({ search: null }); }}>
-                <X size={12} className="text-[#9e9e9e] hover:text-[#dc3545]" />
-              </button>
-            </span>
-          )}
-          {selectedStatuses.map((status) => (
-            <span
-              key={status}
-              className="inline-flex items-center gap-1 px-2 py-1 bg-[#f8fafc] border border-[#eaeaea] rounded-md text-xs text-[#1e293b]"
-            >
-              {BOOKING_STATUSES[status]?.label}
-              <button onClick={() => toggleStatus(status)}>
-                <X size={12} className="text-[#9e9e9e] hover:text-[#dc3545]" />
-              </button>
-            </span>
-          ))}
-          {travelDateFrom && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#f8fafc] border border-[#eaeaea] rounded-md text-xs text-[#1e293b]">
-              From: {formatDate(travelDateFrom)}
-              <button onClick={() => { setDateFrom(""); updateFilters({ travelDateFrom: null }); }}>
-                <X size={12} className="text-[#9e9e9e] hover:text-[#dc3545]" />
-              </button>
-            </span>
-          )}
-          {travelDateTo && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#f8fafc] border border-[#eaeaea] rounded-md text-xs text-[#1e293b]">
-              To: {formatDate(travelDateTo)}
-              <button onClick={() => { setDateTo(""); updateFilters({ travelDateTo: null }); }}>
-                <X size={12} className="text-[#9e9e9e] hover:text-[#dc3545]" />
-              </button>
-            </span>
-          )}
+      {error && (
+        <div className="mb-4 p-4 bg-[#ffebeb] border border-[#fecaca] rounded-lg text-sm text-[#991b1b]">
+          {error}
         </div>
       )}
 
-      {/* Data Table */}
-      <DataTable
-        data={paginatedData}
-        columns={columns}
-        pageSize={pageSize}
-        pageSizeOptions={PAGE_SIZE_OPTIONS}
-        currentPage={page}
-        totalPages={totalPages}
-        totalItems={totalItems}
-        onPageChange={(newPage) => updateFilters({ page: newPage })}
-        onPageSizeChange={(newSize) => updateFilters({ pageSize: newSize, page: 0 })}
-      />
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 size={28} className="animate-spin text-[#044b3b]" />
+        </div>
+      ) : (
+        <DataTable
+          data={filteredData}
+          columns={columns}
+          pageSize={pageSize}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          onPageChange={(newPage) => updateFilters({ page: newPage })}
+          onPageSizeChange={(newSize) => updateFilters({ pageSize: newSize, page: 0 })}
+        />
+      )}
     </div>
   );
 }

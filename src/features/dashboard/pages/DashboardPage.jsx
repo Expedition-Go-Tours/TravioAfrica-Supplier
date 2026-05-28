@@ -28,13 +28,12 @@ import {
 } from "lucide-react";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import api from "@/lib/axios";
+import { fetchSupplierDashboard } from "../api";
 import { getAuthToken } from "@/stores/authStore";
 
 const BOOKING_STATUS_COLORS = {
   CONFIRMED: "#00d67f",
   PENDING: "#ffc400",
-  AWAITING_CONFIRMATION: "#ffc400",
   CANCELLED: "#dc3545",
   REFUNDED: "#298dff",
   COMPLETED: "#00d67f",
@@ -102,10 +101,9 @@ export default function DashboardPage() {
 
     setLoading(true);
     setError(null);
-    api
-      .get("/suppliers/dashboard")
-      .then((res) => {
-        setDashboardData(res.data?.data);
+    fetchSupplierDashboard()
+      .then((data) => {
+        setDashboardData(data);
       })
       .catch((err) => {
         if (err.code === "AUTH_REQUIRED") {
@@ -249,7 +247,7 @@ export default function DashboardPage() {
           { label: "Create New Tour", count: "+", route: "/products/build/new/type", color: "text-[#044b3b]", bg: "bg-[#f0fdf4]" },
           { label: "Manage Tours", count: totalTours, route: "/products", color: "text-[#1d4ed8]", bg: "bg-[#eff6ff]" },
           { label: "View Bookings", count: activeBookings, route: "/bookings", color: "text-[#f97316]", bg: "bg-[#fff7ed]" },
-          { label: "Performance", count: "", route: "/performance", color: "text-[#044b3b]", bg: "bg-[#f0fdf4]" },
+          { label: "View Finance", count: "", route: "/finance", color: "text-[#044b3b]", bg: "bg-[#f0fdf4]" },
         ].map((item) => (
           <button
             key={item.label}

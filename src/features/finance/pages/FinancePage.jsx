@@ -1,139 +1,255 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   DollarSign,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Download,
-  Calendar,
-  Search,
-  ChevronDown,
-  CreditCard,
   Wallet,
+  CreditCard,
+  Loader2,
   RefreshCw,
-  AlertCircle,
+  Plus,
+  Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DataTable from "@/components/shared/DataTable";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import {
+  createPayoutMethod,
+  deletePayoutMethod,
+  fetchEarnings,
+  fetchPayoutMethods,
+  fetchPayouts,
+} from "../api";
+import { getAuthToken } from "@/stores/authStore";
 
 const TABS = [
-  { key: "transactions", label: "Transactions", icon: CreditCard },
-  { key: "payouts", label: "Payouts", icon: Wallet },
-  { key: "refunds", label: "Refunds", icon: RefreshCw },
   { key: "earnings", label: "Earnings", icon: DollarSign },
+  { key: "payouts", label: "Payouts", icon: Wallet },
+  { key: "methods", label: "Payout Methods", icon: CreditCard },
 ];
 
-// Mock transaction data
-const MOCK_TRANSACTIONS = [
-  { id: "TXN-001", date: "2026-05-18", type: "booking", description: "Booking BK-2026-0001 - Serengeti Safari", amount: 2400, status: "PAID", customer: "John Smith", tour: "Serengeti Safari Adventure" },
-  { id: "TXN-002", date: "2026-05-17", type: "booking", description: "Booking BK-2026-0002 - Zanzibar Beach", amount: 1800, status: "PENDING", customer: "Sarah Johnson", tour: "Zanzibar Beach Escape" },
-  { id: "TXN-003", date: "2026-05-16", type: "refund", description: "Refund for BK-2026-0004 - Masai Mara", amount: -1950, status: "REFUNDED", customer: "Emily Davis", tour: "Masai Mara Wildlife Tour" },
-  { id: "TXN-004", date: "2026-05-15", type: "commission", description: "Platform commission - BK-2026-0001", amount: -360, status: "PAID", customer: "—", tour: "Serengeti Safari Adventure" },
-  { id: "TXN-005", date: "2026-05-14", type: "booking", description: "Booking BK-2026-0005 - Victoria Falls", amount: 2800, status: "PAID", customer: "Robert Wilson", tour: "Victoria Falls Expedition" },
-  { id: "TXN-006", date: "2026-05-13", type: "payout", description: "Supplier payout - Serengeti Tours Ltd.", amount: -2040, status: "PAID", customer: "—", tour: "Multiple" },
-  { id: "TXN-007", date: "2026-05-12", type: "booking", description: "Booking BK-2026-0007 - Ngorongoro", amount: 1600, status: "FAILED", customer: "David Martinez", tour: "Ngorongoro Crater Tour" },
-  { id: "TXN-008", date: "2026-05-11", type: "commission", description: "Platform commission - BK-2026-0005", amount: -420, status: "PAID", customer: "—", tour: "Victoria Falls Expedition" },
-];
-
-const MOCK_PAYOUTS = [
-  { id: "PO-001", supplier: "Serengeti Tours Ltd.", amount: 4200, status: "PAID", date: "2026-05-15", method: "Bank Transfer", account: "****4521" },
-  { id: "PO-002", supplier: "Zanzibar Adventures", amount: 1800, status: "PENDING", date: "2026-05-14", method: "Stripe", account: "****7890" },
-  { id: "PO-003", supplier: "Kili Expeditions", amount: 3200, status: "PAID", date: "2026-05-10", method: "Bank Transfer", account: "****1234" },
-  { id: "PO-004", supplier: "Mara Safaris", amount: 0, status: "PENDING", date: "2026-05-18", method: "Stripe", account: "****5678" },
-];
-
-const MOCK_REFUNDS = [
-  { id: "REF-001", bookingId: "BK-2026-0004", customer: "Emily Davis", amount: 1950, status: "REFUNDED", date: "2026-05-16", reason: "Tour cancelled by customer", processedBy: "Admin" },
-  { id: "REF-002", bookingId: "BK-2026-0007", customer: "David Martinez", amount: 1600, status: "REFUND_REQUEST", date: "2026-05-14", reason: "Payment failed, duplicate charge", processedBy: "—" },
-  { id: "REF-003", bookingId: "BK-2026-0010", customer: "Maria Garcia", amount: 9600, status: "REFUND_REJECTED", date: "2026-05-12", reason: "Booking terms violation", processedBy: "Admin" },
+const METHOD_TYPES = [
+  { value: "BANK_TRANSFER", label: "Bank Transfer" },
+  { value: "MOBILE_MONEY", label: "Mobile Money" },
+  { value: "PAYPAL", label: "PayPal" },
 ];
 
 export default function FinancePage() {
-  const [activeTab, setActiveTab] = useState("transactions");
-  const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState("earnings");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [earnings, setEarnings] = useState([]);
+  const [earningsSummary, setEarningsSummary] = useState({});
+  const [payouts, setPayouts] = useState([]);
+  const [payoutsSummary, setPayoutsSummary] = useState({});
+  const [methods, setMethods] = useState([]);
+  const [showMethodForm, setShowMethodForm] = useState(false);
+  const [methodForm, setMethodForm] = useState({
+    type: "BANK_TRANSFER",
+    accountName: "",
+    accountNumber: "",
+    bankName: "",
+    bankCountry: "",
+    mobileProvider: "",
+    mobileNumber: "",
+    paypalEmail: "",
+    currency: "USD",
+  });
+  const [savingMethod, setSavingMethod] = useState(false);
 
-  // Calculate summary stats
-  const totalRevenue = MOCK_TRANSACTIONS.filter((t) => t.type === "booking" && t.status === "PAID").reduce((sum, t) => sum + t.amount, 0);
-  const totalRefunds = MOCK_TRANSACTIONS.filter((t) => t.type === "refund").reduce((sum, t) => sum + Math.abs(t.amount), 0);
-  const totalCommissions = Math.abs(MOCK_TRANSACTIONS.filter((t) => t.type === "commission").reduce((sum, t) => sum + t.amount, 0));
-  const netRevenue = totalRevenue - totalRefunds - totalCommissions;
+  const loadData = useCallback(async () => {
+    if (!getAuthToken()) {
+      setLoading(false);
+      return;
+    }
 
-  const transactionColumns = [
-    { accessorKey: "id", header: "Transaction ID", cell: ({ row }) => <span className="font-mono text-xs text-[#044b3b]">{row.original.id}</span> },
-    { accessorKey: "date", header: "Date", cell: ({ row }) => <span className="text-[#1e293b]">{formatDate(row.original.date)}</span> },
-    { accessorKey: "type", header: "Type", cell: ({ row }) => (
-      <span className={`capitalize text-sm font-medium ${
-        row.original.type === "booking" ? "text-[#00d67f]" :
-        row.original.type === "refund" ? "text-[#dc3545]" :
-        row.original.type === "commission" ? "text-[#ffc400]" :
-        "text-[#044b3b]"
-      }`}>{row.original.type}</span>
-    )},
-    { accessorKey: "description", header: "Description", cell: ({ row }) => <span className="text-[#1e293b] text-sm">{row.original.description}</span> },
-    { accessorKey: "amount", header: "Amount", cell: ({ row }) => (
-      <span className={`font-semibold ${row.original.amount >= 0 ? "text-[#00d67f]" : "text-[#dc3545]"}`}>
-        {row.original.amount >= 0 ? "+" : ""}{formatCurrency(Math.abs(row.original.amount))}
-      </span>
-    )},
-    { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} label={row.original.status} size="sm" /> },
-    { accessorKey: "customer", header: "Customer", cell: ({ row }) => <span className="text-sm text-[#64748b]">{row.original.customer}</span> },
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (activeTab === "earnings") {
+        const result = await fetchEarnings({ limit: 50 });
+        setEarnings(result.earnings);
+        setEarningsSummary(result.summary);
+      } else if (activeTab === "payouts") {
+        const result = await fetchPayouts({ limit: 50 });
+        setPayouts(result.payouts);
+        setPayoutsSummary(result.summary);
+      } else {
+        const result = await fetchPayoutMethods();
+        setMethods(result);
+      }
+    } catch (err) {
+      if (err.code === "AUTH_REQUIRED") return;
+      setError(err.response?.data?.message || err.message || "Failed to load finance data");
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleAddMethod = async (e) => {
+    e.preventDefault();
+    setSavingMethod(true);
+
+    try {
+      const payload = { type: methodForm.type, currency: methodForm.currency };
+
+      if (methodForm.type === "BANK_TRANSFER") {
+        Object.assign(payload, {
+          accountName: methodForm.accountName,
+          accountNumber: methodForm.accountNumber,
+          bankName: methodForm.bankName,
+          bankCountry: methodForm.bankCountry,
+        });
+      } else if (methodForm.type === "MOBILE_MONEY") {
+        Object.assign(payload, {
+          mobileProvider: methodForm.mobileProvider,
+          mobileNumber: methodForm.mobileNumber,
+        });
+      } else {
+        payload.paypalEmail = methodForm.paypalEmail;
+      }
+
+      await createPayoutMethod(payload);
+      toast.success("Payout method added");
+      setShowMethodForm(false);
+      setMethodForm({
+        type: "BANK_TRANSFER",
+        accountName: "",
+        accountNumber: "",
+        bankName: "",
+        bankCountry: "",
+        mobileProvider: "",
+        mobileNumber: "",
+        paypalEmail: "",
+        currency: "USD",
+      });
+      await loadData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to add payout method");
+    } finally {
+      setSavingMethod(false);
+    }
+  };
+
+  const handleDeleteMethod = async (id) => {
+    if (!confirm("Delete this payout method?")) return;
+
+    try {
+      await deletePayoutMethod(id);
+      toast.success("Payout method deleted");
+      await loadData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete payout method");
+    }
+  };
+
+  const earningsColumns = [
+    {
+      accessorKey: "bookingNumber",
+      header: "Booking",
+      cell: ({ row }) => <span className="font-mono text-xs text-[#044b3b]">{row.original.bookingNumber}</span>,
+    },
+    { accessorKey: "tour", header: "Tour" },
+    { accessorKey: "customer", header: "Customer" },
+    {
+      accessorKey: "travelDate",
+      header: "Travel Date",
+      cell: ({ row }) => formatDate(row.original.travelDate),
+    },
+    {
+      accessorKey: "supplierPayout",
+      header: "Your Payout",
+      cell: ({ row }) => (
+        <span className="font-semibold text-[#00d67f]">
+          {formatCurrency(row.original.supplierPayout, row.original.currency)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "commissionAmount",
+      header: "Commission",
+      cell: ({ row }) => formatCurrency(row.original.commissionAmount, row.original.currency),
+    },
+    {
+      accessorKey: "total",
+      header: "Booking Total",
+      cell: ({ row }) => formatCurrency(row.original.total, row.original.currency),
+    },
   ];
 
   const payoutColumns = [
-    { accessorKey: "id", header: "Payout ID", cell: ({ row }) => <span className="font-mono text-xs text-[#044b3b]">{row.original.id}</span> },
-    { accessorKey: "supplier", header: "Supplier", cell: ({ row }) => <span className="font-medium text-[#1e293b]">{row.original.supplier}</span> },
-    { accessorKey: "amount", header: "Amount", cell: ({ row }) => <span className="font-semibold text-[#1e293b]">{formatCurrency(row.original.amount)}</span> },
-    { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} label={row.original.status} size="sm" /> },
-    { accessorKey: "date", header: "Date", cell: ({ row }) => <span className="text-[#1e293b]">{formatDate(row.original.date)}</span> },
-    { accessorKey: "method", header: "Method", cell: ({ row }) => <span className="text-sm text-[#64748b]">{row.original.method}</span> },
-    { accessorKey: "account", header: "Account", cell: ({ row }) => <span className="text-sm font-mono text-[#64748b]">{row.original.account}</span> },
+    {
+      accessorKey: "id",
+      header: "Payout ID",
+      cell: ({ row }) => <span className="font-mono text-xs text-[#044b3b]">{row.original.id.slice(0, 8)}...</span>,
+    },
+    { accessorKey: "bookingNumber", header: "Booking" },
+    { accessorKey: "tour", header: "Tour" },
+    {
+      accessorKey: "amount",
+      header: "Amount",
+      cell: ({ row }) => (
+        <span className="font-semibold">{formatCurrency(row.original.amount, row.original.currency)}</span>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => <StatusBadge status={row.original.status} label={row.original.status} size="sm" />,
+    },
+    {
+      accessorKey: "date",
+      header: "Date",
+      cell: ({ row }) => formatDate(row.original.date),
+    },
+    { accessorKey: "method", header: "Method" },
   ];
 
-  const refundColumns = [
-    { accessorKey: "id", header: "Refund ID", cell: ({ row }) => <span className="font-mono text-xs text-[#044b3b]">{row.original.id}</span> },
-    { accessorKey: "bookingId", header: "Booking", cell: ({ row }) => <span className="text-sm text-[#1e293b]">{row.original.bookingId}</span> },
-    { accessorKey: "customer", header: "Customer", cell: ({ row }) => <span className="font-medium text-[#1e293b]">{row.original.customer}</span> },
-    { accessorKey: "amount", header: "Amount", cell: ({ row }) => <span className="font-semibold text-[#dc3545]">{formatCurrency(row.original.amount)}</span> },
-    { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} label={row.original.status} size="sm" /> },
-    { accessorKey: "date", header: "Date", cell: ({ row }) => <span className="text-[#1e293b]">{formatDate(row.original.date)}</span> },
-    { accessorKey: "reason", header: "Reason", cell: ({ row }) => <span className="text-sm text-[#64748b]">{row.original.reason}</span> },
-  ];
+  const summaryStats =
+    activeTab === "earnings"
+      ? [
+          { label: "Total Earnings", value: formatCurrency(Number(earningsSummary.totalEarnings) || 0) },
+          { label: "Total Revenue", value: formatCurrency(Number(earningsSummary.totalRevenue) || 0) },
+          { label: "Commission Paid", value: formatCurrency(Number(earningsSummary.totalCommission) || 0) },
+          { label: "Confirmed Bookings", value: earningsSummary.totalBookings || 0 },
+        ]
+      : activeTab === "payouts"
+        ? [
+            { label: "Total Paid Out", value: formatCurrency(Number(payoutsSummary.totalEarned) || 0) },
+            { label: "Payout Records", value: payoutsSummary.totalPayouts || 0 },
+          ]
+        : [{ label: "Payout Methods", value: methods.length }];
 
   return (
     <div className="p-4 md:p-6">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-[#1e293b]">Finance</h1>
-          <p className="text-sm text-[#64748b] mt-1">Manage payments, payouts, and earnings</p>
+          <p className="text-sm text-[#64748b] mt-1">Track earnings, payouts, and payment methods</p>
         </div>
-        <button className="flex items-center justify-center gap-2 px-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm font-medium text-[#64748b] hover:bg-[#f8fafc] hover:text-[#1e293b] transition-colors">
-          <Download size={16} />
-          Export Report
+        <button
+          onClick={loadData}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm font-medium text-[#64748b] hover:bg-[#f8fafc] transition-colors disabled:opacity-50"
+        >
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+          Refresh
         </button>
       </div>
 
-      {/* Summary Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {[
-          { label: "Total Revenue", value: formatCurrency(totalRevenue), icon: ArrowUpRight, color: "text-[#00d67f]", bg: "bg-[#ebfcf5]" },
-          { label: "Total Refunds", value: formatCurrency(totalRefunds), icon: ArrowDownLeft, color: "text-[#dc3545]", bg: "bg-[#ffebeb]" },
-          { label: "Commissions", value: formatCurrency(totalCommissions), icon: AlertCircle, color: "text-[#ffc400]", bg: "bg-[#fffbeb]" },
-          { label: "Net Revenue", value: formatCurrency(netRevenue), icon: DollarSign, color: "text-[#044b3b]", bg: "bg-[#f0fdf4]" },
-        ].map((stat) => (
+        {summaryStats.map((stat) => (
           <div key={stat.label} className="bg-white rounded-lg border border-[#eaeaea] p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className={`w-10 h-10 rounded-lg ${stat.bg} flex items-center justify-center`}>
-                <stat.icon size={20} className={stat.color} />
-              </div>
-            </div>
             <p className="text-2xl font-bold text-[#1e293b]">{stat.value}</p>
             <p className="text-sm text-[#64748b] mt-1">{stat.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-1 mb-6 overflow-x-auto pb-1">
         {TABS.map((tab) => {
           const Icon = tab.icon;
@@ -154,97 +270,154 @@ export default function FinancePage() {
         })}
       </div>
 
-      {/* Search & Filter */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9e9e9e]" />
-          <input
-            type="text"
-            placeholder={`Search ${activeTab}...`}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b]"
-          />
+      {error && (
+        <div className="mb-4 p-4 bg-[#ffebeb] border border-[#fecaca] rounded-lg text-sm text-[#991b1b]">
+          {error}
         </div>
-      </div>
-
-      {/* Tab Content */}
-      {activeTab === "transactions" && (
-        <DataTable
-          data={MOCK_TRANSACTIONS}
-          columns={transactionColumns}
-          pageSize={10}
-          currentPage={0}
-          totalPages={1}
-          totalItems={MOCK_TRANSACTIONS.length}
-        />
       )}
 
-      {activeTab === "payouts" && (
-        <DataTable
-          data={MOCK_PAYOUTS}
-          columns={payoutColumns}
-          pageSize={10}
-          currentPage={0}
-          totalPages={1}
-          totalItems={MOCK_PAYOUTS.length}
-        />
-      )}
-
-      {activeTab === "refunds" && (
-        <DataTable
-          data={MOCK_REFUNDS}
-          columns={refundColumns}
-          pageSize={10}
-          currentPage={0}
-          totalPages={1}
-          totalItems={MOCK_REFUNDS.length}
-        />
-      )}
-
-      {activeTab === "earnings" && (
-        <div className="bg-white rounded-lg border border-[#eaeaea] p-4 md:p-6">
-          <h3 className="text-lg font-semibold text-[#1e293b] mb-4">Earnings Breakdown</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="text-sm font-medium text-[#64748b] mb-3">By Tour</h4>
-              <div className="space-y-3">
-                {[
-                  { tour: "Serengeti Safari Adventure", earnings: 4200, bookings: 7 },
-                  { tour: "Victoria Falls Expedition", earnings: 3640, bookings: 4 },
-                  { tour: "Zanzibar Beach Escape", earnings: 1800, bookings: 2 },
-                  { tour: "Kilimanjaro Trek", earnings: 3200, bookings: 1 },
-                ].map((item) => (
-                  <div key={item.tour} className="flex items-center justify-between p-3 bg-[#f8fafc] rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-[#1e293b]">{item.tour}</p>
-                      <p className="text-xs text-[#64748b]">{item.bookings} bookings</p>
-                    </div>
-                    <span className="text-sm font-bold text-[#044b3b]">{formatCurrency(item.earnings)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-[#64748b] mb-3">By Supplier</h4>
-              <div className="space-y-3">
-                {[
-                  { supplier: "Serengeti Tours Ltd.", earnings: 4200, tours: 1 },
-                  { supplier: "Victoria Tours", earnings: 3640, tours: 1 },
-                  { supplier: "Zanzibar Adventures", earnings: 1800, tours: 1 },
-                  { supplier: "Kili Expeditions", earnings: 3200, tours: 1 },
-                ].map((item) => (
-                  <div key={item.supplier} className="flex items-center justify-between p-3 bg-[#f8fafc] rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-[#1e293b]">{item.supplier}</p>
-                      <p className="text-xs text-[#64748b]">{item.tours} tour(s)</p>
-                    </div>
-                    <span className="text-sm font-bold text-[#044b3b]">{formatCurrency(item.earnings)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 size={28} className="animate-spin text-[#044b3b]" />
+        </div>
+      ) : activeTab === "earnings" ? (
+        <DataTable data={earnings} columns={earningsColumns} pageSize={25} />
+      ) : activeTab === "payouts" ? (
+        <DataTable data={payouts} columns={payoutColumns} pageSize={25} />
+      ) : (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <button
+              onClick={() => setShowMethodForm((value) => !value)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#044b3b] text-white rounded-lg text-sm font-medium hover:bg-[#033629] transition-colors"
+            >
+              <Plus size={16} />
+              Add Payout Method
+            </button>
           </div>
+
+          {showMethodForm && (
+            <form onSubmit={handleAddMethod} className="bg-white border border-[#eaeaea] rounded-lg p-5 space-y-4">
+              <h3 className="text-sm font-semibold text-[#1e293b]">New Payout Method</h3>
+              <select
+                value={methodForm.type}
+                onChange={(e) => setMethodForm((prev) => ({ ...prev, type: e.target.value }))}
+                className="w-full px-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm"
+              >
+                {METHOD_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+
+              {methodForm.type === "BANK_TRANSFER" && (
+                <>
+                  <input
+                    placeholder="Account name"
+                    value={methodForm.accountName}
+                    onChange={(e) => setMethodForm((prev) => ({ ...prev, accountName: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm"
+                    required
+                  />
+                  <input
+                    placeholder="Account number"
+                    value={methodForm.accountNumber}
+                    onChange={(e) => setMethodForm((prev) => ({ ...prev, accountNumber: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm"
+                    required
+                  />
+                  <input
+                    placeholder="Bank name"
+                    value={methodForm.bankName}
+                    onChange={(e) => setMethodForm((prev) => ({ ...prev, bankName: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm"
+                    required
+                  />
+                  <input
+                    placeholder="Bank country code (e.g. GH, NG, US)"
+                    value={methodForm.bankCountry}
+                    onChange={(e) => setMethodForm((prev) => ({ ...prev, bankCountry: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm"
+                    required
+                  />
+                </>
+              )}
+
+              {methodForm.type === "MOBILE_MONEY" && (
+                <>
+                  <input
+                    placeholder="Mobile provider (e.g. MTN, Orange)"
+                    value={methodForm.mobileProvider}
+                    onChange={(e) => setMethodForm((prev) => ({ ...prev, mobileProvider: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm"
+                    required
+                  />
+                  <input
+                    placeholder="Mobile number"
+                    value={methodForm.mobileNumber}
+                    onChange={(e) => setMethodForm((prev) => ({ ...prev, mobileNumber: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm"
+                    required
+                  />
+                </>
+              )}
+
+              {methodForm.type === "PAYPAL" && (
+                <input
+                  type="email"
+                  placeholder="PayPal email"
+                  value={methodForm.paypalEmail}
+                  onChange={(e) => setMethodForm((prev) => ({ ...prev, paypalEmail: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm"
+                  required
+                />
+              )}
+
+              <button
+                type="submit"
+                disabled={savingMethod}
+                className="px-4 py-2.5 bg-[#044b3b] text-white rounded-lg text-sm font-medium hover:bg-[#033629] disabled:opacity-50"
+              >
+                {savingMethod ? "Saving..." : "Save Method"}
+              </button>
+            </form>
+          )}
+
+          {methods.length === 0 ? (
+            <div className="text-center py-12 bg-white border border-[#eaeaea] rounded-lg">
+              <CreditCard size={32} className="mx-auto text-[#9e9e9e] mb-3" />
+              <p className="text-sm text-[#64748b]">No payout methods yet. Add one to receive payouts.</p>
+            </div>
+          ) : (
+            methods.map((method) => (
+              <div
+                key={method.id}
+                className="flex items-center justify-between p-4 bg-white border border-[#eaeaea] rounded-lg"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-[#1e293b]">
+                    {method.type.replace(/_/g, " ")}
+                    {method.isDefault && (
+                      <span className="ml-2 text-xs px-2 py-0.5 bg-[#f0fdf4] text-[#044b3b] rounded-full">
+                        Default
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-[#64748b] mt-1">
+                    {method.accountName || method.mobileProvider || method.paypalEmail || "—"}
+                    {method.verified ? " · Verified" : " · Pending verification"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleDeleteMethod(method.id)}
+                  className="p-2 text-[#64748b] hover:text-[#dc3545] hover:bg-[#ffebeb] rounded-lg"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))
+          )}
         </div>
       )}
     </div>

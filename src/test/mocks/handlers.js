@@ -91,6 +91,41 @@ export const handlers = [
   }),
 
   // Bookings endpoints
+  http.get(`${API_BASE_URL}/bookings/supplier/bookings`, ({ request }) => {
+    const url = new URL(request.url);
+    const status = url.searchParams.get("status");
+
+    let filteredBookings = mockBookings;
+    if (status) {
+      filteredBookings = mockBookings.filter((b) => b.status === status);
+    }
+
+    return HttpResponse.json({
+      status: "success",
+      data: {
+        bookings: filteredBookings.map((b) => ({
+          id: b.id,
+          bookingNumber: b.bookingNumber,
+          selectedDate: b.travelDate,
+          createdAt: b.bookingDate,
+          travelers: { adults: b.travelers },
+          total: b.total,
+          status: b.status,
+          paymentStatus: b.paymentStatus,
+          currency: b.currency,
+          customer: { name: b.customerName, email: b.customerEmail },
+          tour: { title: b.tourName },
+        })),
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalCount: filteredBookings.length,
+          limit: 25,
+        },
+      },
+    });
+  }),
+
   http.get(`${API_BASE_URL}/bookings`, ({ request }) => {
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
