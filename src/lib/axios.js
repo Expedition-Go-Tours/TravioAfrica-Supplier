@@ -1,9 +1,19 @@
 import axios from "axios";
 import config from "@/config";
 import { retryWithBackoff, isRetryableError, handleApiError } from "./errorHandler";
-import { useAuthStore } from "@/stores/authStore";
+import { useAuthStore, getAuthToken } from "@/stores/authStore";
 
 const FALLBACK_BASE_URL = "https://expedition-go-backend-v2.onrender.com/api";
+
+const AUTH_REQUIRED_PREFIXES = [
+  "/suppliers",
+  "/tours/supplier",
+  "/bookings",
+  "/notifications",
+  "/admin",
+  "/reviews",
+  "/payout",
+];
 
 const api = axios.create({
   baseURL: config.api.baseURL || FALLBACK_BASE_URL,
@@ -11,23 +21,75 @@ const api = axios.create({
   withCredentials: true, // Required: send & accept cookies on every request
 });
 
+function getRequestAuthorization(headers) {
+  if (!headers) return null;
+  if (typeof headers.get === "function") {
+    return headers.get("Authorization") || headers.get("authorization");
+  }
+  return headers.Authorization || headers.authorization || null;
+}
+
+function setRequestAuthorization(headers, value) {
+  if (typeof headers.set === "function") {
+    headers.set("Authorization", value);
+    return headers;
+  }
+  headers.Authorization = value;
+  return headers;
+}
+
+function requiresAuth(requestConfig) {
+  if (requestConfig.skipAuthGuard) {
+    return false;
+  }
+
+  const url = (requestConfig.url || "").split("?")[0];
+  if (url === "/users/signup" || url.endsWith("/users/signup")) {
+    return false;
+  }
+
+  if (AUTH_REQUIRED_PREFIXES.some((prefix) => url.startsWith(prefix))) {
+    return true;
+  }
+
+  const method = (requestConfig.method || "get").toLowerCase();
+  if (/^\/tours(\/|$)/.test(url) && method !== "get") {
+    return true;
+  }
+
+  return false;
+}
+
+function createAuthRequiredError() {
+  const error = new axios.CanceledError("Authentication required");
+  error.code = "AUTH_REQUIRED";
+  return error;
+}
+
 // Request interceptor to attach JWT token
 api.interceptors.request.use(
   (requestConfig) => {
-    const token = localStorage.getItem("auth_token");
-    if (token && !requestConfig.headers.Authorization) {
-      requestConfig.headers.Authorization = `Bearer ${token}`;
+    const token = getAuthToken();
+    const headers = requestConfig.headers ?? {};
+
+    if (token && !getRequestAuthorization(headers)) {
+      requestConfig.headers = setRequestAuthorization(headers, `Bearer ${token}`);
     }
-    
+
+    const authorization = getRequestAuthorization(requestConfig.headers ?? headers);
+    if (requiresAuth(requestConfig) && !authorization) {
+      return Promise.reject(createAuthRequiredError());
+    }
+
     // Log requests in development
     if (config.isDevelopment() && config.monitoring.debugMode) {
-      console.log('🌐 API Request:', {
+      console.log("🌐 API Request:", {
         method: requestConfig.method?.toUpperCase(),
         url: requestConfig.url,
         data: requestConfig.data,
       });
     }
-    
+
     return requestConfig;
   },
   (error) => {
@@ -52,9 +114,14 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Blocked locally — never hit the network
+    if (axios.isCancel(error) || error.code === "AUTH_REQUIRED") {
+      return Promise.reject(error);
+    }
+
     // Log errors in development
     if (config.isDevelopment()) {
-      console.error('❌ API Error:', {
+      console.error("❌ API Error:", {
         status: error.response?.status,
         url: originalRequest?.url,
         message: error.message,

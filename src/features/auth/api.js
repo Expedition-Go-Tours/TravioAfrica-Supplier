@@ -7,10 +7,17 @@ const AUTH_REQUEST_OPTIONS = {
   skipGlobalErrorHandler: true,
 };
 
-async function fetchSupplierProfile() {
+async function fetchSupplierProfile(authToken) {
+  if (!authToken) {
+    return null;
+  }
+
   try {
     const response = await api.get("/suppliers/application/status", {
       skipGlobalErrorHandler: true,
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
     });
     return response.data?.data?.supplierProfile || null;
   } catch {
@@ -50,15 +57,15 @@ export function getSupplierLoginToast(supplierProfile, user) {
 
   if (!supplierProfile) {
     return {
-      type: "info",
-      message: "Signed in successfully. Apply to become a supplier to access the dashboard.",
+      type: "success",
+      message: `Welcome back, ${name}! Signed in successfully.`,
     };
   }
 
   if (status === "PENDING" || status === "UNDER_REVIEW") {
     return {
-      type: "info",
-      message: "Signed in. Your supplier application is still being reviewed by our team.",
+      type: "success",
+      message: `Welcome back, ${name}! Your supplier application is being reviewed.`,
     };
   }
 
@@ -77,8 +84,8 @@ export function getSupplierLoginToast(supplierProfile, user) {
   }
 
   return {
-    type: "info",
-    message: `Signed in as ${name}. Supplier dashboard access is not available yet.`,
+    type: "success",
+    message: `Welcome back, ${name}! Signed in successfully.`,
   };
 }
 
@@ -100,25 +107,38 @@ export function showSupplierLoginToast(supplierProfile, user) {
  * Exchange a Firebase ID token for a backend session via POST /users/signup.
  */
 export async function exchangeFirebaseToken(idToken) {
+  const normalizedToken = typeof idToken === "string" ? idToken.trim() : "";
+
+  if (!normalizedToken) {
+    throw new Error("Missing authentication token. Please sign in again.");
+  }
+
   const response = await api.post(
     "/users/signup",
     {},
     {
       ...AUTH_REQUEST_OPTIONS,
       headers: {
-        Authorization: `Bearer ${idToken}`,
+        Authorization: `Bearer ${normalizedToken}`,
       },
     }
   );
 
-  const { user, supplierProfile, token } = parseAuthResponse(response);
+  const { user, supplierProfile: initialProfile, token } = parseAuthResponse(response);
+  const sessionToken = token || normalizedToken;
 
-  if (user && !supplierProfile) {
-    const profile = await fetchSupplierProfile();
-    return { user, supplierProfile: profile, token: token || idToken };
+  // Persist immediately so follow-up requests during login are authenticated.
+  localStorage.setItem("auth_token", sessionToken);
+
+  let supplierProfile = initialProfile;
+  if (user) {
+    const profile = await fetchSupplierProfile(sessionToken);
+    if (profile) {
+      supplierProfile = profile;
+    }
   }
 
-  return { user, supplierProfile, token: token || idToken };
+  return { user, supplierProfile, token: sessionToken };
 }
 
 /**

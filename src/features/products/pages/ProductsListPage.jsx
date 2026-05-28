@@ -7,7 +7,7 @@ import { PRODUCT_STATUSES } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { listMyProducts, listProducts, deleteProduct } from "@/features/products/api";
 import EmptyState from "@/components/shared/EmptyState";
-import { useAuthStore } from "@/stores/authStore";
+import { getAuthToken } from "@/stores/authStore";
 import config from "@/config";
 
 function extractPrice(tour) {
@@ -68,38 +68,26 @@ export default function ProductsListPage() {
   const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [usingSupplierEndpoint, setUsingSupplierEndpoint] = useState(false);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const fetchProducts = () => {
     setLoading(true);
     setError(null);
 
-    const attempt = (useSupplier) => {
-      const apiCall = useSupplier ? listMyProducts({ limit: 100 }) : listProducts({ limit: 100 });
+    const useSupplier = Boolean(getAuthToken());
+    const apiCall = useSupplier
+      ? listMyProducts({ limit: 100 })
+      : listProducts({ limit: 100 });
 
-      return apiCall
-        .then((res) => {
-          const tours = res.data?.data?.tours || [];
-          setProducts(tours);
-          setUsingSupplierEndpoint(useSupplier);
-        })
-        .catch((err) => {
-          const status = err.response?.status;
-          if (useSupplier && (status === 401 || status === 403)) {
-            return attempt(false);
-          }
-          throw err;
-        });
-    };
-
-    // Always try the supplier endpoint first so supplier-owned tours
-    // (including DRAFT/INACTIVE) are returned with complete photo data.
-    attempt(true)
-      .catch(() => {
-        // If supplier endpoint fails (not authenticated), fall back to public
-        return attempt(false);
+    apiCall
+      .then((res) => {
+        const tours = res.data?.data?.tours || [];
+        setProducts(tours);
+        setUsingSupplierEndpoint(useSupplier);
       })
       .catch((err) => {
+        if (err.code === "AUTH_REQUIRED") {
+          return;
+        }
         setError(err.response?.data?.message || err.message || "Failed to load products");
       })
       .finally(() => setLoading(false));
@@ -107,7 +95,7 @@ export default function ProductsListPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, [isAuthenticated]);
+  }, []);
 
   const handleDelete = (id, title) => {
     if (!window.confirm(`Are you sure you want to delete "${title || "this product"}"? This action cannot be undone.`)) return;

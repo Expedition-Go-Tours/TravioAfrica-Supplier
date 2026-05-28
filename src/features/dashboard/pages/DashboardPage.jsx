@@ -29,6 +29,7 @@ import {
 import StatusBadge from "@/components/shared/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import api from "@/lib/axios";
+import { getAuthToken } from "@/stores/authStore";
 
 const BOOKING_STATUS_COLORS = {
   CONFIRMED: "#00d67f",
@@ -94,6 +95,11 @@ export default function DashboardPage() {
   const [error, setError] = useState(null);
 
   const fetchDashboard = () => {
+    if (!getAuthToken()) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     api
@@ -102,6 +108,9 @@ export default function DashboardPage() {
         setDashboardData(res.data?.data);
       })
       .catch((err) => {
+        if (err.code === "AUTH_REQUIRED") {
+          return;
+        }
         setError(err.response?.data?.message || err.message || "Failed to load dashboard data");
       })
       .finally(() => setLoading(false));

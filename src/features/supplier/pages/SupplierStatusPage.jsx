@@ -12,7 +12,12 @@ import {
   FileText,
   RefreshCw,
 } from "lucide-react";
-import { useAuthStore, isSupplierUser, canAccessSupplierDashboard } from "@/stores/authStore";
+import {
+  useAuthStore,
+  isSupplierUser,
+  canAccessSupplierDashboard,
+  getAuthToken,
+} from "@/stores/authStore";
 import api from "@/lib/axios";
 
 const STATUS_CONFIG = {
@@ -74,8 +79,13 @@ export default function SupplierStatusPage() {
       return;
     }
 
+    if (!getAuthToken()) {
+      setLoading(false);
+      return;
+    }
+
     api
-      .get("/suppliers/application/status")
+      .get("/suppliers/application/status", { skipGlobalErrorHandler: true })
       .then((res) => {
         const profile = res.data?.data?.supplierProfile || null;
         setSupplierProfile(profile);

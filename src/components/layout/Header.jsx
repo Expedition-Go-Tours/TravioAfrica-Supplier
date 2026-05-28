@@ -3,7 +3,6 @@ import { useSidebarStore } from "@/stores/sidebarStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "@/lib/axios";
 
 const STATUS_STYLES = {
   PENDING: { bg: "bg-[#fef3c7]", text: "text-[#92400e]", label: "Pending" },
@@ -18,6 +17,7 @@ export default function Header() {
   const navigate = useNavigate();
   const { isCollapsed } = useSidebarStore();
   const user = useAuthStore((state) => state.user);
+  const supplierProfile = useAuthStore((state) => state.supplierProfile);
   const isAdmin = user?.roles?.includes("admin");
   const isSupplier = user?.roles?.includes("supplier");
 
@@ -26,26 +26,9 @@ export default function Header() {
   const [suppliersOpen, setSuppliersOpen] = useState(false);
   const suppliersRef = useRef(null);
 
-  const [supplierProfile, setSupplierProfile] = useState(null);
-  const [profileLoading, setProfileLoading] = useState(false);
-
   // User dropdown state
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
-
-  useEffect(() => {
-    if (!isSupplier) return;
-    setProfileLoading(true);
-    api
-      .get("/suppliers/application/status")
-      .then((res) => {
-        setSupplierProfile(res.data?.data?.supplierProfile || null);
-      })
-      .catch(() => {
-        setSupplierProfile(null);
-      })
-      .finally(() => setProfileLoading(false));
-  }, [isSupplier]);
 
   // Click outside handlers
   useEffect(() => {
@@ -67,10 +50,9 @@ export default function Header() {
 
   const statusStyle = STATUS_STYLES[supplierProfile?.status] || STATUS_STYLES.PENDING;
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     setUserMenuOpen(false);
-    await useAuthStore.getState().logout();
-    navigate("/login", { replace: true });
+    navigate("/logout", { replace: true });
   };
 
   return (
@@ -147,9 +129,7 @@ export default function Header() {
                       <p className="text-xs text-[#64748b]">Your account status & details</p>
                     </div>
                     <div className="px-4 py-4 space-y-3">
-                      {profileLoading ? (
-                        <div className="text-center text-sm text-[#64748b]">Loading profile...</div>
-                      ) : supplierProfile ? (
+                      {supplierProfile ? (
                         <>
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-[#044b3b] flex items-center justify-center text-white text-sm font-medium flex-shrink-0">

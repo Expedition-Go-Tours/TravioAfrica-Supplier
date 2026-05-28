@@ -1,17 +1,30 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useAuthStore, isAdminUser, canAccessSupplierDashboard } from "@/stores/authStore";
+import {
+  useAuthStore,
+  isAdminUser,
+  canAccessSupplierDashboard,
+  getAuthToken,
+} from "@/stores/authStore";
 import { Loader2 } from "lucide-react";
 import api from "@/lib/axios";
 
 export default function ProtectedRoute({ requireAdmin = false }) {
-  const { isAuthenticated, isLoading, supplierProfile, setSupplierProfile } = useAuthStore();
+  const { isAuthenticated, isLoading, hasHydrated, supplierProfile, setSupplierProfile } =
+    useAuthStore();
   const location = useLocation();
   const [profileChecked, setProfileChecked] = useState(Boolean(supplierProfile));
   const isAdmin = isAdminUser();
 
   useEffect(() => {
-    if (!isAuthenticated || isAdmin || supplierProfile) {
+    if (!hasHydrated || !isAuthenticated || isAdmin || supplierProfile) {
+      setProfileChecked(true);
+      return;
+    }
+
+    const authToken = getAuthToken();
+    if (!authToken) {
+      useAuthStore.getState().setUnauthenticated();
       setProfileChecked(true);
       return;
     }
@@ -20,7 +33,7 @@ export default function ProtectedRoute({ requireAdmin = false }) {
     setProfileChecked(false);
 
     api
-      .get("/suppliers/application/status")
+      .get("/suppliers/application/status", { skipGlobalErrorHandler: true })
       .then((res) => {
         if (!cancelled) {
           setSupplierProfile(res.data?.data?.supplierProfile || null);
@@ -40,9 +53,11 @@ export default function ProtectedRoute({ requireAdmin = false }) {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, isAdmin, supplierProfile, setSupplierProfile]);
+  }, [hasHydrated, isAuthenticated, isAdmin, supplierProfile, setSupplierProfile]);
 
-  if (isLoading || (isAuthenticated && !profileChecked)) {
+  const authToken = getAuthToken();
+
+  if (!hasHydrated || isLoading || (isAuthenticated && authToken && !profileChecked)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
         <div className="flex flex-col items-center gap-3">
@@ -53,7 +68,10 @@ export default function ProtectedRoute({ requireAdmin = false }) {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !authToken) {
+    if (isAuthenticated && !authToken) {
+      useAuthStore.getState().setUnauthenticated();
+    }
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
