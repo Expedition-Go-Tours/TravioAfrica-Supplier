@@ -1,4 +1,5 @@
-import { Search, Bell, ChevronDown, Building2, Shield, Clock, FileText, LogOut, User, Mail, Loader2 } from "lucide-react";
+import { Search, ChevronDown, Building2, Shield, Clock, FileText, LogOut, User, Mail, Loader2 } from "lucide-react";
+import NotificationBell from "@/features/notifications/components/NotificationBell";
 import { useSidebarStore } from "@/stores/sidebarStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useEffect, useRef, useState } from "react";
@@ -188,13 +189,7 @@ export default function Header() {
           </div>
         )}
 
-        {/* Notifications */}
-        <button className="relative p-2 text-[#6f6f6f] hover:text-[#1e293b] hover:bg-[#f8fafc] rounded-lg transition-colors">
-          <Bell size={20} />
-          <span className="absolute top-1 right-1 w-4 h-4 bg-[#dc3545] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-            3
-          </span>
-        </button>
+        <NotificationBell />
 
         {/* User Profile Dropdown */}
         <div className="relative" ref={userMenuRef}>

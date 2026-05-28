@@ -265,9 +265,36 @@ export const handlers = [
   // Notifications endpoints
   http.get(`${API_BASE_URL}/notifications`, () => {
     return HttpResponse.json({
-      data: [],
-      total: 0,
+      status: "success",
+      data: {
+        notifications: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalCount: 0,
+          unreadCount: 0,
+          limit: 20,
+        },
+      },
     });
+  }),
+
+  http.patch(`${API_BASE_URL}/notifications/mark-all-read`, () => {
+    return HttpResponse.json({
+      status: "success",
+      message: "0 notifications marked as read",
+    });
+  }),
+
+  http.patch(`${API_BASE_URL}/notifications/:id/read`, () => {
+    return HttpResponse.json({
+      status: "success",
+      message: "Notification marked as read",
+    });
+  }),
+
+  http.delete(`${API_BASE_URL}/notifications/:id`, () => {
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // Geoapify Geocoding (free tier autocomplete)
