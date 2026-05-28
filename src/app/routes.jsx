@@ -21,7 +21,6 @@ import GuestRoute from "@/components/shared/GuestRoute";
 // Auth Pages (rendered outside AppShell)
 import AuthCallback from "@/features/auth/pages/AuthCallback";
 import LoginPage from "@/features/auth/pages/LoginPage";
-import LogoutSplashPage from "@/features/auth/pages/LogoutSplashPage";
 
 // Supplier Pages (rendered outside AppShell)
 import SupplierStatusPage from "@/features/supplier/pages/SupplierStatusPage";
@@ -37,7 +36,6 @@ export default function AppRoutes() {
     <Routes>
       {/* Auth Pages (without AppShell) */}
       <Route path="/auth/callback" element={<AuthCallback />} />
-      <Route path="/logout" element={<LogoutSplashPage />} />
       <Route
         path="/login"
         element={

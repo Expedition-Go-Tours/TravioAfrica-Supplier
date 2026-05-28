@@ -50,9 +50,10 @@ export default function Header() {
 
   const statusStyle = STATUS_STYLES[supplierProfile?.status] || STATUS_STYLES.PENDING;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setUserMenuOpen(false);
-    navigate("/logout", { replace: true });
+    await useAuthStore.getState().logout();
+    navigate("/login", { replace: true });
   };
 
   return (
