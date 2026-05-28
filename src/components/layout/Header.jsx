@@ -60,7 +60,7 @@ export default function Header() {
 
     await Promise.all([
       useAuthStore.getState().logout(),
-      new Promise((resolve) => setTimeout(resolve, 2000)),
+      new Promise((resolve) => setTimeout(resolve, 4000)),
     ]);
 
     navigate("/login", { replace: true });
