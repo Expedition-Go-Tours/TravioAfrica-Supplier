@@ -144,7 +144,7 @@ export default function DashboardPage() {
   const revenueData = [...monthlyRevenue]
     .reverse()
     .map((m) => ({
-      month: new Date(m.month).toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+      month: new Date(m.month).toLocaleDateString("en-GB", { month: "short", year: "2-digit" }),
       revenue: Number(m.revenue) || 0,
     }));
 

@@ -19,6 +19,7 @@ import {
   getAuthToken,
 } from "@/stores/authStore";
 import { loadSupplierProfile } from "@/features/auth/api";
+import { formatDate } from "@/lib/utils";
 
 const STATUS_CONFIG = {
   PENDING: {
@@ -202,13 +203,13 @@ export default function SupplierStatusPage() {
             {supplierProfile.createdAt && (
               <div className="flex items-center gap-2 text-sm text-[#64748b]">
                 <Clock size={14} />
-                <span>Applied {new Date(supplierProfile.createdAt).toLocaleDateString()}</span>
+                <span>Applied {formatDate(supplierProfile.createdAt)}</span>
               </div>
             )}
             {supplierProfile.reviewedAt && (
               <div className="flex items-center gap-2 text-sm text-[#64748b]">
                 <Clock size={14} />
-                <span>Reviewed {new Date(supplierProfile.reviewedAt).toLocaleDateString()}</span>
+                <span>Reviewed {formatDate(supplierProfile.reviewedAt)}</span>
               </div>
             )}
             {supplierProfile.adminNotes && (

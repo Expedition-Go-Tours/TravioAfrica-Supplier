@@ -389,7 +389,7 @@ export default function AvailabilityPage() {
       {viewMode === "day" && (
         <div className="bg-white rounded-lg border border-[#eaeaea] p-6">
           <div className="text-center mb-6">
-            <h3 className="text-xl font-bold text-[#1e293b]">{format(currentDate, "EEEE, MMMM d, yyyy")}</h3>
+            <h3 className="text-xl font-bold text-[#1e293b]">{format(currentDate, "EEEE, d MMMM yyyy")}</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {TOURS.map((tour) => {
@@ -443,7 +443,7 @@ export default function AvailabilityPage() {
           <div className="bg-white rounded-xl shadow-xl max-w-full sm:max-w-md w-full mx-4 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-[#1e293b]">
-                {format(selectedDate, "MMMM d, yyyy")}
+                {format(selectedDate, "d MMMM yyyy")}
               </h3>
               <button
                 onClick={() => setEditModalOpen(false)}

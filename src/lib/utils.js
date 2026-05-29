@@ -12,24 +12,28 @@ export function formatCurrency(amount, currency = "USD") {
   }).format(amount);
 }
 
-export function formatDate(date, formatStr = "MMM dd, yyyy") {
+const DATE_FORMAT_OPTIONS = {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+};
+
+const DATE_TIME_FORMAT_OPTIONS = {
+  ...DATE_FORMAT_OPTIONS,
+  hour: "2-digit",
+  minute: "2-digit",
+};
+
+export function formatDate(date) {
   if (!date) return "";
   const d = new Date(date);
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "2-digit",
-    year: "numeric",
-  });
+  if (Number.isNaN(d.getTime())) return "Invalid Date";
+  return d.toLocaleDateString("en-GB", DATE_FORMAT_OPTIONS);
 }
 
 export function formatDateTime(date) {
   if (!date) return "";
   const d = new Date(date);
-  return d.toLocaleString("en-US", {
-    month: "short",
-    day: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  if (Number.isNaN(d.getTime())) return "Invalid Date";
+  return d.toLocaleString("en-GB", DATE_TIME_FORMAT_OPTIONS);
 }

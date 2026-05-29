@@ -4,6 +4,7 @@ import { useSidebarStore } from "@/stores/sidebarStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { formatDate } from "@/lib/utils";
 
 const STATUS_STYLES = {
   PENDING: { bg: "bg-[#fef3c7]", text: "text-[#92400e]", label: "Pending" },
@@ -131,12 +132,12 @@ export default function Header() {
                       )}
                       <div className="flex items-center gap-2 text-xs text-[#64748b]">
                         <Clock size={14} />
-                        <span>Applied {new Date(supplierProfile.createdAt).toLocaleDateString()}</span>
+                        <span>Applied {formatDate(supplierProfile.createdAt)}</span>
                       </div>
                       {supplierProfile.reviewedAt && (
                         <div className="flex items-center gap-2 text-xs text-[#64748b]">
                           <Clock size={14} />
-                          <span>Reviewed {new Date(supplierProfile.reviewedAt).toLocaleDateString()}</span>
+                          <span>Reviewed {formatDate(supplierProfile.reviewedAt)}</span>
                         </div>
                       )}
                     </>

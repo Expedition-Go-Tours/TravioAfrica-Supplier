@@ -52,13 +52,13 @@ describe('utils', () => {
   describe('formatDate', () => {
     it('should format date string', () => {
       const result = formatDate('2026-05-20');
-      expect(result).toMatch(/May 20, 2026/);
+      expect(result).toMatch(/20 May 2026/);
     });
 
     it('should format Date object', () => {
       const date = new Date('2026-05-20');
       const result = formatDate(date);
-      expect(result).toMatch(/May 20, 2026/);
+      expect(result).toMatch(/20 May 2026/);
     });
 
     it('should handle invalid date', () => {
