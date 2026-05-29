@@ -61,6 +61,7 @@ const DatePicker = forwardRef(function DatePicker(
         dateFormat={DATE_PICKER_DISPLAY_FORMAT}
         placeholderText={placeholder}
         showPopperArrow={false}
+        popperPlacement="bottom-start"
         calendarClassName="dashboard-date-picker__calendar"
         popperClassName="dashboard-date-picker__popper"
         className={cn(
