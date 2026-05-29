@@ -12,6 +12,7 @@ import {
   SUPPLIER_BOOKING_STATUS_OPTIONS,
 } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import DatePicker from "@/components/forms/DatePicker";
 import { fetchSupplierBookings, updateBookingStatus } from "../api";
 import { getAuthToken } from "@/stores/authStore";
 
@@ -372,18 +373,20 @@ export default function BookingsPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="date"
+            <DatePicker
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="px-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20"
+              onChange={setDateFrom}
+              placeholder="From date"
+              className="w-full sm:w-40"
+              maxDate={dateTo || undefined}
             />
             <span className="text-[#9e9e9e]">to</span>
-            <input
-              type="date"
+            <DatePicker
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="px-3 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20"
+              onChange={setDateTo}
+              placeholder="To date"
+              className="w-full sm:w-40"
+              minDate={dateFrom || undefined}
             />
             <button
               onClick={applyDateFilter}

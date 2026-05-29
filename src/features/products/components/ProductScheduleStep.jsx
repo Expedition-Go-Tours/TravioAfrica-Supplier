@@ -1,5 +1,6 @@
 import { Plus, Trash2, Clock, Calendar } from "lucide-react";
 import { useProductBuilderStore } from "@/features/products/stores/productBuilderStore";
+import DatePicker from "@/components/forms/DatePicker";
 
 const DAYS = [
   { value: "monday", label: "Mon" },
@@ -200,11 +201,10 @@ export default function ProductScheduleStep() {
         <div className="space-y-2">
           {schedule.blackoutDates.map((date, index) => (
             <div key={index} className="flex items-center gap-2">
-              <input
-                type="date"
+              <DatePicker
                 value={date}
-                onChange={(e) => updateBlackoutDate(index, e.target.value)}
-                className="flex-1 px-4 py-2 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b]"
+                onChange={(value) => updateBlackoutDate(index, value)}
+                placeholder="Select blackout date"
               />
               <button
                 onClick={() => removeBlackoutDate(index)}

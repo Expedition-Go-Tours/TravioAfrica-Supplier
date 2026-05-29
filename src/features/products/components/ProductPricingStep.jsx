@@ -1,5 +1,6 @@
 import { Plus, Trash2, DollarSign, Percent } from "lucide-react";
 import { useProductBuilderStore } from "@/features/products/stores/productBuilderStore";
+import DatePicker from "@/components/forms/DatePicker";
 
 const CURRENCIES = [
   { value: "USD", label: "USD ($)" },
@@ -108,13 +109,12 @@ export default function ProductPricingStep() {
           <label className="block text-sm font-medium text-[#1e293b] mb-2">
             Pricing Start Date <span className="text-[#dc3545]">*</span>
           </label>
-          <input
-            type="date"
+          <DatePicker
             value={pricing.startDate}
-            onChange={(e) => updateNested("pricing.startDate", e.target.value)}
-            className={`w-full px-4 py-2.5 border rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b] ${
-              errors.pricingStartDate ? "border-[#dc3545]" : "border-[#eaeaea]"
-            }`}
+            onChange={(value) => updateNested("pricing.startDate", value)}
+            placeholder="Select start date"
+            error={Boolean(errors.pricingStartDate)}
+            maxDate={pricing.endDate || undefined}
           />
           {errors.pricingStartDate && <p className="mt-1 text-xs text-[#dc3545]">{errors.pricingStartDate}</p>}
         </div>
@@ -122,13 +122,12 @@ export default function ProductPricingStep() {
           <label className="block text-sm font-medium text-[#1e293b] mb-2">
             Pricing End Date <span className="text-[#dc3545]">*</span>
           </label>
-          <input
-            type="date"
+          <DatePicker
             value={pricing.endDate}
-            onChange={(e) => updateNested("pricing.endDate", e.target.value)}
-            className={`w-full px-4 py-2.5 border rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b] ${
-              errors.pricingEndDate ? "border-[#dc3545]" : "border-[#eaeaea]"
-            }`}
+            onChange={(value) => updateNested("pricing.endDate", value)}
+            placeholder="Select end date"
+            error={Boolean(errors.pricingEndDate)}
+            minDate={pricing.startDate || undefined}
           />
           {errors.pricingEndDate && <p className="mt-1 text-xs text-[#dc3545]">{errors.pricingEndDate}</p>}
         </div>

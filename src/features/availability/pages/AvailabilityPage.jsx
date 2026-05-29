@@ -1,16 +1,7 @@
 import { useState, useMemo } from "react";
 import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar as CalendarIcon,
-  Grid3X3,
-  List,
   Clock,
   Users,
-  Lock,
-  Unlock,
-  Edit3,
-  Save,
   X,
 } from "lucide-react";
 import {
@@ -18,14 +9,12 @@ import {
   startOfMonth,
   endOfMonth,
   eachDayOfInterval,
-  isSameMonth,
   isSameDay,
-  addMonths,
-  subMonths,
-  getDay,
   startOfWeek,
   endOfWeek,
 } from "date-fns";
+import DatePicker from "@/components/forms/DatePicker";
+import { parsePickerDate } from "@/lib/datePickerUtils";
 
 const TOURS = [
   { id: "1", title: "Serengeti Safari Adventure" },
@@ -34,19 +23,16 @@ const TOURS = [
   { id: "4", title: "Masai Mara Wildlife Tour" },
 ];
 
-// Generate mock availability data
 function generateMockAvailability() {
   const data = {};
   const today = new Date();
   TOURS.forEach((tour) => {
     data[tour.id] = {};
-    // Generate 90 days of data
     for (let i = 0; i < 90; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       const dateStr = format(date, "yyyy-MM-dd");
 
-      // Random availability status
       const rand = Math.random();
       let status, capacity, booked;
       if (rand < 0.1) {
@@ -91,16 +77,15 @@ const STATUS_COLORS = {
 export default function AvailabilityPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedTour, setSelectedTour] = useState(TOURS[0].id);
-  const [viewMode, setViewMode] = useState("month"); // month, week, day
+  const [viewMode, setViewMode] = useState("month");
   const [availability, setAvailability] = useState(generateMockAvailability);
   const [selectedDate, setSelectedDate] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
-  const calendarStart = startOfWeek(monthStart);
-  const calendarEnd = endOfWeek(monthEnd);
-  const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  const weekStart = startOfWeek(currentDate);
+  const weekDays = eachDayOfInterval({ start: weekStart, end: endOfWeek(currentDate) });
 
   const tourAvailability = availability[selectedTour] || {};
 
@@ -109,12 +94,15 @@ export default function AvailabilityPage() {
     return tourAvailability[dateStr] || { status: "available", capacity: 20, booked: 0 };
   };
 
-  const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
-  const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
-  const handleToday = () => setCurrentDate(new Date());
+  const handleDateChange = (isoDate) => {
+    const date = parsePickerDate(isoDate);
+    if (!date) return;
+    setCurrentDate(date);
+  };
 
   const handleDateClick = (date) => {
     setSelectedDate(date);
+    setCurrentDate(date);
     setEditModalOpen(true);
   };
 
@@ -133,9 +121,8 @@ export default function AvailabilityPage() {
     }));
   };
 
-  // Stats for selected month
   const monthStats = useMemo(() => {
-    const monthDays = days.filter((d) => isSameMonth(d, currentDate));
+    const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
     let available = 0, limited = 0, full = 0, blocked = 0;
     monthDays.forEach((day) => {
       const status = getDayStatus(day).status;
@@ -147,7 +134,6 @@ export default function AvailabilityPage() {
     return { available, limited, full, blocked, total: monthDays.length };
   }, [currentDate, selectedTour, availability]);
 
-  // Legend
   const LegendItem = ({ status }) => {
     const style = STATUS_COLORS[status];
     return (
@@ -160,14 +146,12 @@ export default function AvailabilityPage() {
 
   return (
     <div className="p-4 md:p-6">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-[#1e293b]">Availability</h1>
           <p className="text-sm text-[#64748b] mt-1">Manage tour availability and capacity</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Tour Selector */}
           <select
             value={selectedTour}
             onChange={(e) => setSelectedTour(e.target.value)}
@@ -178,7 +162,6 @@ export default function AvailabilityPage() {
             ))}
           </select>
 
-          {/* View Toggle */}
           <div className="flex items-center border border-[#eaeaea] rounded-lg overflow-hidden">
             {["month", "week", "day"].map((mode) => (
               <button
@@ -195,7 +178,6 @@ export default function AvailabilityPage() {
         </div>
       </div>
 
-      {/* Month Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
           { label: "Available Days", value: monthStats.available, color: "text-[#00d67f]" },
@@ -210,33 +192,23 @@ export default function AvailabilityPage() {
         ))}
       </div>
 
-      {/* Calendar Navigation */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <DatePicker
+            value={format(currentDate, "yyyy-MM-dd")}
+            onChange={handleDateChange}
+            placeholder="Jump to date"
+            className="w-full sm:w-56"
+          />
           <button
-            onClick={handlePrevMonth}
-            className="p-2 rounded-lg border border-[#eaeaea] text-[#64748b] hover:bg-[#f8fafc] transition-colors"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <h2 className="text-lg font-semibold text-[#1e293b] min-w-[200px] text-center">
-            {format(currentDate, "MMMM yyyy")}
-          </h2>
-          <button
-            onClick={handleNextMonth}
-            className="p-2 rounded-lg border border-[#eaeaea] text-[#64748b] hover:bg-[#f8fafc] transition-colors"
-          >
-            <ChevronRight size={18} />
-          </button>
-          <button
-            onClick={handleToday}
-            className="ml-2 px-3 py-2 text-sm font-medium text-[#044b3b] bg-[#f0fdf4] rounded-lg hover:bg-[#dcfce7] transition-colors"
+            type="button"
+            onClick={() => setCurrentDate(new Date())}
+            className="px-3 py-2.5 text-sm font-medium text-[#044b3b] bg-[#f0fdf4] rounded-lg hover:bg-[#dcfce7] transition-colors"
           >
             Today
           </button>
         </div>
 
-        {/* Legend */}
         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           {["available", "limited", "full", "blocked"].map((status) => (
             <LegendItem key={status} status={status} />
@@ -244,113 +216,51 @@ export default function AvailabilityPage() {
         </div>
       </div>
 
-      {/* Month View Calendar */}
       {viewMode === "month" && (
-        <div className="bg-white rounded-lg border border-[#eaeaea] overflow-hidden">
-          {/* Day Headers */}
-          <div className="grid grid-cols-7 border-b border-[#eaeaea]">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-              <div key={day} className="px-3 py-2 text-center text-xs font-semibold text-[#64748b] uppercase tracking-wider bg-[#f8fafc]">
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7">
-            {days.map((day, index) => {
-              const dayStatus = getDayStatus(day);
-              const statusStyle = STATUS_COLORS[dayStatus.status];
-              const isCurrentMonth = isSameMonth(day, currentDate);
-              const isToday = isSameDay(day, new Date());
-              const fillPercent = dayStatus.capacity > 0 ? (dayStatus.booked / dayStatus.capacity) * 100 : 0;
-
+        <div className="bg-white rounded-lg border border-[#eaeaea] p-4 md:p-6">
+          <DatePicker
+            inline
+            value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
+            openToDate={currentDate}
+            onMonthChange={setCurrentDate}
+            onChange={(isoDate) => {
+              const date = parsePickerDate(isoDate);
+              if (date) handleDateClick(date);
+            }}
+            dayClassName={(date) => `availability-day-${getDayStatus(date).status}`}
+            renderDayContents={(dayOfMonth, date) => {
+              const dayStatus = getDayStatus(date);
               return (
-                <div
-                  key={index}
-                  className={`min-h-[60px] sm:min-h-[100px] border-r border-b border-[#eaeaea] p-1.5 sm:p-2 relative group cursor-pointer transition-colors hover:bg-[#f8fafc] ${
-                    !isCurrentMonth ? "bg-[#fafafa]" : ""
-                  }`}
-                  onClick={() => handleDateClick(day)}
-                >
-                  {/* Date Number */}
-                  <div className="flex items-center justify-between mb-1">
-                    <span
-                      className={`text-sm font-medium ${
-                        isToday
-                          ? "w-7 h-7 rounded-full bg-[#044b3b] text-white flex items-center justify-center"
-                          : isCurrentMonth
-                          ? "text-[#1e293b]"
-                          : "text-[#9e9e9e]"
-                      }`}
-                    >
-                      {format(day, "d")}
-                    </span>
-                    {/* Block/Unblock quick action */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleBlockDate(day);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-[#9e9e9e] hover:text-[#044b3b] hover:bg-[#f0fdf4]"
-                      title={dayStatus.status === "blocked" ? "Unblock" : "Block"}
-                    >
-                      {dayStatus.status === "blocked" ? <Unlock size={12} /> : <Lock size={12} />}
-                    </button>
-                  </div>
-
-                  {/* Status Indicator */}
-                  {isCurrentMonth && (
-                    <div className={`rounded-md p-1 sm:p-1.5 ${statusStyle.bg} border ${statusStyle.border}`}>
-                      <div className="flex items-center gap-1 mb-0.5 sm:mb-1">
-                        <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
-                        <span className={`text-[9px] sm:text-[10px] font-semibold ${statusStyle.text}`}>
-                          {statusStyle.label}
-                        </span>
-                      </div>
-                      {dayStatus.status !== "blocked" && (
-                        <div className="mt-0.5 sm:mt-1">
-                          <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-[#64748b]">
-                            <span>{dayStatus.booked}/{dayStatus.capacity}</span>
-                            <span>{Math.round(fillPercent)}%</span>
-                          </div>
-                          {/* Progress bar */}
-                          <div className="w-full h-1 bg-white/50 rounded-full mt-0.5 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${
-                                fillPercent >= 100 ? "bg-[#dc3545]" : fillPercent >= 80 ? "bg-[#ffc400]" : "bg-[#00d67f]"
-                              }`}
-                              style={{ width: `${Math.min(fillPercent, 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                <div className={`availability-day-cell availability-day-${dayStatus.status}`}>
+                  <span>{dayOfMonth}</span>
+                  <span className="availability-day-dot" />
                 </div>
               );
-            })}
-          </div>
+            }}
+          />
         </div>
       )}
 
-      {/* Week View */}
       {viewMode === "week" && (
         <div className="bg-white rounded-lg border border-[#eaeaea] overflow-hidden overflow-x-auto">
           <div className="grid grid-cols-7 min-w-[600px]">
-            {days.slice(0, 7).map((day, index) => {
+            {weekDays.map((day, index) => {
               const dayStatus = getDayStatus(day);
               const statusStyle = STATUS_COLORS[dayStatus.status];
               const isToday = isSameDay(day, new Date());
 
               return (
                 <div key={index} className="border-r border-[#eaeaea] p-4">
-                  <div className="text-center mb-3">
+                  <button
+                    type="button"
+                    onClick={() => handleDateClick(day)}
+                    className="w-full text-center mb-3 rounded-lg hover:bg-[#f8fafc] transition-colors p-2"
+                  >
                     <p className="text-xs text-[#64748b] uppercase">{format(day, "EEE")}</p>
                     <p className={`text-lg font-bold mt-1 ${isToday ? "text-[#044b3b]" : "text-[#1e293b]"}`}>
                       {format(day, "d")}
                     </p>
-                  </div>
+                  </button>
                   <div className={`rounded-lg p-3 ${statusStyle.bg} border ${statusStyle.border}`}>
                     <div className="flex items-center gap-1.5 mb-2">
                       <span className={`w-2 h-2 rounded-full ${statusStyle.dot}`} />
@@ -385,9 +295,15 @@ export default function AvailabilityPage() {
         </div>
       )}
 
-      {/* Day View */}
       {viewMode === "day" && (
         <div className="bg-white rounded-lg border border-[#eaeaea] p-6">
+          <div className="max-w-xs mx-auto mb-6">
+            <DatePicker
+              value={format(currentDate, "yyyy-MM-dd")}
+              onChange={handleDateChange}
+              placeholder="Select day"
+            />
+          </div>
           <div className="text-center mb-6">
             <h3 className="text-xl font-bold text-[#1e293b]">{format(currentDate, "EEEE, d MMMM yyyy")}</h3>
           </div>
@@ -437,7 +353,6 @@ export default function AvailabilityPage() {
         </div>
       )}
 
-      {/* Edit Modal */}
       {editModalOpen && selectedDate && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-full sm:max-w-md w-full mx-4 p-4 sm:p-6">
@@ -446,6 +361,7 @@ export default function AvailabilityPage() {
                 {format(selectedDate, "d MMMM yyyy")}
               </h3>
               <button
+                type="button"
                 onClick={() => setEditModalOpen(false)}
                 className="p-1.5 text-[#9e9e9e] hover:text-[#1e293b] hover:bg-[#f8fafc] rounded-lg transition-colors"
               >
@@ -459,7 +375,6 @@ export default function AvailabilityPage() {
 
               return (
                 <div className="space-y-4">
-                  {/* Status */}
                   <div>
                     <label className="block text-sm font-medium text-[#1e293b] mb-2">Status</label>
                     <div className="grid grid-cols-2 gap-2">
@@ -468,6 +383,7 @@ export default function AvailabilityPage() {
                         return (
                           <button
                             key={status}
+                            type="button"
                             onClick={() => {
                               setAvailability((prev) => ({
                                 ...prev,
@@ -490,7 +406,6 @@ export default function AvailabilityPage() {
                     </div>
                   </div>
 
-                  {/* Capacity */}
                   {dayData.status !== "blocked" && (
                     <div>
                       <label className="block text-sm font-medium text-[#1e293b] mb-2">
@@ -514,7 +429,6 @@ export default function AvailabilityPage() {
                     </div>
                   )}
 
-                  {/* Time Slots */}
                   {dayData.status !== "blocked" && dayData.slots && (
                     <div>
                       <label className="block text-sm font-medium text-[#1e293b] mb-2">Time Slots</label>
@@ -561,15 +475,16 @@ export default function AvailabilityPage() {
                     </div>
                   )}
 
-                  {/* Actions */}
                   <div className="flex items-center gap-3 pt-4 border-t border-[#eaeaea]">
                     <button
+                      type="button"
                       onClick={() => setEditModalOpen(false)}
                       className="flex-1 px-4 py-2.5 bg-[#044b3b] text-white rounded-lg text-sm font-medium hover:bg-[#033629] transition-colors"
                     >
                       Save Changes
                     </button>
                     <button
+                      type="button"
                       onClick={() => {
                         toggleBlockDate(selectedDate);
                         setEditModalOpen(false);
