@@ -7,7 +7,7 @@ import { PRODUCT_STATUSES } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { listMyProducts, listProducts, deleteProduct } from "@/features/products/api";
 import EmptyState from "@/components/shared/EmptyState";
-import { getAuthToken } from "@/stores/authStore";
+import { getAuthToken, useAuthStore } from "@/stores/authStore";
 import config from "@/config";
 
 function extractPrice(tour) {
@@ -39,7 +39,14 @@ function extractCategory(tour) {
 
 function extractSupplierName(tour) {
   try {
-    return tour?.supplier?.name || tour?.supplier?.supplierProfile?.businessInfo?.businessName || "";
+    const businessInfo = tour?.supplier?.supplierProfile?.businessInfo;
+    return (
+      businessInfo?.displayName ||
+      businessInfo?.legalBusinessName ||
+      businessInfo?.businessName ||
+      tour?.supplier?.name ||
+      ""
+    );
   } catch {
     return "";
   }
@@ -58,6 +65,7 @@ const CATEGORIES = [
 
 export default function ProductsListPage() {
   const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
   const [viewMode, setViewMode] = useState("grid");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -112,10 +120,15 @@ export default function ProductsListPage() {
       .finally(() => setDeletingId(null));
   };
 
+  const getSupplierLabel = (product) => {
+    const name = extractSupplierName(product) || (usingSupplierEndpoint ? user?.name : "");
+    return name || "No supplier";
+  };
+
   const filteredProducts = products.filter((product) => {
     const matchesSearch = !search ||
       product.title?.toLowerCase().includes(search.toLowerCase()) ||
-      extractSupplierName(product).toLowerCase().includes(search.toLowerCase());
+      getSupplierLabel(product).toLowerCase().includes(search.toLowerCase());
     const matchesCategory = !categoryFilter || extractCategory(product) === categoryFilter;
     const matchesStatus = !statusFilter || product.status === statusFilter;
     return matchesSearch && matchesCategory && matchesStatus;
@@ -305,7 +318,7 @@ export default function ProductsListPage() {
                 >
                   {product.title}
                 </h3>
-                <p className="text-xs text-[#64748b] mt-1">{extractSupplierName(product) || "No supplier"}</p>
+                <p className="text-xs text-[#64748b] mt-1">{getSupplierLabel(product)}</p>
 
                 <div className="flex items-center gap-2 mt-3">
                   {extractPrice(product) !== null ? (
@@ -392,7 +405,7 @@ export default function ProductsListPage() {
                         >
                           {product.title}
                         </p>
-                        <p className="text-xs text-[#64748b]">{extractSupplierName(product) || "No supplier"}</p>
+                        <p className="text-xs text-[#64748b]">{getSupplierLabel(product)}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3">

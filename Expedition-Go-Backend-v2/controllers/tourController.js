@@ -779,6 +779,17 @@ exports.getMyTours = catchAsync(async (req, res, next) => {
     prisma.tour.findMany({
       where,
       include: {
+        supplier: {
+          select: {
+            id: true,
+            name: true,
+            supplierProfile: {
+              select: {
+                businessInfo: true,
+              },
+            },
+          },
+        },
         _count: {
           select: {
             reviews: true,
