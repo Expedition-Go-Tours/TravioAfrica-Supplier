@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { normalizeHighlights } from "@/features/products/utils/normalizeHighlights";
 
 const STEPS = [
   { id: "type", label: "Product Type", number: 1 },
@@ -241,6 +242,9 @@ export const useProductBuilderStore = create(
 
           case 2: // Content
             if (!product.content.itinerary?.trim()) errors.itinerary = "Itinerary is required";
+            if (normalizeHighlights(product.content.highlights).length === 0) {
+              errors.highlights = "At least one tour highlight is required";
+            }
             if (!product.content.meetingInstructions?.trim()) errors.meetingInstructions = "Meeting instructions are required";
             if (!product.content.uniqueSellingPoints?.trim()) errors.uniqueSellingPoints = "Please describe what makes your product unique";
             if (!product.content.languages?.length) errors.languages = "At least one language is required";
@@ -306,8 +310,18 @@ export const useProductBuilderStore = create(
       },
 
       loadDraft: (draft) => {
+        const mergedContent = {
+          ...INITIAL_PRODUCT.content,
+          ...draft?.content,
+          highlights: normalizeHighlights(draft?.content?.highlights),
+        };
+
         set({
-          product: { ...INITIAL_PRODUCT, ...draft },
+          product: {
+            ...INITIAL_PRODUCT,
+            ...draft,
+            content: mergedContent,
+          },
           isDirty: false,
         });
       },

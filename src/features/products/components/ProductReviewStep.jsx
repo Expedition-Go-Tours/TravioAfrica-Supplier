@@ -1,5 +1,6 @@
 import { Check, AlertTriangle, Eye } from "lucide-react";
 import { useProductBuilderStore } from "@/features/products/stores/productBuilderStore";
+import { normalizeHighlights } from "@/features/products/utils/normalizeHighlights";
 
 export default function ProductReviewStep() {
   const { product, steps, currentStep } = useProductBuilderStore();
@@ -67,6 +68,9 @@ export default function ProductReviewStep() {
 
       case 2: // Content
         if (!product.content.itinerary?.trim()) stepErrors.itinerary = "Itinerary required";
+        if (normalizeHighlights(product.content.highlights).length === 0) {
+          stepErrors.highlights = "At least one tour highlight is required";
+        }
         if (!product.content.meetingInstructions?.trim()) stepErrors.meetingInstructions = "Meeting instructions required";
         if (!product.content.uniqueSellingPoints?.trim()) stepErrors.uniqueSellingPoints = "Unique selling points required";
         if (!product.content.languages?.length) stepErrors.languages = "Languages required";
@@ -265,6 +269,14 @@ export default function ProductReviewStep() {
               <span className="text-[#64748b]">Meeting Address:</span>
               <span className="ml-2 text-[#1e293b] font-medium">
                 {product.bookingRules.meetingPointAddress || "—"}
+              </span>
+            </div>
+            <div>
+              <span className="text-[#64748b]">Highlights:</span>
+              <span className="ml-2 text-[#1e293b] font-medium">
+                {normalizeHighlights(product.content.highlights).length > 0
+                  ? `${normalizeHighlights(product.content.highlights).length} added`
+                  : "—"}
               </span>
             </div>
             <div>

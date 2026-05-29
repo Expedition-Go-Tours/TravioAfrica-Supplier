@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { useProductBuilderStore } from "@/features/products/stores/productBuilderStore";
 import { createProduct, updateProduct } from "@/features/products/api";
 
+import { normalizeHighlights } from "@/features/products/utils/normalizeHighlights";
+
 function buildFormData(product) {
   const formData = new FormData();
 
@@ -66,7 +68,7 @@ function buildFormData(product) {
 
   // productContent (JSON string)
   const productContent = {
-    highlights: product.content?.highlights || [],
+    highlights: normalizeHighlights(product.content?.highlights),
     included: product.content?.included || [],
     excluded: product.content?.excluded || [],
     whatToBring: product.content?.whatToBring || [],

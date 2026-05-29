@@ -3,6 +3,8 @@
  * Matches the backend's `createTour` controller exactly.
  * Only sends fields the backend reads from req.body.
  */
+import { normalizeHighlights } from "@/features/products/utils/normalizeHighlights";
+
 export const buildProductPayload = (product) => {
   // Build duration object for backend
   const durationPayload = {};
@@ -98,7 +100,7 @@ export const buildProductPayload = (product) => {
     },
 
     productContent: {
-      highlights: product.content?.highlights || [],
+      highlights: normalizeHighlights(product.content?.highlights),
       included: product.content?.included || [],
       excluded: product.content?.excluded || [],
       whatToBring: product.content?.whatToBring || [],

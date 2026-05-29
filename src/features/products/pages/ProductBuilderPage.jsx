@@ -12,6 +12,7 @@ import ProductScheduleStep from "@/features/products/components/ProductScheduleS
 import ProductBookingStep from "@/features/products/components/ProductBookingStep";
 import ProductContentStep from "@/features/products/components/ProductContentStep";
 import ProductReviewStep from "@/features/products/components/ProductReviewStep";
+import { normalizeHighlights } from "@/features/products/utils/normalizeHighlights";
 
 const STEPS = [
   { id: "type", label: "Product Type", description: "Choose the type of product you are creating.", component: ProductTypeStep },
@@ -164,7 +165,7 @@ function tourToProduct(tour) {
     },
     content: {
       itinerary: content.itinerary || "",
-      highlights: content.highlights || [],
+      highlights: normalizeHighlights(content.highlights),
       included: content.included || [],
       excluded: content.excluded || [],
       whatToBring: content.whatToBring || [],

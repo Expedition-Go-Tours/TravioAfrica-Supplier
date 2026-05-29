@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Plus, Trash2, Globe, FileText, Star, MapPin, Check, ChevronRight, Users, Sparkles, Info } from "lucide-react";
+import { Globe, FileText, Star, MapPin, Check, ChevronRight, Users, Sparkles, Info } from "lucide-react";
 import { useProductBuilderStore } from "@/features/products/stores/productBuilderStore";
+import { normalizeHighlights } from "@/features/products/utils/normalizeHighlights";
 
 const LANGUAGES = [
   "English", "French", "German", "Spanish", "Italian", "Portuguese", "Dutch", "Russian",
@@ -21,20 +22,15 @@ export default function ProductContentStep() {
   const { content } = product;
   const [activeSection, setActiveSection] = useState("meeting");
 
-  const handleHighlightChange = (index, value) => {
-    const newHighlights = [...content.highlights];
-    newHighlights[index] = value;
-    updateNested("content.highlights", newHighlights);
+  const handleHighlightsChange = (value) => {
+    updateNested(
+      "content.highlights",
+      value.split("\n").map((item) => item.trimEnd()),
+    );
   };
 
-  const addHighlight = () => {
-    updateNested("content.highlights", [...content.highlights, ""]);
-  };
-
-  const removeHighlight = (index) => {
-    const newHighlights = content.highlights.filter((_, i) => i !== index);
-    updateNested("content.highlights", newHighlights);
-  };
+  const highlightLines = Array.isArray(content.highlights) ? content.highlights : [];
+  const highlights = normalizeHighlights(highlightLines);
 
   const toggleLanguage = (lang) => {
     const newLangs = content.languages.includes(lang)
@@ -48,7 +44,7 @@ export default function ProductContentStep() {
       case "meeting":
         return !!content.meetingInstructions?.trim() && !!content.pickupDescription?.trim();
       case "details":
-        return !!content.itinerary?.trim() && content.highlights.length > 0;
+        return !!content.itinerary?.trim() && highlights.length > 0;
       case "languages":
         return content.languages?.length > 0;
       case "inclusions":
@@ -121,43 +117,37 @@ export default function ProductContentStep() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-[#1e293b]">
-                  <span className="flex items-center gap-2">
-                    <Star size={16} className="text-[#64748b]" />
-                    Tour Highlights
-                  </span>
-                </h3>
-                <button
-                  onClick={addHighlight}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-[#044b3b] bg-[#f0fdf4] rounded-md hover:bg-[#dcfce7] transition-colors"
-                >
-                  <Plus size={12} />
-                  Add Highlight
-                </button>
-              </div>
-              <div className="space-y-2">
-                {content.highlights.map((item, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={item}
-                      onChange={(e) => handleHighlightChange(index, e.target.value)}
-                      placeholder={`Highlight ${index + 1}`}
-                      className="flex-1 px-4 py-2 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b]"
-                    />
-                    <button
-                      onClick={() => removeHighlight(index)}
-                      className="p-2 text-[#9e9e9e] hover:text-[#dc3545] transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-                {content.highlights.length === 0 && (
-                  <p className="text-sm text-[#64748b] italic">No highlights added yet</p>
-                )}
-              </div>
+              <label className="block text-sm font-medium text-[#1e293b] mb-2">
+                <span className="flex items-center gap-2">
+                  <Star size={16} className="text-[#64748b]" />
+                  Tour Highlights
+                </span>
+              </label>
+              <p className="text-xs text-[#64748b] mb-2">
+                Add the key selling points of your tour. Enter one highlight per line.
+              </p>
+              <textarea
+                value={highlightLines.join("\n")}
+                onChange={(e) => handleHighlightsChange(e.target.value)}
+                rows={6}
+                placeholder={"Visit local markets and cultural sites\nGuided nature walk through scenic trails\nTraditional cooking experience\nPhoto opportunities at viewpoints"}
+                className={`w-full px-4 py-2.5 border rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b] resize-none ${
+                  errors.highlights ? "border-[#dc3545]" : "border-[#eaeaea]"
+                }`}
+              />
+              {errors.highlights && (
+                <p className="mt-1 text-xs text-[#dc3545]">{errors.highlights}</p>
+              )}
+              {highlights.length > 0 && (
+                <ul className="mt-3 space-y-1.5 rounded-lg border border-[#eaeaea] bg-[#f8fafc] p-3">
+                  {highlights.map((item, index) => (
+                    <li key={`${item}-${index}`} className="flex items-start gap-2 text-sm text-[#475569]">
+                      <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#044b3b]" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         );
