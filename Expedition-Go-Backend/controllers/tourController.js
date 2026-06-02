@@ -514,7 +514,8 @@ exports.createTour = catchAsync(async (req, res, next) => {
   } = req.body;
 
   // Get uploaded Cloudinary URLs from multer
-  const uploadedPhotos = (req.files || []).map(f => f.path);
+  // NOTE: f.path is undefined when Cloudinary is not configured (memory storage fallback)
+  const uploadedPhotos = (req.files || []).map(f => f.path).filter(Boolean);
   const allPhotos = [...photos, ...uploadedPhotos];
 
   // Determine cover photo from uploaded files
@@ -660,7 +661,7 @@ exports.updateTour = catchAsync(async (req, res, next) => {
   if (longitude !== undefined) updateData.longitude = longitude;
 
   // Handle uploaded photos from multer
-  const uploadedPhotos = (req.files || []).map(f => f.path);
+  const uploadedPhotos = (req.files || []).map(f => f.path).filter(Boolean);
   if (uploadedPhotos.length > 0 || req.body.existingPhotos) {
     // existingPhotos is already parsed by parseJsonFields inside validateTourData
     const keptPhotos = req.body.existingPhotos || (existingTour.photos || []);
@@ -990,12 +991,15 @@ exports.serveTourPhoto = catchAsync(async (req, res, next) => {
     return next(new AppError('Tour not found', 404));
   }
 
+  // Filter out null/undefined entries that may have been stored due to memory storage fallback
+  const validPhotos = (Array.isArray(tour.photos) ? tour.photos : []).filter(Boolean);
+
   let photoUrl;
 
-  if (!isNaN(index) && Array.isArray(tour.photos) && index >= 0 && index < tour.photos.length) {
-    photoUrl = tour.photos[index];
+  if (!isNaN(index) && index >= 0 && index < validPhotos.length) {
+    photoUrl = validPhotos[index];
   } else {
-    photoUrl = tour.coverPhoto || (Array.isArray(tour.photos) && tour.photos.length > 0 ? tour.photos[0] : null);
+    photoUrl = tour.coverPhoto || (validPhotos.length > 0 ? validPhotos[0] : null);
   }
 
   if (!photoUrl) {
