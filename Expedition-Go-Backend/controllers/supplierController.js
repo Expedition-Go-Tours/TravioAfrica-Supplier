@@ -173,7 +173,7 @@ exports.getDashboard = catchAsync(async (req, res, next) => {
     return next(new AppError('Supplier profile not found', 404));
   }
 
-  const [tourStats, bookingStats, recentReviews] = await Promise.all([
+  const [tourStats, bookingStats, revenueAgg, recentReviews] = await Promise.all([
     // Tour counts by status
     prisma.tour.groupBy({
       by: ['status'],
@@ -186,6 +186,15 @@ exports.getDashboard = catchAsync(async (req, res, next) => {
       by: ['status'],
       where: { tour: { supplierId } },
       _count: true,
+    }),
+
+    // Total revenue from confirmed/completed bookings
+    prisma.booking.aggregate({
+      where: {
+        tour: { supplierId },
+        status: { in: ['CONFIRMED', 'COMPLETED'] },
+      },
+      _sum: { total: true },
     }),
 
     // Recent reviews
@@ -202,12 +211,13 @@ exports.getDashboard = catchAsync(async (req, res, next) => {
 
   const tourMap = Object.fromEntries(tourStats.map(t => [t.status, t._count]));
   const bookingMap = Object.fromEntries(bookingStats.map(b => [b.status, b._count]));
+  const totalRevenue = Number(revenueAgg._sum.total) || 0;
 
   res.status(200).json({
     status: 'success',
     data: {
       earnings: {
-        totalEarnings: Number(supplierProfile.totalEarnings),
+        totalEarnings: totalRevenue,
         currency: 'USD',
       },
       tours: {
