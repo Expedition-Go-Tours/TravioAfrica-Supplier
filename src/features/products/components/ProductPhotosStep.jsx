@@ -76,6 +76,7 @@ export default function ProductPhotosStep() {
                     alt={photo.alt}
                     className="w-full h-full object-cover"
                     onError={(e) => {
+                      console.error('ProductPhotosStep photo failed:', e.target.src);
                       e.target.style.display = 'none';
                     }}
                   />

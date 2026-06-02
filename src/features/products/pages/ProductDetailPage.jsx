@@ -143,33 +143,22 @@ export default function ProductDetailPage() {
    * @returns {string[]} Ordered array of photo URLs with coverPhoto first
    */
   const displayPhotos = (() => {
-    const photos = tour?.photos || [];
+    const rawPhotos = (tour?.photos || []).filter(Boolean);
+    const coverPhoto = tour?.coverPhoto;
     
-    // Edge case: coverPhoto exists but photos array is empty
-    if (tour?.coverPhoto && photos.length === 0) return [tour.coverPhoto];
+    if (coverPhoto && rawPhotos.length === 0) return [coverPhoto];
+    if (!coverPhoto || rawPhotos.length === 0) return rawPhotos;
     
-    // Guard: No photos to display
-    if (!tour?.coverPhoto || photos.length === 0) return photos;
-    
-    /**
-     * Extract public ID from Cloudinary URL for comparison
-     * Handles URLs like:
-     * - https://res.cloudinary.com/cloud/image/upload/v123456/folder/image.jpg
-     * - https://res.cloudinary.com/cloud/image/upload/folder/image.jpg
-     * 
-     * @param {string} url - Cloudinary URL
-     * @returns {string} Public ID or original URL if pattern doesn't match
-     */
     const extractId = (url) => {
       if (!url) return '';
       const m = url.match(/\/(?:v\d+\/)?([^/]+)$/);
       return m ? m[1] : url;
     };
     
-    const coverId = extractId(tour.coverPhoto);
-    const rest = photos.filter((p) => extractId(p) !== coverId);
+    const coverId = extractId(coverPhoto);
+    const rest = rawPhotos.filter((p) => extractId(p) !== coverId);
     
-    return [tour.coverPhoto, ...rest];
+    return [coverPhoto, ...rest];
   })();
 
   /**
@@ -225,6 +214,11 @@ export default function ProductDetailPage() {
    * @returns {string} Processed URL
    * @deprecated Use getCloudinaryThumbnail for better performance
    */
+  const proxyUrl = (photoIndex) => {
+    const idx = photoIndex != null ? photoIndex : 0;
+    return `${config.api.baseURL}/tours/${id}/photo?index=${idx}`;
+  };
+
   const getImageUrl = (url, photoIndex) => {
     if (!url) return url;
 
@@ -232,9 +226,17 @@ export default function ProductDetailPage() {
       return url;
     }
 
-    // Bare public ID — proxy through backend
-    const idx = photoIndex != null ? photoIndex : 0;
-    return `${config.api.baseURL}/tours/${id}/photo?index=${idx}`;
+    return proxyUrl(photoIndex);
+  };
+
+  const handleImageError = (e, photoIndex) => {
+    console.error('Image failed to load:', e.target.src);
+    const fallback = proxyUrl(photoIndex);
+    if (!e.target.src || e.target.src !== fallback) {
+      e.target.src = fallback;
+      return;
+    }
+    e.target.style.display = "none";
   };
 
   // ============================================================================
@@ -442,20 +444,12 @@ export default function ProductDetailPage() {
                   i === 0 ? "h-[240px] md:h-full md:row-span-2" : "h-[145px]"
                 }`}
                 aria-label={`View photo ${i + 1} of ${displayPhotos.length}`}
-                onClick={() => setLightboxIndex(i)}
               >
                 <img
                   src={getImageUrl(photo, i)}
                   alt={`${tour.title} - Photo ${i + 1}`}
                   className="absolute inset-0 h-full w-full object-cover hover:opacity-90 transition-opacity"
-                  onError={(e) => {
-                    e.target.style.display = "none";
-                    const placeholder = document.createElement("div");
-                    placeholder.className =
-                      "absolute inset-0 flex items-center justify-center text-[#9e9e9e] bg-[#f8fafc]";
-                    placeholder.textContent = "📷";
-                    e.target.parentElement.appendChild(placeholder);
-                  }}
+                  onError={(e) => handleImageError(e, i)}
                 />
               </button>
             ))}
@@ -470,11 +464,8 @@ export default function ProductDetailPage() {
                   src={getImageUrl(displayPhotos[4], 4)}
                   alt={`${tour.title} - Photo 5`}
                   className="absolute inset-0 h-full w-full object-cover opacity-40 group-hover:opacity-50 transition-opacity"
-                  onError={(e) => {
-                    e.target.style.display = "none";
-                  }}
+                  onError={(e) => handleImageError(e, 4)}
                 />
-
                 <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
                   <span className="text-sm font-medium text-[#1e293b]">
                     +{displayPhotos.length - 4} more photos
@@ -954,14 +945,7 @@ export default function ProductDetailPage() {
                     src={getImageUrl(photo, i)}
                     alt={`${tour.title} - Photo ${i + 1}`}
                     className="absolute inset-0 h-full w-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                      const placeholder = document.createElement("div");
-                      placeholder.className =
-                        "absolute inset-0 flex items-center justify-center text-[#9e9e9e] bg-[#f8fafc]";
-                      placeholder.textContent = "📷";
-                      e.target.parentElement.appendChild(placeholder);
-                    }}
+                    onError={(e) => handleImageError(e, i)}
                   />
                 </button>
               ))}
@@ -1003,7 +987,7 @@ export default function ProductDetailPage() {
               src={getImageUrl(displayPhotos[lightboxIndex], lightboxIndex)}
               alt={`${tour.title} - Photo ${lightboxIndex + 1}`}
               className="max-w-full max-h-[80vh] object-contain rounded-lg"
-              onError={(e) => { e.target.style.display = "none"; }}
+              onError={(e) => handleImageError(e, lightboxIndex)}
             />
             <p className="mt-3 text-sm text-white/70">
               {lightboxIndex + 1} / {displayPhotos.length}

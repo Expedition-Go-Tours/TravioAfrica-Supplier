@@ -294,6 +294,7 @@ export default function ProductsListPage() {
                         className="absolute inset-0 w-full h-full object-cover"
                         loading="lazy"
                         onError={(e) => {
+                          console.error('ProductsListPage thumbnail failed:', e.target.src);
                           const proxy = `${config.api.baseURL}/tours/${product.id}/photo`;
                           if (e.target.src !== proxy) {
                             e.target.src = proxy;
