@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useProductBuilderStore } from "@/features/products/stores/productBuilderStore";
 import LocationAutocomplete from "@/components/shared/LocationAutocomplete";
 import MultiSelect from "@/components/shared/MultiSelect";
@@ -89,6 +90,11 @@ const ACTIVITY_TYPES = [
 
 export default function ProductBasicsStep() {
   const { product, errors, updateProduct } = useProductBuilderStore();
+  const [secondaryThemesDraft, setSecondaryThemesDraft] = useState("");
+
+  useEffect(() => {
+    setSecondaryThemesDraft(product.secondaryThemes.join(", "));
+  }, [product.secondaryThemes]);
 
   const handleChange = (field, value) => {
     updateProduct({ [field]: value });
@@ -258,8 +264,15 @@ export default function ProductBasicsStep() {
           <label className="block text-sm font-medium text-[#1e293b] mb-2">Secondary Themes</label>
           <input
             type="text"
-            value={product.secondaryThemes.join(", ")}
-            onChange={(e) => handleChange("secondaryThemes", e.target.value.split(",").map((t) => t.trim()).filter(Boolean))}
+            value={secondaryThemesDraft}
+            onChange={(e) => setSecondaryThemesDraft(e.target.value)}
+            onBlur={() => {
+              const themes = secondaryThemesDraft
+                .split(",")
+                .map((t) => t.trim())
+                .filter(Boolean);
+              handleChange("secondaryThemes", themes);
+            }}
             placeholder="History, Photography (comma separated)"
             className="w-full px-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b]"
           />
