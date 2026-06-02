@@ -973,6 +973,48 @@ exports.getTourAnalytics = catchAsync(async (req, res, next) => {
 /**
  * Delete a specific photo from a tour (suppliers only - own tours)
  */
+/**
+ * GET /tours/:id/photo
+ * Serve a tour's photo as a redirect — supports ?index=N for specific photo
+ */
+exports.serveTourPhoto = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const index = parseInt(req.query.index, 10);
+
+  const tour = await prisma.tour.findUnique({
+    where: { id },
+    select: { id: true, photos: true, coverPhoto: true },
+  });
+
+  if (!tour) {
+    return next(new AppError('Tour not found', 404));
+  }
+
+  let photoUrl;
+
+  if (!isNaN(index) && Array.isArray(tour.photos) && index >= 0 && index < tour.photos.length) {
+    photoUrl = tour.photos[index];
+  } else {
+    photoUrl = tour.coverPhoto || (Array.isArray(tour.photos) && tour.photos.length > 0 ? tour.photos[0] : null);
+  }
+
+  if (!photoUrl) {
+    return next(new AppError('No photos available for this tour', 404));
+  }
+
+  const { CLOUDINARY_CLOUD_NAME } = process.env;
+
+  if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+    return res.redirect(302, photoUrl);
+  }
+
+  if (CLOUDINARY_CLOUD_NAME) {
+    return res.redirect(302, `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/w_800,q_auto,f_auto/v1/${photoUrl}`);
+  }
+
+  return res.redirect(302, photoUrl);
+});
+
 exports.deleteTourPhoto = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const supplierId = req.user.id;

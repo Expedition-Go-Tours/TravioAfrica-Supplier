@@ -484,6 +484,7 @@ router.get('/popular/by-category', tourController.getPopularByCategory);
  *         description: Tour not found
  */
 router.get('/:id', tourController.getTour);
+router.get('/:id/photo', tourController.serveTourPhoto);
 
 // ================================
 // SUPPLIER TOUR MANAGEMENT
