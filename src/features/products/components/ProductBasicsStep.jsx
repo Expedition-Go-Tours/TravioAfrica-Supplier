@@ -382,6 +382,21 @@ export default function ProductBasicsStep() {
             placeholder="Short description for SEO and social sharing"
             className="w-full px-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b] resize-none"
           />
+          <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 text-xs text-[#64748b]">
+            <div className="flex items-start sm:items-center gap-1.5">
+              <svg className="w-3.5 h-3.5 mt-0.5 sm:mt-0 flex-shrink-0 text-[#0891b2]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+              </svg>
+              <span>Keep between <strong>120–160 characters</strong> for optimal Google search snippets.</span>
+            </div>
+            <span className="hidden sm:inline text-[#9e9e9e]">|</span>
+            <div className="flex items-start sm:items-center gap-1.5">
+              <svg className="w-3.5 h-3.5 mt-0.5 sm:mt-0 flex-shrink-0 text-[#0891b2]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Include primary keywords naturally — this appears in search results and social shares.</span>
+            </div>
+          </div>
         </div>
       </div>
 
