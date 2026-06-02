@@ -221,7 +221,7 @@ export default function ProductBookingStep() {
         {/* Meeting Point Location Map */}
         <div className="md:col-span-2">
           <LocationMapPicker
-            apiKey={config.maps.googleMapsApiKey}
+            accessToken={config.maps.mapboxAccessToken}
             initialLat={bookingRules.meetingPointLat}
             initialLng={bookingRules.meetingPointLng}
             label="Set Meeting Point on Map"
