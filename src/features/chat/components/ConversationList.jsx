@@ -85,17 +85,22 @@ export default function ConversationList({ conversations, selectedId, onSelect, 
                   onError={(e) => { e.target.style.display = "none"; }}
                 />
               )}
+              {(conv.unreadCount ?? 0) > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#044b3b] px-1 text-[9px] font-bold text-white ring-2 ring-white">
+                  {conv.unreadCount}
+                </span>
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
-                <p className={`truncate text-sm font-medium ${isSelected ? "text-[#044b3b]" : "text-gray-900"}`}>
+                <p className={`truncate text-sm font-medium ${(conv.unreadCount ?? 0) > 0 ? "font-semibold text-gray-900" : isSelected ? "text-[#044b3b]" : "text-gray-900"}`}>
                   {name}
                 </p>
                 {lastMsg && (
                   <span className="shrink-0 text-[10px] text-gray-400">{timeAgo(lastMsg.createdAt)}</span>
                 )}
               </div>
-              <p className="mt-0.5 truncate text-xs text-gray-500">{preview}</p>
+              <p className={`mt-0.5 truncate text-xs ${(conv.unreadCount ?? 0) > 0 ? "font-medium text-gray-800" : "text-gray-500"}`}>{preview}</p>
             </div>
           </button>
         );
