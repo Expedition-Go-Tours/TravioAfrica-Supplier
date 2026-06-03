@@ -58,8 +58,12 @@ export default function ChatPage() {
       setCursor(data.cursor || null);
       setHasMore(data.hasMore || false);
       const initialStatuses = {};
+      const otherParticipant = conv?.participants?.find(
+        (p) => currentUserId ? p.userId !== currentUserId : p.user.roles?.includes('admin')
+      );
+      const lastReadAt = otherParticipant?.lastReadAt ? new Date(otherParticipant.lastReadAt).getTime() : 0;
       msgs.forEach((m) => {
-        initialStatuses[m.id] = "sent";
+        initialStatuses[m.id] = new Date(m.createdAt).getTime() <= lastReadAt ? "read" : "sent";
       });
       setMessageStatuses(initialStatuses);
     } catch {
@@ -68,7 +72,7 @@ export default function ChatPage() {
       setLoadingMsgs(false);
       isFetchingRef.current = false;
     }
-  }, []);
+  }, [currentUserId]);
 
   const handleSelectConversation = useCallback(async (conv) => {
     setSelectedConv(conv);
@@ -94,10 +98,14 @@ export default function ChatPage() {
       setMessages((prev) => [...msgs, ...prev]);
       setCursor(data.cursor || null);
       setHasMore(data.hasMore || false);
+      const otherParticipant = selectedConv?.participants?.find(
+        (p) => currentUserId ? p.userId !== currentUserId : p.user.roles?.includes('admin')
+      );
+      const lastReadAt = otherParticipant?.lastReadAt ? new Date(otherParticipant.lastReadAt).getTime() : 0;
       const statusUpdates = {};
       msgs.forEach((m) => {
         if (!messageStatuses[m.id]) {
-          statusUpdates[m.id] = "sent";
+          statusUpdates[m.id] = new Date(m.createdAt).getTime() <= lastReadAt ? "read" : "sent";
         }
       });
       if (Object.keys(statusUpdates).length > 0) {
