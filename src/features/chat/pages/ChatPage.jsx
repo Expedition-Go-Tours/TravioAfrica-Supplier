@@ -23,7 +23,7 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const isFetchingRef = useRef(false);
 
-  const { onNewMessage, onMarkRead, emitMarkRead, emitDelivered } = useChatSocket(selectedConv?.id, currentUserId);
+  const { onNewMessage, onMarkRead, onDelivered, emitMarkRead, emitDelivered } = useChatSocket(selectedConv?.id, currentUserId);
 
   const loadConversations = useCallback(async () => {
     if (!currentUserId) return;
@@ -172,6 +172,20 @@ export default function ChatPage() {
     });
     return unsub;
   }, [onMarkRead]);
+
+  useEffect(() => {
+    if (!onDelivered) return;
+    const unsub = onDelivered((data) => {
+      setMessageStatuses((prev) => {
+        const next = { ...prev };
+        (data.messageIds || []).forEach((id) => {
+          if (next[id] === "sent") next[id] = "delivered";
+        });
+        return next;
+      });
+    });
+    return unsub;
+  }, [onDelivered]);
 
   useEffect(() => {
     if (!selectedConv?.id || !currentUserId) return;
