@@ -13,6 +13,9 @@ dist
 dist-ssr
 *.local
 *.md
+
+Expedition-GO-Frontend-main/
+Expedition-Go-Backend/
 /doc
 # Editor directories and files
 .vscode/*
