@@ -44,7 +44,19 @@ export default function MessageBubble({ message, isOwn, status, showAvatar, send
               : "bg-white text-gray-800 border border-gray-200 rounded-[18px] rounded-bl-[4px]"
           }`}
         >
-          <span className="whitespace-pre-wrap break-words">{message.content}</span>
+          {message.attachmentUrl && (
+            <div className="-mx-3.5 -mt-2 mb-2 overflow-hidden rounded-t-[18px]">
+              <img
+                src={message.attachmentUrl}
+                alt=""
+                className="max-w-full object-cover"
+                onError={(e) => { e.target.style.display = "none"; }}
+              />
+            </div>
+          )}
+          {message.content && (
+            <span className="whitespace-pre-wrap break-words">{message.content}</span>
+          )}
           <div className={`mt-1 flex items-center gap-1 ${isOwn ? "justify-end" : "justify-start"}`}>
             <span className={`text-[10px] leading-none ${isOwn ? "text-white/70" : "text-gray-400"}`}>
               {formatMessageTime(message.createdAt)}
