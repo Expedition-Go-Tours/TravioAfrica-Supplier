@@ -12,7 +12,6 @@ export function useChatSocket(conversationId, userId) {
     const token = localStorage.getItem("auth_token");
     socketRef.current = io(SOCKET_URL, {
       auth: { userId, role: "supplier", token },
-      transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 3000,
