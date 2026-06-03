@@ -1,16 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard,
-  CalendarCheck,
-  Package,
-  Star,
-  DollarSign,
-  Bell,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-  Menu,
-  X,
+  LayoutDashboard, CalendarCheck, Package, Star,
+  DollarSign, Bell, Settings, ChevronLeft, ChevronRight, Menu, X, MessageCircle,
 } from "lucide-react";
 import { useSidebarStore } from "@/stores/sidebarStore";
 
@@ -22,6 +13,7 @@ const navItems = [
   { label: "Finance", path: "/finance", icon: DollarSign },
   { label: "Notifications", path: "/notifications", icon: Bell },
   { label: "Settings", path: "/settings", icon: Settings },
+  { label: "Messages", path: "/chat", icon: MessageCircle },
 ];
 
 export default function Sidebar() {
