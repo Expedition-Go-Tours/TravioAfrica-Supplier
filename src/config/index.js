@@ -104,6 +104,9 @@ const env = {
   VITE_STRIPE_PUBLIC_KEY: envString(import.meta.env.VITE_STRIPE_PUBLIC_KEY, ''),
   VITE_INTERCOM_APP_ID: envString(import.meta.env.VITE_INTERCOM_APP_ID, ''),
 
+  // Support
+  VITE_ADMIN_SUPPORT_ID: envString(import.meta.env.VITE_ADMIN_SUPPORT_ID, ''),
+
   // Dev tools
   VITE_ENABLE_REACT_QUERY_DEVTOOLS: envBool(import.meta.env.VITE_ENABLE_REACT_QUERY_DEVTOOLS, isDev),
   VITE_ENABLE_REDUX_DEVTOOLS: envBool(import.meta.env.VITE_ENABLE_REDUX_DEVTOOLS, isDev),
@@ -195,6 +198,10 @@ export const config = {
   integrations: {
     stripePublicKey: env.VITE_STRIPE_PUBLIC_KEY,
     intercomAppId: env.VITE_INTERCOM_APP_ID,
+  },
+
+  support: {
+    adminId: env.VITE_ADMIN_SUPPORT_ID,
   },
 
   devTools: {
