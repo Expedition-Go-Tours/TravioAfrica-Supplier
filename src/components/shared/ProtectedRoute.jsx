@@ -1,0 +1,102 @@
+import { useEffect, useRef, useState } from "react";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import {
+  useAuthStore,
+  isAdminUser,
+  canAccessSupplierDashboard,
+  getAuthToken,
+} from "@/stores/authStore";
+import { loadSupplierProfile } from "@/features/auth/api";
+import { Loader2 } from "lucide-react";
+
+const PROFILE_CHECK_TIMEOUT_MS = 8000;
+
+function SessionLoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 size={32} className="animate-spin text-[#044b3b]" />
+        <p className="text-sm text-[#64748b]">Verifying session...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function ProtectedRoute({ requireAdmin = false }) {
+  const { isAuthenticated, hasHydrated, supplierProfile, setSupplierProfile } = useAuthStore();
+  const location = useLocation();
+  const isAdmin = isAdminUser();
+  const authToken = getAuthToken();
+  const profileCheckStarted = useRef(false);
+
+  const hasDashboardAccess = isAdmin || canAccessSupplierDashboard(supplierProfile);
+  const needsProfileLookup =
+    hasHydrated && isAuthenticated && Boolean(authToken) && !isAdmin && !hasDashboardAccess;
+
+  const [profileResolved, setProfileResolved] = useState(() => !needsProfileLookup);
+
+  useEffect(() => {
+    if (!needsProfileLookup) {
+      setProfileResolved(true);
+      return undefined;
+    }
+
+    setProfileResolved(false);
+
+    if (profileCheckStarted.current) {
+      return undefined;
+    }
+
+    profileCheckStarted.current = true;
+    let cancelled = false;
+
+    const timeoutId = window.setTimeout(() => {
+      if (!cancelled) {
+        setProfileResolved(true);
+      }
+    }, PROFILE_CHECK_TIMEOUT_MS);
+
+    loadSupplierProfile(authToken)
+      .then((profile) => {
+        if (!cancelled) {
+          setSupplierProfile(profile);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          window.clearTimeout(timeoutId);
+          setProfileResolved(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [needsProfileLookup, authToken, setSupplierProfile]);
+
+  if (!hasHydrated) {
+    return <SessionLoadingScreen />;
+  }
+
+  if (!isAuthenticated || !authToken) {
+    if (isAuthenticated && !authToken) {
+      useAuthStore.getState().setUnauthenticated();
+    }
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (needsProfileLookup && !profileResolved) {
+    return <SessionLoadingScreen />;
+  }
+
+  if (requireAdmin && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (!isAdmin && !canAccessSupplierDashboard(supplierProfile)) {
+    return <Navigate to="/supplier/status" replace />;
+  }
+
+  return <Outlet />;
+}

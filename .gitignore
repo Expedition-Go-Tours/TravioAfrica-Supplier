@@ -6,12 +6,18 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
+Expedition-GO-Frontend-main/*
+Expedition-GO-Frontend-main/Expedition-Go-Dashboard-main/*
 node_modules
 dist
 dist-ssr
 *.local
+*.md
 
+Expedition-GO-Frontend-main/
+Expedition-Go-Backend-v2/
+Expedition-Go-Backend/
+/doc
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +28,18 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.kiro/*
+
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.development.local
+.env.production.local
+.env.test.local
+.env.example
+/test-results
+playwright-report
+playwright.config.js
+test.yml
