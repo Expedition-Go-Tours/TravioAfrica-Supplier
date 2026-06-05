@@ -59,6 +59,17 @@ export const useAuthStore = create(
       setHasHydrated: (hasHydrated) => set({ hasHydrated, isLoading: false }),
 
       /**
+       * Update the stored token (e.g., after Firebase auto-refresh).
+       * Keeps localStorage in sync without changing any other state.
+       */
+      setToken: (newToken) => {
+        if (newToken) {
+          localStorage.setItem("auth_token", newToken);
+          set({ token: newToken });
+        }
+      },
+
+      /**
        * Mark auth as failed / user is logged out.
        */
       setUnauthenticated: () => {

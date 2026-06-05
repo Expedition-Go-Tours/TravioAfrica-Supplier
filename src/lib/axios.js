@@ -2,6 +2,7 @@ import axios from "axios";
 import config from "@/config";
 import { retryWithBackoff, isRetryableError, handleApiError } from "./errorHandler";
 import { useAuthStore, getAuthToken } from "@/stores/authStore";
+import { auth } from "./firebase";
 
 const FALLBACK_BASE_URL = "https://expedition-go-backend-v2.onrender.com/api";
 
@@ -111,21 +112,37 @@ api.interceptors.response.use(
       });
     }
 
-    // Handle 401 Unauthorized (skip during login/token exchange)
-    if (error.response?.status === 401 && !originalRequest?.skipGlobalErrorHandler) {
-      // Save current URL so we can return here after re-authentication
-      if (typeof window !== "undefined") {
-        localStorage.setItem("auth_return_url", window.location.pathname + window.location.search);
+    // Handle 401 Unauthorized — attempt token refresh before giving up
+    if (error.response?.status === 401 && !originalRequest?._retry) {
+      originalRequest._retry = true;
+
+      try {
+        // Try to get a fresh Firebase ID token
+        if (auth?.currentUser) {
+          const freshToken = await auth.currentUser.getIdToken(true);
+          if (freshToken) {
+            // Update stored token so subsequent requests use it
+            useAuthStore.getState().setToken(freshToken);
+            // Retry the original request with the new token
+            originalRequest.headers.Authorization = `Bearer ${freshToken}`;
+            return api(originalRequest);
+          }
+        }
+      } catch {
+        // Token refresh failed — fall through to logout
       }
 
-      // Clear local auth state so the UI knows the user is logged out.
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("auth_user");
-      useAuthStore.getState().setUnauthenticated();
-
-      // Redirect to login immediately so the supplier doesn't see a broken dashboard.
-      if (typeof window !== "undefined") {
-        window.location.href = "/login";
+      // Token refresh didn't work — user must re-authenticate
+      if (!originalRequest?.skipGlobalErrorHandler) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("auth_return_url", window.location.pathname + window.location.search);
+        }
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("auth_user");
+        useAuthStore.getState().setUnauthenticated();
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
+        }
       }
       return Promise.reject(error);
     }
