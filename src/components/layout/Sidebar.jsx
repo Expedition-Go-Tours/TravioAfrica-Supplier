@@ -41,9 +41,19 @@ function extractBusinessName(businessInfo) {
   return businessInfo.businessName || businessInfo.legalBusinessName || null;
 }
 
+const SIDEBAR_STATUS_STYLES = {
+  PENDING: { dot: "bg-amber-400", text: "text-amber-300/80", label: "Pending" },
+  UNDER_REVIEW: { dot: "bg-blue-400", text: "text-blue-300/80", label: "Under Review" },
+  APPROVED: { dot: "bg-blue-400", text: "text-blue-300/80", label: "Approved" },
+  ACTIVE: { dot: "bg-slate-400", text: "text-slate-300/70", label: "Verified" },
+  SUSPENDED: { dot: "bg-red-400", text: "text-red-300/80", label: "Suspended" },
+  REJECTED: { dot: "bg-red-400", text: "text-red-300/80", label: "Rejected" },
+};
+
 export default function Sidebar() {
   const { isCollapsed, toggle, isMobileOpen, closeMobile } = useSidebarStore();
   const user = useAuthStore((state) => state.user);
+  const supplierProfile = useAuthStore((state) => state.supplierProfile);
   const location = useLocation();
   const navigate = useNavigate();
   const logoUrl = user?.logoUrl;
@@ -63,6 +73,8 @@ export default function Sidebar() {
   useEffect(() => {
     if (isCollapsed) setShowLogoutConfirm(false); // eslint-disable-line react-hooks/set-state-in-effect
   }, [isCollapsed]);
+
+  const statusStyle = SIDEBAR_STATUS_STYLES[supplierProfile?.status] || null;
 
   const handleLogout = async () => {
     await useAuthStore.getState().logout();
@@ -183,13 +195,15 @@ export default function Sidebar() {
             </div>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-emerald-100 truncate leading-tight" title={businessName || user?.name}>
+                <p className="text-xs font-semibold text-slate-100 truncate leading-tight" title={businessName || user?.name}>
                   {businessName || user?.name || "Supplier"}
                 </p>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className="w-1 h-1 rounded-full bg-emerald-400" />
-                  <span className="text-[10px] font-medium text-emerald-300/70">Verified</span>
-                </div>
+                {statusStyle && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className={`w-1 h-1 rounded-full ${statusStyle.dot}`} />
+                    <span className={`text-[10px] font-medium ${statusStyle.text}`}>{statusStyle.label}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
