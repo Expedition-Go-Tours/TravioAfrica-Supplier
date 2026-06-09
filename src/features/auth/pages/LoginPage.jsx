@@ -45,6 +45,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleEmailSignIn = async (event) => {
     event.preventDefault();
@@ -87,6 +88,7 @@ export default function LoginPage() {
       return;
     }
 
+    setGoogleLoading(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const idToken = await result.user.getIdToken();
@@ -96,6 +98,8 @@ export default function LoginPage() {
       if (!err.response) {
         setError(getLoginErrorMessage(err));
       }
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -265,10 +269,10 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              disabled={loading}
+              disabled={googleLoading}
               className="w-1/2 mx-auto flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-emerald-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-slate-900/5"
             >
-              {loading ? (
+              {googleLoading ? (
                 <Loader2 size={20} className="animate-spin text-emerald-600" />
               ) : (
                 <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
