@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Loader2,
   AlertCircle,
@@ -9,6 +10,7 @@ import {
   MapPin,
   Package,
   BarChart3,
+  Compass,
 } from "lucide-react";
 import {
   auth,
@@ -26,6 +28,16 @@ const FEATURES = [
   { icon: MapPin, label: "Manage destinations and availability" },
   { icon: BarChart3, label: "Track bookings and performance" },
 ];
+
+const fadeUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.4, ease: "easeOut" },
+};
+
+const stagger = {
+  animate: { transition: { staggerChildren: 0.08 } },
+};
 
 export default function LoginPage() {
   const { completeLogin, loading, error, setError } = useSupplierLogin();
@@ -88,83 +100,122 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#f8fafc]">
+    <div className="min-h-screen flex bg-slate-50/80">
       {/* Brand panel with supplier image */}
-      <div className="hidden lg:flex lg:w-[45%] xl:w-[42%] relative overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="hidden lg:flex lg:w-[45%] xl:w-[42%] relative overflow-hidden"
+      >
         <img
           src={supplierLoginImage}
           alt="African travel and safari experiences"
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#044b3b]/70 via-[#044b3b]/45 to-[#044b3b]/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-emerald-700/80 via-emerald-800/50 to-emerald-900/30" />
 
         <div className="relative z-10 flex flex-col justify-between p-10 xl:p-14 text-white w-full min-h-screen">
-          <div>
-            <div className="flex items-center gap-3 mb-12">
-              <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                <span className="font-bold text-lg">T</span>
+          <motion.div variants={stagger} initial="initial" animate="animate">
+            <motion.div variants={fadeUp} className="flex items-center gap-3 mb-14">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-950/40">
+                <Compass size={19} className="text-white" />
               </div>
-              <span className="font-bold text-xl tracking-tight">TravioAfrica</span>
-            </div>
+              <span className="font-bold text-xl tracking-tight" style={{ fontFamily: "'DM Sans', system-ui, sans-serif", letterSpacing: "-0.02em" }}>TravioAfrica</span>
+            </motion.div>
 
-            <h1 className="text-3xl xl:text-4xl font-bold leading-tight mb-4">
-              Supplier Dashboard
-            </h1>
-            <p className="text-white/85 text-base leading-relaxed max-w-md">
-              Sign in to create tours, manage bookings, and grow your travel business across Africa.
-            </p>
-          </div>
+            <motion.div variants={fadeUp}>
+              <h1 className="text-3xl xl:text-4xl font-bold leading-tight mb-4">
+                Supplier Dashboard
+              </h1>
+              <p className="text-emerald-100/85 text-base leading-relaxed max-w-md">
+                Sign in to create tours, manage bookings, and grow your travel business across Africa.
+              </p>
+            </motion.div>
+          </motion.div>
 
-          <ul className="space-y-4">
+          <motion.ul
+            variants={stagger}
+            initial="initial"
+            animate="animate"
+            className="space-y-4"
+          >
             {FEATURES.map(({ icon: Icon, label }) => (
-              <li key={label} className="flex items-center gap-3 text-white/90">
-                <span className="w-9 h-9 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+              <motion.li
+                key={label}
+                variants={fadeUp}
+                className="flex items-center gap-3 text-emerald-50/90"
+              >
+                <span className="w-9 h-9 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 ring-1 ring-white/10">
                   <Icon size={18} />
                 </span>
                 <span className="text-sm font-medium">{label}</span>
-              </li>
+              </motion.li>
             ))}
-          </ul>
+          </motion.ul>
 
-          <p className="text-xs text-white/60">
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.4 }}
+            className="text-xs text-emerald-200/50"
+          >
             Access is limited to approved and active suppliers.
-          </p>
+          </motion.p>
         </div>
-      </div>
+      </motion.div>
 
       {/* Login form */}
       <div className="flex-1 flex items-center justify-center px-4 py-10 sm:px-8">
-        <div className="w-full max-w-md">
-          <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#044b3b] mb-3">
-              <span className="text-white font-bold text-lg">T</span>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="w-full max-w-md"
+        >
+          {/* Mobile brand */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.35 }}
+            className="lg:hidden text-center mb-8"
+          >
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-lg shadow-emerald-950/20 mb-3">
+              <Compass size={20} className="text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-[#1e293b]">Supplier Login</h1>
-            <p className="text-sm text-[#64748b] mt-1">Approved & active suppliers only</p>
-          </div>
+            <h1 className="text-2xl font-bold text-slate-800">Supplier Login</h1>
+            <p className="text-sm text-slate-500 mt-1">Approved & active suppliers only</p>
+          </motion.div>
 
-          <div className="bg-white rounded-2xl border border-[#eaeaea] shadow-sm p-6 sm:p-8">
+          {/* Login card */}
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm shadow-slate-900/5 p-6 sm:p-8">
+            {/* Desktop heading */}
             <div className="hidden lg:block mb-6">
-              <h2 className="text-xl font-bold text-[#1e293b]">Sign in</h2>
-              <p className="text-sm text-[#64748b] mt-1">
+              <h2 className="text-xl font-bold text-slate-800">Sign in</h2>
+              <p className="text-sm text-slate-500 mt-1">
                 Use your supplier account to access the dashboard
               </p>
             </div>
 
+            {/* Error */}
             {error && (
-              <div className="flex items-start gap-3 p-3 mb-5 bg-[#fef2f2] border border-[#fca5a5] rounded-lg">
-                <AlertCircle size={18} className="text-[#dc2626] mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-[#991b1b]">{error}</p>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="flex items-start gap-3 p-3.5 mb-5 bg-red-50 border border-red-200 rounded-lg"
+              >
+                <AlertCircle size={16} className="text-red-500 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-700">{error}</p>
+              </motion.div>
             )}
 
             <form onSubmit={handleEmailSignIn} className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-[#1e293b] mb-1.5">
+                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">
                   Email address
                 </label>
                 <div className="relative">
-                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9e9e9e]" />
+                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     id="email"
                     type="email"
@@ -173,17 +224,17 @@ export default function LoginPage() {
                     placeholder="you@example.com"
                     autoComplete="email"
                     disabled={loading}
-                    className="w-full pl-9 pr-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b] transition-colors disabled:opacity-60"
+                    className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-colors disabled:opacity-60 disabled:bg-slate-50"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-[#1e293b] mb-1.5">
+                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9e9e9e]" />
+                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     id="password"
                     type={showPassword ? "text" : "password"}
@@ -192,12 +243,12 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     autoComplete="current-password"
                     disabled={loading}
-                    className="w-full pl-9 pr-10 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b] transition-colors disabled:opacity-60"
+                    className="w-full pl-9 pr-10 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-colors disabled:opacity-60 disabled:bg-slate-50"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9e9e9e] hover:text-[#64748b]"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -208,7 +259,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#044b3b] text-white rounded-lg text-sm font-medium hover:bg-[#033629] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? <Loader2 size={18} className="animate-spin" /> : null}
                 {loading ? "Signing in..." : "Sign in"}
@@ -217,10 +268,10 @@ export default function LoginPage() {
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[#eaeaea]" />
+                <div className="w-full border-t border-slate-100" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-white px-3 text-[#9e9e9e]">or continue with</span>
+                <span className="bg-white px-3 text-slate-400">or continue with</span>
               </div>
             </div>
 
@@ -228,10 +279,10 @@ export default function LoginPage() {
               type="button"
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border-2 border-[#eaeaea] rounded-lg text-sm font-medium text-[#1e293b] hover:bg-[#f8fafc] hover:border-[#044b3b] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:border-emerald-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-slate-900/5"
             >
               {loading ? (
-                <Loader2 size={20} className="animate-spin text-[#044b3b]" />
+                <Loader2 size={20} className="animate-spin text-emerald-600" />
               ) : (
                 <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
@@ -244,18 +295,23 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <p className="text-xs text-center text-[#9e9e9e] mt-6 leading-relaxed">
-            Only suppliers with <strong className="text-[#64748b] font-medium">Approved</strong> or{" "}
-            <strong className="text-[#64748b] font-medium">Active</strong> status can access the dashboard and create tours.
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.25, duration: 0.35 }}
+            className="text-xs text-center text-slate-400 mt-6 leading-relaxed"
+          >
+            Only suppliers with <strong className="text-slate-600 font-medium">Approved</strong> or{" "}
+            <strong className="text-slate-600 font-medium">Active</strong> status can access the dashboard.
             <br />
             <a
               href="https://travioafrica.com/become-a-supplier"
-              className="text-[#044b3b] hover:underline mt-1 inline-block"
+              className="text-emerald-700 hover:text-emerald-800 underline underline-offset-2 mt-1 inline-block font-medium"
             >
               Apply to become a supplier
             </a>
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
       </div>
     </div>
   );
