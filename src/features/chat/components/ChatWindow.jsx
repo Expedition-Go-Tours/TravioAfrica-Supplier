@@ -189,7 +189,7 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
       </div>
 
       <div key={conversation?.id} style={{ animation: "chatSlideIn 0.25s ease-out" }} className="flex flex-1 flex-col min-h-0">
-      <div ref={messagesContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto bg-gray-50/50">
+      <div ref={messagesContainerRef} onScroll={handleScroll} className="relative flex-1 overflow-y-auto bg-gray-50/50">
         <div className="px-4 py-3">
           {loading ? (
             <div className="space-y-2 pt-4">
@@ -252,7 +252,7 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
       {showScrollBtn && (
         <button
           onClick={() => scrollToBottom(true)}
-          className="absolute bottom-20 right-8 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+          className="absolute bottom-4 right-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
         >
           <ChevronDown className="h-4 w-4 text-gray-600" />
         </button>
