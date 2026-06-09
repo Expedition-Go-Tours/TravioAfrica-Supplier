@@ -19,7 +19,7 @@ export default function AppShell() {
       )}
       <main
         className={`pt-14 min-h-screen transition-all duration-300 ${
-          isCollapsed ? "lg:ml-[60px]" : "lg:ml-[220px]"
+          isCollapsed ? "lg:ml-[64px]" : "lg:ml-[270px]"
         }`}
       >
         <div className="min-h-[calc(100vh-64px)]">
