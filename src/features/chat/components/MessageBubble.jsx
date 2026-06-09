@@ -12,7 +12,7 @@ const statusIcon = {
   sending: <Loader2 className="h-3 w-3 animate-spin" />,
   sent: <Check className="h-3 w-3" />,
   delivered: <CheckCheck className="h-3 w-3" />,
-  read: <CheckCheck className="h-3 w-3 text-[#53bdeb]" />,
+  read: <CheckCheck className="h-3 w-3 text-emerald-400" />,
 };
 
 export default function MessageBubble({ message, isOwn, status, showAvatar, senderAvatar, senderName, compact }) {
@@ -33,13 +33,13 @@ export default function MessageBubble({ message, isOwn, status, showAvatar, send
       {isOwn ? (
         <div className={`${spacer} shrink-0`} />
       ) : showAvatar ? (
-        <div className={`relative flex ${a} shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#2563eb] font-bold text-white`}>
+        <div className={`relative flex ${a} shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-600 font-bold text-white`}>
           {compact ? (
             <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none">
               <circle cx="12" cy="12" r="10" fill="currentColor" className="text-white/90" />
-              <circle cx="8.5" cy="10" r="1.2" fill="#2563eb" />
-              <circle cx="15.5" cy="10" r="1.2" fill="#2563eb" />
-              <path d="M7.5 14.5c1.2 1.2 3 1.8 4.5 1.8s3.3-0.6 4.5-1.8" stroke="#2563eb" strokeWidth="1.2" strokeLinecap="round" />
+              <circle cx="8.5" cy="10" r="1.2" fill="#059669" />
+              <circle cx="15.5" cy="10" r="1.2" fill="#059669" />
+              <path d="M7.5 14.5c1.2 1.2 3 1.8 4.5 1.8s3.3-0.6 4.5-1.8" stroke="#059669" strokeWidth="1.2" strokeLinecap="round" />
             </svg>
           ) : (
             <>
@@ -63,8 +63,8 @@ export default function MessageBubble({ message, isOwn, status, showAvatar, send
         <div
           className={`relative ${bubblePad} ${bubbleText} shadow-sm ${
             isOwn
-              ? `bg-[#2563eb] text-white ${bubbleRadius} ${bubbleRadiusOwn}`
-              : `bg-white text-gray-800 border border-gray-200 ${bubbleRadius} ${bubbleRadiusOther}`
+              ? `bg-emerald-600 text-white ${bubbleRadius} ${bubbleRadiusOwn}`
+              : `bg-white text-slate-800 border border-slate-200 ${bubbleRadius} ${bubbleRadiusOther}`
           }`}>
           {message.attachmentUrl && (
             <div className={`${attMargin} overflow-hidden ${attRadius}`}>
@@ -80,7 +80,7 @@ export default function MessageBubble({ message, isOwn, status, showAvatar, send
             <span className="whitespace-pre-wrap break-words">{message.content}</span>
           )}
           <div className={`mt-0.5 flex items-center gap-1 ${isOwn ? "justify-end" : "justify-start"}`}>
-            <span className={`${tsSize} leading-none ${isOwn ? "text-white/70" : "text-gray-400"}`}>
+            <span className={`${tsSize} leading-none ${isOwn ? "text-white/70" : "text-slate-400"}`}>
               {formatMessageTime(message.createdAt)}
             </span>
             {isOwn && status && <span className="flex">{statusIcon[status]}</span>}

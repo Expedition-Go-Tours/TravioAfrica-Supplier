@@ -40,7 +40,6 @@ function timeAgo(dateStr) {
 export default function CustomerDetailsPanel({ conversation, currentUserId, onClose }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [visible, setVisible] = useState(false);
   const navigate = useNavigate();
 
   const otherParticipant = conversation?.participants?.find(
@@ -48,10 +47,6 @@ export default function CustomerDetailsPanel({ conversation, currentUserId, onCl
   )?.user;
   const customerId = otherParticipant?.id;
   const cu = otherParticipant || {};
-
-  useEffect(() => {
-    requestAnimationFrame(() => setVisible(true));
-  }, []);
 
   useEffect(() => {
     if (!customerId) return;
@@ -68,15 +63,12 @@ export default function CustomerDetailsPanel({ conversation, currentUserId, onCl
   }, [bookings]);
 
   const handleClose = () => {
-    setVisible(false);
-    setTimeout(onClose, 200);
+    onClose();
   };
 
   return (
     <div
-      className={`flex w-[420px] shrink-0 flex-col border-l border-gray-200 bg-white shadow-[-4px_0_16px_rgba(0,0,0,0.06)] transition-all duration-200 ease-out ${
-        visible ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"
-      }`}
+      className="flex h-full w-[420px] shrink-0 flex-col border-l border-gray-200 bg-white shadow-[-4px_0_16px_rgba(0,0,0,0.06)]"
     >
       {/* Header */}
       <div className="bg-gradient-to-r from-[#044b3b] to-emerald-700 px-5 h-16 flex items-center justify-between relative">

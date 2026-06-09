@@ -1,6 +1,7 @@
 ﻿import { useState, useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 import { useAuthStore } from "@/stores/authStore";
 import { useChatStore } from "@/stores/chatStore";
 import ConversationList from "../components/ConversationList";
@@ -271,11 +272,11 @@ export default function ChatPage() {
   const isCustomerConv = Boolean(otherParticipant?.roles?.includes("customer"));
 
   return (
-    <div className="p-6 h-[calc(100vh-64px)]">
-      <div className="flex h-full rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-      <div className="flex w-[340px] shrink-0 flex-col border-r border-gray-200 bg-white">
+    <div className="px-6 py-4 h-[calc(100vh-120px)] mx-auto">
+      <div className="flex h-full rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-900/5 overflow-hidden">
+      <div className="flex w-[340px] shrink-0 flex-col border-r border-slate-200 bg-white">
         <div className="px-4 pt-4 pb-3">
-          <div className="flex items-center gap-1.5 bg-white rounded-xl p-1 border border-gray-200">
+          <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
             {TABS.map((tab) => {
               const isActive = activeTab === tab.key;
               const unreadCount = conversations.filter((c) => (c.unreadCount ?? 0) > 0).length;
@@ -283,18 +284,19 @@ export default function ChatPage() {
                 <button
                   key={tab.key}
                   onClick={() => handleTabChange(tab.key)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all duration-200 ${
+                                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all duration-200 ${
                     isActive
-                      ? "bg-[#044b3b] text-white shadow-sm"
-                      : "text-gray-500 hover:text-gray-700"
+                      ? "bg-white text-emerald-700 shadow-sm border border-slate-200"
+                      : "text-slate-500 hover:text-slate-700 border border-transparent"
                   }`}
+                  style={{ outline: "none", WebkitTapHighlightColor: "transparent" }}
                 >
                   {tab.label}
                   {tab.key === "unread" && unreadCount > 0 && (
                     <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1.5 text-[10px] font-bold ${
                       isActive
-                        ? "bg-white text-[#044b3b]"
-                        : "bg-gray-200 text-gray-600"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-slate-200 text-slate-600"
                     }`}>
                       {unreadCount}
                     </span>
@@ -304,42 +306,62 @@ export default function ChatPage() {
             })}
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
-          <ConversationList
-            conversations={filteredConversations}
-            selectedId={selectedConv?.id}
-            onSelect={handleSelectConversation}
-            onDelete={handleDeleteConversation}
-            loading={loadingConvs}
-            currentUserId={currentUserId}
-            emptyMessage={activeTab === "unread" ? "No unread messages" : "No conversations yet"}
-          />
+        <div className="flex-1 overflow-y-auto pt-2">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 12 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+            >
+              <ConversationList
+                conversations={filteredConversations}
+                selectedId={selectedConv?.id}
+                onSelect={handleSelectConversation}
+                onDelete={handleDeleteConversation}
+                loading={loadingConvs}
+                currentUserId={currentUserId}
+                emptyMessage={activeTab === "unread" ? "No unread messages" : "No conversations yet"}
+              />
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
-      <div className="relative flex-1">
-        <ChatWindow
-          conversation={selectedConv}
-          messages={messages}
-          messageStatuses={messageStatuses}
-          onSendMessage={handleSend}
-          onLoadMore={handleLoadMore}
-          hasMore={hasMore}
-          loading={loadingMsgs}
-          loadingMore={loadingMore}
-          sending={sending}
-          currentUserId={currentUserId}
-          onOpenDetails={() => setShowDetailsPanel((v) => !v)}
-          showDetailsButton={isCustomerConv}
-        />
-        {showDetailsPanel && isCustomerConv && (
-          <div className="absolute inset-y-0 right-0 z-20">
-            <CustomerDetailsPanel
-              conversation={selectedConv}
-              currentUserId={currentUserId}
-              onClose={() => setShowDetailsPanel(false)}
-            />
-          </div>
-        )}
+      <div className="flex flex-1 min-w-0">
+        <div className="flex-1 min-w-0">
+          <ChatWindow
+            conversation={selectedConv}
+            messages={messages}
+            messageStatuses={messageStatuses}
+            onSendMessage={handleSend}
+            onLoadMore={handleLoadMore}
+            hasMore={hasMore}
+            loading={loadingMsgs}
+            loadingMore={loadingMore}
+            sending={sending}
+            currentUserId={currentUserId}
+            onOpenDetails={() => setShowDetailsPanel((v) => !v)}
+            showDetailsButton={isCustomerConv}
+            showDetails={showDetailsPanel}
+          />
+        </div>
+        <AnimatePresence>
+          {showDetailsPanel && isCustomerConv && (
+            <motion.div
+              initial={{ opacity: 0, x: 32 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 32 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+            >
+              <CustomerDetailsPanel
+                conversation={selectedConv}
+                currentUserId={currentUserId}
+                onClose={() => setShowDetailsPanel(false)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       </div>
     </div>
