@@ -53,7 +53,8 @@ export default function Header() {
   const handleLogout = async () => {
     if (logoutLoading) return;
     setLogoutLoading(true);
-    await Promise.all([useAuthStore.getState().logout(), new Promise((resolve) => setTimeout(resolve, 1500))]);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await useAuthStore.getState().logout();
     navigate("/login", { replace: true });
   };
 
