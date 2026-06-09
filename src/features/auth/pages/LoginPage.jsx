@@ -100,95 +100,91 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-slate-50/80">
-      {/* Brand panel with supplier image */}
+    <div className="min-h-screen flex items-center justify-center bg-slate-50/80 p-4 sm:p-6">
+      {/* Unified card: image + form come together at same height */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="hidden lg:flex lg:w-[45%] xl:w-[42%] relative overflow-hidden"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="flex w-full max-w-5xl xl:max-w-6xl min-h-[560px] bg-white rounded-2xl shadow-xl shadow-slate-900/10 overflow-hidden"
       >
-        <img
-          src={supplierLoginImage}
-          alt="African travel and safari experiences"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-emerald-700/80 via-emerald-800/50 to-emerald-900/30" />
+        {/* Image panel */}
+        <div className="hidden lg:flex lg:w-[45%] xl:w-[42%] relative">
+          <img
+            src={supplierLoginImage}
+            alt="African travel and safari experiences"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          {/* Lighter overlay — image shows through more */}
+          <div className="absolute inset-0 bg-gradient-to-t from-emerald-700/50 via-emerald-800/30 to-emerald-900/10" />
 
-        <div className="relative z-10 flex flex-col justify-between p-10 xl:p-14 text-white w-full min-h-screen">
-          <motion.div variants={stagger} initial="initial" animate="animate">
-            <motion.div variants={fadeUp} className="flex items-center gap-3 mb-14">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-950/40">
-                <Compass size={19} className="text-white" />
-              </div>
-              <span className="font-bold text-xl tracking-tight" style={{ fontFamily: "'DM Sans', system-ui, sans-serif", letterSpacing: "-0.02em" }}>TravioAfrica</span>
+          <div className="relative z-10 flex flex-col justify-between p-10 xl:p-12 text-white flex-1">
+            <motion.div variants={stagger} initial="initial" animate="animate">
+              <motion.div variants={fadeUp} className="flex items-center gap-3 mb-14">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-950/40">
+                  <Compass size={19} className="text-white" />
+                </div>
+                <span className="font-bold text-xl tracking-tight" style={{ fontFamily: "'DM Sans', system-ui, sans-serif", letterSpacing: "-0.02em" }}>TravioAfrica</span>
+              </motion.div>
+
+              <motion.div variants={fadeUp}>
+                <h1 className="text-3xl xl:text-4xl font-bold leading-tight mb-4 text-white drop-shadow-sm">
+                  Supplier Dashboard
+                </h1>
+                <p className="text-white/80 text-base leading-relaxed max-w-md">
+                  Sign in to create tours, manage bookings, and grow your travel business across Africa.
+                </p>
+              </motion.div>
             </motion.div>
 
-            <motion.div variants={fadeUp}>
-              <h1 className="text-3xl xl:text-4xl font-bold leading-tight mb-4">
-                Supplier Dashboard
-              </h1>
-              <p className="text-emerald-100/85 text-base leading-relaxed max-w-md">
-                Sign in to create tours, manage bookings, and grow your travel business across Africa.
-              </p>
-            </motion.div>
-          </motion.div>
+            <motion.ul
+              variants={stagger}
+              initial="initial"
+              animate="animate"
+              className="space-y-4"
+            >
+              {FEATURES.map(({ icon: Icon, label }) => (
+                <motion.li
+                  key={label}
+                  variants={fadeUp}
+                  className="flex items-center gap-3 text-white/85"
+                >
+                  <span className="w-9 h-9 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 ring-1 ring-white/20">
+                    <Icon size={18} />
+                  </span>
+                  <span className="text-sm font-medium">{label}</span>
+                </motion.li>
+              ))}
+            </motion.ul>
 
-          <motion.ul
-            variants={stagger}
-            initial="initial"
-            animate="animate"
-            className="space-y-4"
-          >
-            {FEATURES.map(({ icon: Icon, label }) => (
-              <motion.li
-                key={label}
-                variants={fadeUp}
-                className="flex items-center gap-3 text-emerald-50/90"
-              >
-                <span className="w-9 h-9 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 ring-1 ring-white/10">
-                  <Icon size={18} />
-                </span>
-                <span className="text-sm font-medium">{label}</span>
-              </motion.li>
-            ))}
-          </motion.ul>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.4 }}
-            className="text-xs text-emerald-200/50"
-          >
-            Access is limited to approved and active suppliers.
-          </motion.p>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.4 }}
+              className="text-xs text-white/40"
+            >
+              Access is limited to approved and active suppliers.
+            </motion.p>
+          </div>
         </div>
-      </motion.div>
 
-      {/* Login form */}
-      <div className="flex-1 flex items-center justify-center px-4 py-10 sm:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          className="w-full max-w-md"
-        >
-          {/* Mobile brand */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.35 }}
-            className="lg:hidden text-center mb-8"
-          >
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-lg shadow-emerald-950/20 mb-3">
-              <Compass size={20} className="text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-slate-800">Supplier Login</h1>
-            <p className="text-sm text-slate-500 mt-1">Approved & active suppliers only</p>
-          </motion.div>
+        {/* Form panel — same height as image panel */}
+        <div className="flex-1 flex items-center justify-center p-8 lg:p-12">
+          <div className="w-full max-w-md">
+            {/* Mobile brand */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.35 }}
+              className="lg:hidden text-center mb-8"
+            >
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-lg shadow-emerald-950/20 mb-3">
+                <Compass size={20} className="text-white" />
+              </div>
+              <h1 className="text-2xl font-bold text-slate-800">Supplier Login</h1>
+              <p className="text-sm text-slate-500 mt-1">Approved & active suppliers only</p>
+            </motion.div>
 
-          {/* Login card */}
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm shadow-slate-900/5 p-6 sm:p-8">
             {/* Desktop heading */}
             <div className="hidden lg:block mb-6">
               <h2 className="text-xl font-bold text-slate-800">Sign in</h2>
@@ -294,25 +290,26 @@ export default function LoginPage() {
               Sign in with Google
             </button>
           </div>
+        </div>
+      </motion.div>
 
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.25, duration: 0.35 }}
-            className="text-xs text-center text-slate-400 mt-6 leading-relaxed"
-          >
-            Only suppliers with <strong className="text-slate-600 font-medium">Approved</strong> or{" "}
-            <strong className="text-slate-600 font-medium">Active</strong> status can access the dashboard.
-            <br />
-            <a
-              href="https://travioafrica.com/become-a-supplier"
-              className="text-emerald-700 hover:text-emerald-800 underline underline-offset-2 mt-1 inline-block font-medium"
-            >
-              Apply to become a supplier
-            </a>
-          </motion.p>
-        </motion.div>
-      </div>
+      {/* Footer */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.25, duration: 0.35 }}
+        className="absolute bottom-6 text-xs text-center text-slate-400 leading-relaxed max-w-md"
+      >
+        Only suppliers with <strong className="text-slate-600 font-medium">Approved</strong> or{" "}
+        <strong className="text-slate-600 font-medium">Active</strong> status can access the dashboard.
+        <br />
+        <a
+          href="https://travioafrica.com/become-a-supplier"
+          className="text-emerald-700 hover:text-emerald-800 underline underline-offset-2 mt-1 inline-block font-medium"
+        >
+          Apply to become a supplier
+        </a>
+      </motion.p>
     </div>
   );
 }
