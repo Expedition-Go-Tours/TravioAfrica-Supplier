@@ -521,7 +521,7 @@ export default function ProductDetailPage() {
                   )}
                   {tour.averageRating > 0 && (
                     <div className="flex items-center gap-2.5 bg-white rounded-lg border border-slate-100 px-3.5 py-2.5 shadow-sm shadow-slate-900/5 ring-1 ring-black/5">
-                      <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600"><Star size={15} /></div>
+                      <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600"><Star size={15} /></div>
                       <div><p className="text-sm font-bold text-slate-800 leading-none tabular-nums">{tour.averageRating}</p><p className="text-[11px] text-slate-400 font-medium leading-tight">Rating</p></div>
                     </div>
                   )}

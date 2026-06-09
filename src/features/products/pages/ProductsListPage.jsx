@@ -484,8 +484,8 @@ export default function ProductsListPage() {
                       <div className="flex items-center gap-3 text-xs text-slate-500">
                         <span className="font-medium">{product._count?.bookings ?? 0} bookings</span>
                         {product.averageRating > 0 && (
-                          <span className="flex items-center gap-1 font-medium text-amber-600">
-                            <Star size={12} className="fill-amber-400 text-amber-400" />
+                          <span className="flex items-center gap-1 font-medium text-emerald-600">
+                            <Star size={12} className="fill-emerald-400 text-emerald-400" />
                             {product.averageRating}
                           </span>
                         )}
