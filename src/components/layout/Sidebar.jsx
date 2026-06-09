@@ -195,13 +195,13 @@ export default function Sidebar() {
             </div>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-slate-100 truncate leading-tight" title={businessName || user?.name}>
+                <p className="text-sm font-semibold text-slate-100 truncate leading-tight" title={businessName || user?.name}>
                   {businessName || user?.name || "Supplier"}
                 </p>
                 {statusStyle && (
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <span className={`w-1 h-1 rounded-full ${statusStyle.dot}`} />
-                    <span className={`text-[10px] font-medium ${statusStyle.text}`}>{statusStyle.label}</span>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
+                    <span className={`text-xs font-medium ${statusStyle.text}`}>{statusStyle.label}</span>
                   </div>
                 )}
               </div>
