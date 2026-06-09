@@ -6,7 +6,7 @@ import {
   Clock, Users, Star, Globe, Calendar,
   Check, X as XIcon, Camera, ChevronLeft, ChevronRight,
   Eye, Shield, Activity, Navigation, MoreHorizontal,
-  Tag, Award, Percent, DollarSign,
+  Tag, Award, Percent, DollarSign, MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getMyProduct, deleteProduct } from "@/features/products/api";
@@ -497,49 +497,49 @@ export default function ProductDetailPage() {
                 </button>
               )}
             </div>
+          </motion.div>
+        )}
 
-            {/* Stat cards overlay */}
-            {hasAnyStat && (
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15, duration: 0.35 }}
-                className="relative md:absolute md:bottom-0 md:right-4 md:translate-y-1/2 z-10 mt-4 md:mt-0"
-              >
-                <div className="flex flex-wrap md:flex-nowrap gap-2">
-                  {(tour.totalBookings > 0 || tour._count?.bookings > 0) && (
-                    <div className="flex items-center gap-2.5 bg-white rounded-lg border border-slate-100 px-3.5 py-2.5 shadow-sm shadow-slate-900/5 ring-1 ring-black/5">
-                      <div className="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500"><Calendar size={15} /></div>
-                      <div><p className="text-sm font-bold text-slate-800 leading-none tabular-nums">{tour.totalBookings || tour._count?.bookings}</p><p className="text-[11px] text-slate-400 font-medium leading-tight">Bookings</p></div>
-                    </div>
-                  )}
-                  {tour.totalRevenue > 0 && (
-                    <div className="flex items-center gap-2.5 bg-white rounded-lg border border-slate-100 px-3.5 py-2.5 shadow-sm shadow-slate-900/5 ring-1 ring-black/5">
-                      <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600"><DollarSign size={15} /></div>
-                      <div><p className="text-sm font-bold text-slate-800 leading-none tabular-nums">{formatCurrency(tour.totalRevenue, currency)}</p><p className="text-[11px] text-slate-400 font-medium leading-tight">Revenue</p></div>
-                    </div>
-                  )}
-                  {tour.averageRating > 0 && (
-                    <div className="flex items-center gap-2.5 bg-white rounded-lg border border-slate-100 px-3.5 py-2.5 shadow-sm shadow-slate-900/5 ring-1 ring-black/5">
-                      <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600"><Star size={15} /></div>
-                      <div><p className="text-sm font-bold text-slate-800 leading-none tabular-nums">{tour.averageRating}</p><p className="text-[11px] text-slate-400 font-medium leading-tight">Rating</p></div>
-                    </div>
-                  )}
-                  {tour._count?.reviews > 0 && (
-                    <div className="flex items-center gap-2.5 bg-white rounded-lg border border-slate-100 px-3.5 py-2.5 shadow-sm shadow-slate-900/5 ring-1 ring-black/5">
-                      <div className="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500"><Star size={15} /></div>
-                      <div><p className="text-sm font-bold text-slate-800 leading-none tabular-nums">{tour._count.reviews}</p><p className="text-[11px] text-slate-400 font-medium leading-tight">Reviews</p></div>
-                    </div>
-                  )}
-                  {tour.viewCount > 0 && (
-                    <div className="flex items-center gap-2.5 bg-white rounded-lg border border-slate-100 px-3.5 py-2.5 shadow-sm shadow-slate-900/5 ring-1 ring-black/5">
-                      <div className="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500"><Eye size={15} /></div>
-                      <div><p className="text-sm font-bold text-slate-800 leading-none tabular-nums">{tour.viewCount}</p><p className="text-[11px] text-slate-400 font-medium leading-tight">Views</p></div>
-                    </div>
-                  )}
+        {/* ===== STAT CARDS ===== */}
+        {hasAnyStat && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.35 }}
+            className="mb-8 -mt-2"
+          >
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {(tour.totalBookings > 0 || tour._count?.bookings > 0) && (
+                <div className="flex items-center gap-3 bg-white rounded-xl border border-slate-100 px-4 py-3.5 shadow-sm shadow-slate-900/5 hover:shadow-md hover:border-slate-200 transition-all duration-200">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 ring-1 ring-slate-200/50"><Calendar size={17} /></div>
+                  <div><p className="text-base font-bold text-slate-800 leading-none tabular-nums">{tour.totalBookings || tour._count?.bookings}</p><p className="text-xs text-slate-400 font-medium leading-tight mt-1">Bookings</p></div>
                 </div>
-              </motion.div>
-            )}
+              )}
+              {tour.totalRevenue > 0 && (
+                <div className="flex items-center gap-3 bg-white rounded-xl border border-slate-100 px-4 py-3.5 shadow-sm shadow-slate-900/5 hover:shadow-md hover:border-slate-200 transition-all duration-200">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 ring-1 ring-emerald-200/50"><DollarSign size={17} /></div>
+                  <div><p className="text-base font-bold text-slate-800 leading-none tabular-nums">{formatCurrency(tour.totalRevenue, currency)}</p><p className="text-xs text-slate-400 font-medium leading-tight mt-1">Revenue</p></div>
+                </div>
+              )}
+              {tour.averageRating > 0 && (
+                <div className="flex items-center gap-3 bg-white rounded-xl border border-slate-100 px-4 py-3.5 shadow-sm shadow-slate-900/5 hover:shadow-md hover:border-slate-200 transition-all duration-200">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 ring-1 ring-amber-200/50"><Star size={17} /></div>
+                  <div><p className="text-base font-bold text-slate-800 leading-none tabular-nums">{tour.averageRating}</p><p className="text-xs text-slate-400 font-medium leading-tight mt-1">Rating</p></div>
+                </div>
+              )}
+              {tour._count?.reviews > 0 && (
+                <div className="flex items-center gap-3 bg-white rounded-xl border border-slate-100 px-4 py-3.5 shadow-sm shadow-slate-900/5 hover:shadow-md hover:border-slate-200 transition-all duration-200">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 ring-1 ring-blue-200/50"><MessageSquare size={17} /></div>
+                  <div><p className="text-base font-bold text-slate-800 leading-none tabular-nums">{tour._count.reviews}</p><p className="text-xs text-slate-400 font-medium leading-tight mt-1">Reviews</p></div>
+                </div>
+              )}
+              {tour.viewCount > 0 && (
+                <div className="flex items-center gap-3 bg-white rounded-xl border border-slate-100 px-4 py-3.5 shadow-sm shadow-slate-900/5 hover:shadow-md hover:border-slate-200 transition-all duration-200">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 ring-1 ring-slate-200/50"><Eye size={17} /></div>
+                  <div><p className="text-base font-bold text-slate-800 leading-none tabular-nums">{tour.viewCount}</p><p className="text-xs text-slate-400 font-medium leading-tight mt-1">Views</p></div>
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
 

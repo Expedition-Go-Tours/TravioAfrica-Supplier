@@ -441,11 +441,6 @@ export default function ProductsListPage() {
                       </div>
                     )}
 
-                    {/* Status badge */}
-                    <div className="absolute top-3 left-3">
-                      <StatusBadge status={product.status} label={PRODUCT_STATUSES[product.status]?.label} size="sm" />
-                    </div>
-
                     {/* Category pill */}
                     {category && (
                       <span className="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/90 text-slate-700 backdrop-blur-sm border border-white/60 shadow-sm">
@@ -465,8 +460,8 @@ export default function ProductsListPage() {
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">{getSupplierLabel(product)}</p>
 
-                    {/* Price */}
-                    <div className="mt-3">
+                    {/* Price + Status */}
+                    <div className="mt-3 flex items-center justify-between">
                       {price !== null ? (
                         <div className="flex items-baseline gap-1.5">
                           <span className="text-lg font-bold text-emerald-700">
@@ -477,6 +472,7 @@ export default function ProductsListPage() {
                       ) : (
                         <span className="text-sm text-slate-400 italic">Price not set</span>
                       )}
+                      <StatusBadge status={product.status} label={PRODUCT_STATUSES[product.status]?.label} size="sm" />
                     </div>
 
                     {/* Footer */}
