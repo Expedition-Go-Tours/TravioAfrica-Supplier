@@ -276,7 +276,7 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
               placeholder="Type a message..."
               rows={1}
               disabled={loading || sending}
-              className="w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus-visible:outline-none focus-visible:border-[#044b3b] focus-visible:bg-white transition-colors disabled:opacity-50"
+              className="w-full resize-none overflow-y-hidden rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus-visible:outline-none focus-visible:border-[#044b3b] focus-visible:bg-white transition-colors disabled:opacity-50"
               style={{ maxHeight: "120px" }}
             />
           </div>

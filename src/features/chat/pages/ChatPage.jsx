@@ -271,7 +271,7 @@ export default function ChatPage() {
   const isCustomerConv = Boolean(otherParticipant?.roles?.includes("customer"));
 
   return (
-    <div className="p-4 h-[calc(100vh-64px)]">
+    <div className="p-6 h-[calc(100vh-64px)]">
       <div className="flex h-full rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
       <div className="flex w-[340px] shrink-0 flex-col border-r border-gray-200 bg-white">
         <div className="px-4 pt-4 pb-3">
@@ -331,14 +331,16 @@ export default function ChatPage() {
           onOpenDetails={() => setShowDetailsPanel((v) => !v)}
           showDetailsButton={isCustomerConv}
         />
+        {showDetailsPanel && isCustomerConv && (
+          <div className="absolute inset-y-0 right-0 z-20">
+            <CustomerDetailsPanel
+              conversation={selectedConv}
+              currentUserId={currentUserId}
+              onClose={() => setShowDetailsPanel(false)}
+            />
+          </div>
+        )}
       </div>
-      {showDetailsPanel && isCustomerConv && (
-        <CustomerDetailsPanel
-          conversation={selectedConv}
-          currentUserId={currentUserId}
-          onClose={() => setShowDetailsPanel(false)}
-        />
-      )}
       </div>
     </div>
   );
