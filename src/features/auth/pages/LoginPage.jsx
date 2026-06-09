@@ -118,26 +118,26 @@ export default function LoginPage() {
           {/* Lighter overlay — image shows through more */}
           <div className="absolute inset-0 bg-gradient-to-t from-emerald-700/30 via-emerald-800/15 to-emerald-900/5" />
 
-          <div className="relative z-10 flex flex-col justify-between p-8 xl:p-10 text-white flex-1">
-            <div>
-              <motion.div variants={fadeUp} className="flex items-center gap-2.5 mb-8">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-950/40">
-                  <Compass size={15} className="text-white" />
-                </div>
-                <span className="text-sm font-bold tracking-tight" style={{ fontFamily: "'DM Sans', system-ui, sans-serif", letterSpacing: "-0.02em" }}>TravioAfrica</span>
-              </motion.div>
+          <div className="relative z-10 flex flex-col p-6 xl:p-8 text-white flex-1">
+            <motion.div variants={fadeUp} className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-950/40">
+                <Compass size={15} className="text-white" />
+              </div>
+              <span className="text-sm font-bold tracking-tight" style={{ fontFamily: "'DM Sans', system-ui, sans-serif", letterSpacing: "-0.02em" }}>TravioAfrica</span>
+            </motion.div>
 
-              <motion.div variants={fadeUp}>
-                <h1 className="text-xl xl:text-2xl font-bold leading-snug mb-3 text-white drop-shadow-sm">
-                  Supplier Dashboard
-                </h1>
-                <p className="text-white/70 text-sm leading-relaxed max-w-sm">
-                  Sign in to create tours, manage bookings, and grow your travel business across Africa.
-                </p>
-              </motion.div>
-            </div>
+            <motion.div variants={fadeUp} className="mt-3">
+              <h1 className="text-xl xl:text-2xl font-bold leading-snug mb-2 text-white drop-shadow-sm">
+                Supplier Dashboard
+              </h1>
+              <p className="text-white/70 text-sm leading-relaxed max-w-sm">
+                Sign in to create tours, manage bookings, and grow your travel business across Africa.
+              </p>
+            </motion.div>
 
-            <motion.ul variants={stagger} initial="initial" animate="animate" className="space-y-2.5">
+            <div className="flex-1" />
+
+            <motion.ul variants={stagger} initial="initial" animate="animate" className="space-y-2">
               {FEATURES.map(({ icon: Icon, label }) => (
                 <motion.li key={label} variants={fadeUp} className="flex items-center gap-2.5 text-white/80">
                   <span className="w-7 h-7 rounded-md bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 ring-1 ring-white/15">
@@ -152,7 +152,7 @@ export default function LoginPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5, duration: 0.4 }}
-              className="text-[10px] text-white/35"
+              className="text-[10px] text-white/35 mt-3"
             >
               Access is limited to approved and active suppliers.
             </motion.p>
