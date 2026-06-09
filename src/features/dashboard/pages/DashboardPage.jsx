@@ -4,13 +4,13 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import Chart from "react-apexcharts";
-import { Loader2, RefreshCw, ArrowUpRight, ShoppingBag, CheckCircle2, Star, DollarSign, MessageCircle, AlertTriangle, ClipboardList, MapPin, TrendingUp } from "lucide-react";
+import { Loader2, RefreshCw, ArrowUpRight, ShoppingBag, CheckCircle2, Star, DollarSign, MessageCircle, AlertTriangle, ClipboardList, MapPin, TrendingUp, Bell, Check } from "lucide-react";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { fetchSupplierDashboard } from "../api";
-import { getAuthToken } from "@/stores/authStore";
+import { getAuthToken, useAuthStore } from "@/stores/authStore";
 import { fetchSupplierBookings } from "@/features/bookings/api";
-import { fetchNotifications } from "@/features/notifications/api";
+import { fetchNotifications, markAllNotificationsAsRead } from "@/features/notifications/api";
 
 const NOTIFICATION_ICONS = {
   new_booking: { icon: ShoppingBag, color: "text-emerald-600", bg: "bg-emerald-50" },
@@ -53,6 +53,13 @@ function timeAgo(dateStr) {
   return formatDate(dateStr);
 }
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState(null);
@@ -60,6 +67,8 @@ export default function DashboardPage() {
   const [error, setError] = useState(null);
   const [recentBookings, setRecentBookings] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const user = useAuthStore((s) => s.user);
 
   const fetchDashboard = () => {
     if (!getAuthToken()) { setLoading(false); return; }
@@ -67,7 +76,7 @@ export default function DashboardPage() {
     Promise.all([
       fetchSupplierDashboard(),
       fetchSupplierBookings({ page: 1, limit: 4 }).then(r => r.bookings).catch(() => []),
-      fetchNotifications({ limit: 5 }).then(r => r.data?.notifications || r.notifications || []).catch(() => []),
+      fetchNotifications({ limit: 5 }).then(r => { setUnreadCount(r.unreadCount || 0); return r.notifications || []; }).catch(() => []),
     ])
       .then(([data, bookings, notifs]) => {
         setDashboardData(data);
@@ -82,6 +91,16 @@ export default function DashboardPage() {
   };
 
   useEffect(() => { fetchDashboard(); }, []);
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsAsRead();
+      setUnreadCount(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, readAt: n.readAt || new Date().toISOString() })));
+    } catch {
+      // silent fail — non-critical
+    }
+  };
 
   const tours = dashboardData?.tours || {};
   const bookings = dashboardData?.bookings || {};
@@ -135,8 +154,12 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-slate-800">Dashboard Home</h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Here&apos;s what&apos;s happening with your business today.</p>
+          <h1 className="text-2xl font-bold text-slate-800">{getGreeting()}, {user?.name?.split(' ')[0] || 'there'}</h1>
+          <p className="text-sm text-slate-500 mt-1.5">
+            {pendingBookings > 0
+              ? `You have ${pendingBookings} pending booking${pendingBookings > 1 ? 's' : ''} to review.`
+              : 'All caught up — no pending requests.'}
+          </p>
         </div>
         <button onClick={fetchDashboard} disabled={loading}
           className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-emerald-200/60 rounded-xl text-xs font-medium text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition-all disabled:opacity-40 shadow-sm"
@@ -215,64 +238,102 @@ export default function DashboardPage() {
         <div className="space-y-4">
           {/* Notifications */}
           <div className="bg-white border border-emerald-100/60 rounded-xl hover:border-emerald-200 transition-all overflow-hidden">
-            <div className="flex items-center justify-between px-5 pt-4 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-emerald-50">
+              <div className="flex items-center gap-2.5">
+                <div className="relative">
+                  <Bell size={16} className="text-slate-600" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[9px] font-bold text-white bg-emerald-600 rounded-full">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </div>
                 <h3 className="text-sm font-semibold text-slate-800">Notifications</h3>
               </div>
-              <button onClick={() => navigate("/notifications")} className="text-xs font-medium text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
-                View all <ArrowUpRight size={11} />
-              </button>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button onClick={handleMarkAllRead}
+                    className="text-[11px] font-medium text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors"
+                  >
+                    <Check size={12} /> Mark all read
+                  </button>
+                )}
+                <button onClick={() => navigate("/notifications")} className="text-[11px] font-medium text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                  View all <ArrowUpRight size={11} />
+                </button>
+              </div>
             </div>
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-emerald-50/80 max-h-[380px] overflow-y-auto">
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex items-start gap-3 px-5 py-3">
-                    <div className="w-8 h-8 rounded-xl bg-gray-100 animate-pulse shrink-0" />
-                    <div className="flex-1 space-y-1.5">
-                      <div className="h-3 w-3/4 bg-gray-100 rounded animate-pulse" />
-                      <div className="h-2 w-1/4 bg-gray-100 rounded animate-pulse" />
+                  <div key={i} className="flex items-start gap-3 px-5 py-4">
+                    <div className="w-9 h-9 rounded-lg bg-gray-100 animate-pulse shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-1/2 bg-gray-100 rounded animate-pulse" />
+                      <div className="h-2.5 w-3/4 bg-gray-100 rounded animate-pulse" />
                     </div>
                   </div>
                 ))
               ) : notifications.length > 0 ? (
-                notifications.slice(0, 5).map((n, i) => {
+                notifications.slice(0, 5).map((n) => {
                   const iconConfig = NOTIFICATION_ICONS[n.type] || { icon: MessageCircle, color: "text-slate-600", bg: "bg-slate-50" };
                   const Icon = iconConfig.icon;
                   const isUnread = !n.readAt;
+                  const notifType = n.type?.replace(/_/g, ' ') || 'general';
                   return (
                     <div
                       key={n.id}
-                      className={`flex items-start gap-3 px-5 py-3 hover:bg-gray-50/80 transition-colors cursor-pointer relative ${
-                        isUnread ? "bg-emerald-50/30" : ""
+                      className={`relative pl-4 pr-5 py-4 hover:bg-emerald-50/30 transition-colors cursor-pointer ${
+                        isUnread ? "bg-gradient-to-r from-emerald-50/60 to-transparent" : ""
                       }`}
                       onClick={() => navigate("/notifications")}
                     >
                       {isUnread && (
-                        <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-emerald-500 rounded-r-full" />
+                        <span className="absolute left-0 top-3 bottom-3 w-1 bg-emerald-500 rounded-r-full" />
                       )}
-                      <div className={`w-8 h-8 rounded-xl ${iconConfig.bg} flex items-center justify-center shrink-0 shadow-sm`}>
-                        <Icon size={14} className={iconConfig.color} />
-                      </div>
-                      <div className="min-w-0 flex-1 pt-0.5">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className={`text-xs leading-relaxed ${isUnread ? "font-semibold text-slate-800" : "font-medium text-slate-600"}`}>
-                            {n.message || n.title || "Notification"}
-                          </p>
-                          <span className="shrink-0 text-[10px] font-medium text-slate-400 mt-0.5 whitespace-nowrap">
-                            {timeAgo(n.createdAt)}
-                          </span>
+                      <div className="flex items-start gap-3.5">
+                        <div className={`w-10 h-10 rounded-xl ${iconConfig.bg} flex items-center justify-center shrink-0 ring-1 ring-black/5`}>
+                          <Icon size={16} className={iconConfig.color} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              {n.title && (
+                                <p className={`text-sm leading-snug mb-0.5 ${isUnread ? "font-semibold text-slate-800" : "font-medium text-slate-700"}`}>
+                                  {n.title}
+                                </p>
+                              )}
+                              <p className={`text-sm leading-relaxed ${n.title ? "text-slate-500" : isUnread ? "font-semibold text-slate-800" : "font-medium text-slate-700"}`}>
+                                {n.message || n.title || "Notification"}
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-[11px] font-medium text-slate-400 whitespace-nowrap mt-0.5">
+                              {timeAgo(n.createdAt)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500 capitalize">
+                              {notifType}
+                            </span>
+                            {n.data?.bookingId && (
+                              <span className="text-[10px] font-medium text-emerald-600">View booking</span>
+                            )}
+                            {n.data?.payoutId && (
+                              <span className="text-[10px] font-medium text-emerald-600">View payout</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
                   );
                 })
               ) : (
-                <div className="flex flex-col items-center justify-center py-8 px-5 text-center">
-                  <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center mb-2.5">
-                    <MessageCircle size={16} className="text-gray-300" />
+                <div className="flex flex-col items-center justify-center py-12 px-5 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mb-4 ring-1 ring-emerald-100/60">
+                    <Bell size={22} className="text-emerald-300" />
                   </div>
-                  <p className="text-xs font-medium text-slate-400">No notifications yet</p>
+                  <p className="text-sm font-semibold text-slate-600">All clear</p>
+                  <p className="text-xs text-slate-400 mt-1 max-w-[180px]">Notifications about bookings, payouts, and updates will show up here.</p>
                 </div>
               )}
             </div>

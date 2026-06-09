@@ -393,17 +393,32 @@ export default function AvailabilityPage() {
                   key={format(date, "yyyy-MM-dd")}
                   onClick={() => !filteredOut && openPanel(date)}
                   disabled={filteredOut}
-                  className={`relative flex flex-col items-center py-3 px-1 border-b border-r border-slate-100 transition-colors min-h-[80px] ${
+                   className={`relative flex flex-col items-center py-3 px-1 border-b border-r border-slate-100 transition-colors min-h-[80px] ${
                     filteredOut
                       ? "opacity-20 cursor-default bg-white"
                       : isBlocked
                         ? "bg-slate-50 hover:bg-slate-100 cursor-pointer"
-                        : "hover:bg-slate-50 active:bg-slate-100 cursor-pointer bg-white"
-                  } ${today && !isBlocked ? "bg-emerald-50/40" : ""}`}
+                        : day.status === "full"
+                          ? "bg-red-50 hover:bg-red-100 cursor-pointer"
+                          : "hover:bg-slate-50 active:bg-slate-100 cursor-pointer bg-white"
+                  } ${today && !isBlocked && day.status !== "full" ? "bg-emerald-50/40" : ""}`}
                 >
-                  <span className={`text-sm font-semibold leading-none mb-1.5 ${today && !isBlocked ? "text-[#044b3b]" : isBlocked ? "text-slate-400" : "text-slate-700"}`}>
+                  <span className={`text-sm font-semibold leading-none mb-1.5 ${today && !isBlocked && day.status !== "full" ? "text-[#044b3b]" : isBlocked || day.status === "full" ? "text-slate-400" : "text-slate-700"}`}>
                     {format(date, "d")}
                   </span>
+
+                  {!isBlocked && (
+                    <span className="flex items-center gap-1 mb-1">
+                      {day.status === "available" && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                      {day.status === "limited" && (
+                        <>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        </>
+                      )}
+                      {day.status === "full" && <span className="w-1.5 h-1.5 rounded-full bg-red-400" />}
+                    </span>
+                  )}
 
                   {isBlocked ? (
                     <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider leading-none mt-0.5">Blocked</span>

@@ -32,7 +32,10 @@ export const useAuthStore = create(
           localStorage.setItem("auth_token", token);
         }
         if (user) {
-          localStorage.setItem("auth_user", JSON.stringify(user));
+          const normalizedUser = normalizeAvatar(user);
+          localStorage.setItem("auth_user", JSON.stringify(normalizedUser));
+          set({ user: normalizedUser, token, isAuthenticated: true, isLoading: false, supplierProfile });
+          return;
         }
         set({ user, token, isAuthenticated: true, isLoading: false, supplierProfile });
       },
@@ -41,9 +44,14 @@ export const useAuthStore = create(
        * Update user data without touching the token.
        */
       updateUser: (userData) => {
-        set((state) => ({
-          user: state.user ? { ...state.user, ...userData } : userData,
-        }));
+        set((state) => {
+          const merged = state.user ? { ...state.user, ...userData } : userData;
+          const normalized = normalizeAvatar(merged);
+          if (state.user) {
+            localStorage.setItem("auth_user", JSON.stringify(normalized));
+          }
+          return { user: normalized };
+        });
       },
 
       /**
@@ -126,7 +134,11 @@ export const useAuthStore = create(
           localStorage.setItem("auth_token", state.token);
         }
         if (state?.user) {
-          localStorage.setItem("auth_user", JSON.stringify(state.user));
+          const normalizedUser = normalizeAvatar(state.user);
+          localStorage.setItem("auth_user", JSON.stringify(normalizedUser));
+          if (normalizedUser.avatar !== state.user.avatar) {
+            useAuthStore.setState({ user: normalizedUser });
+          }
         }
         useAuthStore.getState().setHasHydrated(true);
       },
@@ -169,6 +181,17 @@ export function getStoredAuthUser() {
   return useAuthStore.getState().user || null;
 }
 
+/** Normalize Firebase photo fields (photoURL, photoUrl) into a single avatar field. */
+function normalizeAvatar(user) {
+  if (!user) return user;
+  if (user.avatar) return user;
+  const url = user.photoURL || user.photoUrl;
+  if (url) {
+    return { ...user, avatar: url };
+  }
+  return user;
+}
+
 /** True when both user state and a bearer token are available. */
 export function hasValidAuthSession() {
   const { isAuthenticated } = useAuthStore.getState();
@@ -182,7 +205,12 @@ export function hasValidAuthSession() {
  */
 export function initAuthFromStorage() {
   const token = getAuthToken();
-  const user = getStoredAuthUser();
+  const raw = getStoredAuthUser();
+  const user = normalizeAvatar(raw);
+
+  if (raw && user?.avatar !== raw?.avatar) {
+    localStorage.setItem("auth_user", JSON.stringify(user));
+  }
 
   if (token && user) {
     useAuthStore.setState({ user, token, isAuthenticated: true, isLoading: false });

@@ -33,13 +33,13 @@ export default function MessageBubble({ message, isOwn, status, showAvatar, send
       {isOwn ? (
         <div className={`${spacer} shrink-0`} />
       ) : showAvatar ? (
-        <div className={`relative flex ${a} shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#044b3b] font-bold text-white`}>
+        <div className={`relative flex ${a} shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#2563eb] font-bold text-white`}>
           {compact ? (
             <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none">
               <circle cx="12" cy="12" r="10" fill="currentColor" className="text-white/90" />
-              <circle cx="8.5" cy="10" r="1.2" fill="#044b3b" />
-              <circle cx="15.5" cy="10" r="1.2" fill="#044b3b" />
-              <path d="M7.5 14.5c1.2 1.2 3 1.8 4.5 1.8s3.3-0.6 4.5-1.8" stroke="#044b3b" strokeWidth="1.2" strokeLinecap="round" />
+              <circle cx="8.5" cy="10" r="1.2" fill="#2563eb" />
+              <circle cx="15.5" cy="10" r="1.2" fill="#2563eb" />
+              <path d="M7.5 14.5c1.2 1.2 3 1.8 4.5 1.8s3.3-0.6 4.5-1.8" stroke="#2563eb" strokeWidth="1.2" strokeLinecap="round" />
             </svg>
           ) : (
             <>
@@ -63,7 +63,7 @@ export default function MessageBubble({ message, isOwn, status, showAvatar, send
         <div
           className={`relative ${bubblePad} ${bubbleText} shadow-sm ${
             isOwn
-              ? `bg-[#044b3b] text-white ${bubbleRadius} ${bubbleRadiusOwn}`
+              ? `bg-[#2563eb] text-white ${bubbleRadius} ${bubbleRadiusOwn}`
               : `bg-white text-gray-800 border border-gray-200 ${bubbleRadius} ${bubbleRadiusOther}`
           }`}>
           {message.attachmentUrl && (

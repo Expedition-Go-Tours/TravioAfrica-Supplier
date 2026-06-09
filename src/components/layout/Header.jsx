@@ -82,8 +82,8 @@ export default function Header() {
                     <>
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full overflow-hidden bg-[#044b3b] shrink-0">
-                          {user?.photoURL ? (
-                            <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
+                          {(user?.avatar || user?.photoURL) ? (
+                            <img src={user.avatar || user.photoURL} alt="" className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-white text-sm font-medium">{avatarLetter}</div>
                           )}
@@ -133,8 +133,8 @@ export default function Header() {
               <p className="text-[10px] text-slate-400 capitalize">{displayRole}</p>
             </div>
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-[#044b3b] shrink-0">
-              {user?.photoURL ? (
-                <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
+              {(user?.avatar || user?.photoURL) ? (
+                <img src={user.avatar || user.photoURL} alt="" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-white font-medium text-[11px]">{avatarLetter}</div>
               )}
@@ -146,8 +146,8 @@ export default function Header() {
               <div className="px-4 py-4 border-b border-slate-100">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full overflow-hidden bg-[#044b3b] shrink-0">
-                    {user?.photoURL ? (
-                      <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
+                    {(user?.avatar || user?.photoURL) ? (
+                      <img src={user.avatar || user.photoURL} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-white text-sm font-medium">{avatarLetter}</div>
                     )}

@@ -6,6 +6,7 @@ export function mapReviewRow(review) {
     tourName: review.tour?.title || "—",
     tourId: review.tourId,
     customerName: review.customer?.name || "—",
+    customerPhoto: review.customer?.avatar || review.customer?.photoURL || null,
     rating: review.rating,
     title: review.title || "",
     comment: review.comment || "",

@@ -1,113 +1,334 @@
-/**
- * ProductDetailPage Component
- * 
- * Displays comprehensive details for a single tour/product including:
- * - Product metadata (title, status, dates)
- * - Photo gallery with lightbox functionality
- * - Description, highlights, and itinerary
- * - Pricing information and schedules
- * - Booking rules and cancellation policies
- * - Location and transport details
- * - Statistics (bookings, reviews, ratings)
- * 
- * Features:
- * - Responsive layout (mobile-first design)
- * - Image optimization with Cloudinary transformations
- * - Keyboard navigation for lightbox (Arrow keys, Escape)
- * - Error handling with user-friendly messages
- * - Loading states for async operations
- * - Graceful fallbacks for missing data
- * 
- * @component
- * @production-ready
- */
-
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
-import { ArrowLeft, Edit, Trash2, Loader2, AlertCircle, MapPin, Clock, Users, Star, Globe, DollarSign, Calendar, Check, X as XIcon, Languages, Camera, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { motion } from "framer-motion";
+import {
+  ArrowLeft, Edit, Trash2, Loader2, AlertCircle,
+  Clock, Users, Star, Globe, Calendar,
+  Check, X as XIcon, Camera, ChevronLeft, ChevronRight,
+  Eye, Shield, Activity, Navigation, MoreHorizontal,
+  Tag, Award, Percent, DollarSign,
+} from "lucide-react";
 import { toast } from "sonner";
 import { getMyProduct, deleteProduct } from "@/features/products/api";
 import { fetchTourAvailability } from "@/features/availability/api";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { PRODUCT_STATUSES } from "@/lib/constants";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, formatTime, cn } from "@/lib/utils";
 import config from "@/config";
 import { normalizeItinerary } from "@/features/products/utils/normalizeItinerary";
 
-export default function ProductDetailPage() {
-  // ============================================================================
-  // HOOKS & STATE MANAGEMENT
-  // ============================================================================
-  
-  const { id } = useParams(); // Product ID from URL params
-  const navigate = useNavigate(); // Navigation hook for programmatic routing
-  
-  // Product data state
-  const [tour, setTour] = useState(null); // Main product/tour data
-  const [loading, setLoading] = useState(true); // Loading state for initial data fetch
-  const [error, setError] = useState(null); // Error message for failed data fetch
+function useImageError(proxyUrlFn) {
+  const handleError = useCallback((e, photoIndex) => {
+    const fallback = proxyUrlFn(photoIndex);
+    if (!e.target.src || e.target.src !== fallback) {
+      e.target.src = fallback;
+      return;
+    }
+    if (e.target.parentElement) {
+      e.target.parentElement.classList.add("image-failed");
+    }
+  }, [proxyUrlFn]);
+  return handleError;
+}
 
-  // Availability state
+function reorderPhotos(tour) {
+  const rawPhotos = (tour?.photos || []).filter(Boolean);
+  const coverPhoto = tour?.coverPhoto;
+  if (coverPhoto && rawPhotos.length === 0) return [coverPhoto];
+  if (!coverPhoto || rawPhotos.length === 0) return rawPhotos;
+  const extractId = (url) => {
+    if (!url) return '';
+    const m = url.match(/\/(?:v\d+\/)?([^/]+)$/);
+    return m ? m[1] : url;
+  };
+  const coverId = extractId(coverPhoto);
+  const rest = rawPhotos.filter((p) => extractId(p) !== coverId);
+  return [coverPhoto, ...rest];
+}
+
+function getCloudinaryUrl(url, w = 400, h = 300) {
+  if (!url) return url;
+  if (url.includes('cloudinary.com')) {
+    const idx = url.indexOf('/upload/');
+    if (idx !== -1) {
+      const before = url.substring(0, idx + 8);
+      const after = url.substring(idx + 8);
+      return `${before}c_fill,w_${w},h_${h},q_auto,f_auto/${after}`;
+    }
+  }
+  return url;
+}
+
+function getCloudinaryHero(url) {
+  return getCloudinaryUrl(url, 1200, 600);
+}
+
+function formatDuration(duration) {
+  const parts = [];
+  if (duration?.days) parts.push(`${duration.days} day${duration.days !== 1 ? 's' : ''}`);
+  if (duration?.hours) parts.push(`${duration.hours} hour${duration.hours !== 1 ? 's' : ''}`);
+  return parts.join(', ') || null;
+}
+
+/* ======================================================================
+   SUB-COMPONENTS
+   ====================================================================== */
+
+function SectionCard({ title, children, className }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-30px" }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className={cn("bg-white rounded-xl border border-slate-100 shadow-sm shadow-slate-900/5 overflow-hidden hover:shadow-md hover:shadow-slate-900/5 hover:border-slate-200 transition-all duration-200", className)}
+    >
+      {title && (
+        <div className="px-5 py-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-0.5 h-4 bg-gradient-to-b from-emerald-500 to-emerald-300 rounded-full flex-shrink-0" />
+            <h2 className="text-sm font-semibold text-slate-800 tracking-tight">{title}</h2>
+          </div>
+        </div>
+      )}
+      <div className={cn("px-5 py-4", !title && "p-5")}>
+        {children}
+      </div>
+    </motion.div>
+  );
+}
+
+function DetailRow({ icon: Icon, label, value, children }) {
+  if (!value && !children) return null;
+  return (
+    <div className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-0.5 py-2 first:pt-0 last:pb-0 border-b border-slate-100 last:border-0">
+      <div className="flex items-center gap-1.5">
+        <Icon size={11} className="text-slate-400 flex-shrink-0" />
+        <span className="text-[11px] text-slate-400 uppercase tracking-wider">{label}</span>
+      </div>
+      <div className="min-w-0">
+        {value && <span className="text-sm font-medium text-slate-800 break-words leading-snug">{value}</span>}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function PhotoGalleryModal({ displayPhotos, index: lightboxIndex, setLightboxIndex, handleImageError, tour }) {
+  if (lightboxIndex === null) return null;
+  const photo = displayPhotos[lightboxIndex];
+  if (!photo) return null;
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 p-4 md:p-8"
+      onClick={() => setLightboxIndex(null)}
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); setLightboxIndex(null); }}
+        className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center text-white/60 hover:text-white rounded-full hover:bg-white/10 transition-all"
+      >
+        <XIcon size={22} />
+      </button>
+      {lightboxIndex > 0 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex - 1); }}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center text-white/60 hover:text-white rounded-full hover:bg-white/10 transition-all"
+        >
+          <ChevronLeft size={28} />
+        </button>
+      )}
+      {lightboxIndex < displayPhotos.length - 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex + 1); }}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center text-white/60 hover:text-white rounded-full hover:bg-white/10 transition-all"
+        >
+          <ChevronRight size={28} />
+        </button>
+      )}
+      <div className="flex flex-col items-center max-w-6xl w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="relative w-full flex items-center justify-center">
+          <img
+            src={getCloudinaryUrl(photo, 1600, 1066)}
+            alt={`${tour?.title} - Photo ${lightboxIndex + 1}`}
+            className="max-h-[80vh] w-auto max-w-full object-contain rounded-xl shadow-2xl"
+            onError={(e) => handleImageError(e, lightboxIndex)}
+          />
+        </div>
+        <div className="flex items-center gap-4 mt-5">
+          <div className="flex items-center gap-1.5">
+            {displayPhotos.map((_, i) => (
+              <button
+                key={i}
+                onClick={(e) => { e.stopPropagation(); setLightboxIndex(i); }}
+                className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", i === lightboxIndex ? "bg-white w-4" : "bg-white/30 hover:bg-white/50")}
+              />
+            ))}
+          </div>
+          <span className="text-sm text-white/50 font-medium">{lightboxIndex + 1} / {displayPhotos.length}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AllPhotosModal({ displayPhotos, open, onClose, onSelect, handleImageError, tour }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 pb-4 border-b border-slate-200">
+          <div className="flex items-center gap-3">
+            <Camera size={18} className="text-slate-500" />
+            <h2 className="text-base font-semibold text-slate-800">All Photos <span className="text-slate-400 font-normal">({displayPhotos.length})</span></h2>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-all">
+            <XIcon size={18} />
+          </button>
+        </div>
+        <div className="p-5 overflow-y-auto max-h-[calc(90vh-70px)]">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {displayPhotos.map((photo, i) => (
+              <button key={i} onClick={() => { onClose(); onSelect(i); }} className="group relative aspect-[4/3] overflow-hidden rounded-lg bg-slate-100">
+                <img src={getCloudinaryUrl(photo, 600, 450)} alt={`${tour?.title} - Photo ${i + 1}`} className="absolute inset-0 w-full h-full object-cover transition-all duration-500 group-hover:scale-110" onError={(e) => handleImageError(e, i)} />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
+                <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/40 text-white text-[10px] px-2 py-0.5 rounded-full">{i + 1}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AvailabilityCalendar({ availability, availMonth, setAvailMonth }) {
+  const [y, m] = availMonth.split("-").map(Number);
+  const firstDay = new Date(y, m - 1, 1).getDay();
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const availMap = {};
+  availability.forEach((a) => { availMap[a.date] = a; });
+
+  const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(<div key={`e-${i}`} />);
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${availMonth}-${String(d).padStart(2, "0")}`;
+    const day = availMap[dateStr];
+    const status = day?.status?.toLowerCase() || "available";
+    const isPast = new Date(dateStr) < new Date(new Date().toDateString());
+    const bgMap = { available: "bg-emerald-50 text-emerald-700", limited: "bg-amber-50 text-amber-700", full: "bg-red-50 text-red-700", blocked: "bg-slate-100 text-slate-400" };
+    const dotMap = { available: "bg-emerald-500", limited: "bg-amber-400", full: "bg-red-500", blocked: "bg-slate-300" };
+    cells.push(
+      <div key={dateStr} className={cn("relative flex flex-col items-center justify-center rounded-md text-xs font-medium aspect-square transition-all duration-150", isPast ? "opacity-40" : "hover:shadow-sm", bgMap[status] || "bg-slate-50 text-slate-400")} title={`${dateStr}: ${status}${day ? ` (${day.booked}/${day.capacity})` : ""}`}>
+        <span className="leading-none">{d}</span>
+        <span className={cn("w-1 h-1 rounded-full mt-0.5", dotMap[status] || "bg-slate-300")} />
+      </div>
+    );
+  }
+
+  const prevMonth = () => {
+    const prev = new Date(y, m - 2, 1);
+    setAvailMonth(`${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`);
+  };
+  const nextMonth = () => {
+    const next = new Date(y, m, 1);
+    setAvailMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`);
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-all"><ChevronLeft size={14} /></button>
+        <span className="text-xs font-semibold text-slate-500">{new Date(y, m - 1).toLocaleString("default", { month: "long", year: "numeric" })}</span>
+        <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-all"><ChevronRight size={14} /></button>
+      </div>
+      <div className="grid grid-cols-7 gap-0.5 mb-1">{dayLabels.map((d) => <div key={d} className="text-[10px] text-slate-400 text-center font-semibold py-1">{d}</div>)}</div>
+      <div className="grid grid-cols-7 gap-0.5">{cells}</div>
+      <div className="flex items-center justify-center gap-2.5 mt-3 pt-3 border-t border-slate-200">
+        {[{ label: "Available", dot: "bg-emerald-500" }, { label: "Limited", dot: "bg-amber-400" }, { label: "Full", dot: "bg-red-500" }, { label: "Blocked", dot: "bg-slate-300" }].map((l) => (
+          <div key={l.label} className="flex items-center gap-1"><span className={cn("w-1.5 h-1.5 rounded-full", l.dot)} /><span className="text-[10px] text-slate-500">{l.label}</span></div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ======================================================================
+   SKELETON
+   ====================================================================== */
+
+const skeletonVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: (i) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.35, ease: "easeOut" } }),
+};
+
+function SkeletonBlock({ className, style }) {
+  return <div className={cn("animate-pulse bg-gradient-to-r from-slate-100 via-slate-200/50 to-slate-100 bg-[length:200%_100%] rounded-lg", className)} style={style} />;
+}
+
+function DetailPageSkeleton() {
+  return (
+    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
+      <motion.div custom={0} variants={skeletonVariants} initial="hidden" animate="visible"><SkeletonBlock className="h-10 w-full" /></motion.div>
+      <motion.div custom={1} variants={skeletonVariants} initial="hidden" animate="visible"><SkeletonBlock className="h-[400px] rounded-xl" /></motion.div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          {[160, 120, 240].map((h, i) => (<motion.div key={i} custom={i + 2} variants={skeletonVariants} initial="hidden" animate="visible"><SkeletonBlock className="rounded-xl" style={{ height: `${h}px` }} /></motion.div>))}
+        </div>
+        <div className="space-y-4">
+          {[200, 160, 180, 140].map((h, i) => (<motion.div key={i} custom={i + 5} variants={skeletonVariants} initial="hidden" animate="visible"><SkeletonBlock className="rounded-xl" style={{ height: `${h}px` }} /></motion.div>))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ======================================================================
+   MAIN COMPONENT
+   ====================================================================== */
+
+export default function ProductDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  const [tour, setTour] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [availability, setAvailability] = useState([]);
   const [availLoading, setAvailLoading] = useState(false);
   const [availMonth, setAvailMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
-  
-  // UI interaction states
-  const [deleting, setDeleting] = useState(false); // Loading state for delete operation
-  const [galleryOpen, setGalleryOpen] = useState(false); // Gallery modal visibility
-  const [lightboxIndex, setLightboxIndex] = useState(null); // Current image index in lightbox (null = closed)
 
-  // ============================================================================
-  // DATA FETCHING
-  // ============================================================================
-  
-  /**
-   * Fetch product details on component mount or when ID changes
-   * 
-   * Error handling:
-   * - Network errors: Displays user-friendly error message
-   * - 404 errors: Shows "Product not found" message
-   * - Server errors: Falls back to generic error message
-   * 
-   * @effect Runs when `id` changes
-   */
+  const [deleting, setDeleting] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
   useEffect(() => {
-    // Guard: Skip if no ID provided
     if (!id) return;
-
     setLoading(true);
     setError(null);
-
     getMyProduct(id)
       .then((res) => {
         const data = res.data?.data?.tour;
-        
-        // Validate response data structure
-        if (!data) {
-          setError("Product not found");
-          return;
-        }
-        
+        if (!data) { setError("Product not found"); return; }
         setTour(data);
       })
       .catch((err) => {
-        // Extract error message with fallback chain
         setError(err.response?.data?.message || err.message || "Failed to load product");
       })
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Fetch availability when tour id or month changes
   useEffect(() => {
     if (!id) return;
     const [year, month] = availMonth.split("-").map(Number);
     const startDate = `${availMonth}-01`;
     const lastDay = new Date(year, month, 0).getDate();
     const endDate = `${availMonth}-${String(lastDay).padStart(2, "0")}`;
-
     setAvailLoading(true);
     fetchTourAvailability(id, startDate, endDate)
       .then((res) => setAvailability(res.calendar || []))
@@ -115,1030 +336,743 @@ export default function ProductDetailPage() {
       .finally(() => setAvailLoading(false));
   }, [id, availMonth]);
 
-  // ============================================================================
-  // EVENT HANDLERS
-  // ============================================================================
-  
-  /**
-   * Handle product deletion with confirmation
-   * 
-   * Flow:
-   * 1. Show native confirmation dialog
-   * 2. Call delete API
-   * 3. Show success toast and navigate to products list
-   * 4. On error, show error toast and keep user on page
-   * 
-   * Security: Requires user confirmation before destructive action
-   * UX: Provides feedback via toast notifications
-   */
   const handleDelete = () => {
-    // Confirmation dialog prevents accidental deletion
+    setMenuOpen(false);
     if (!window.confirm("Are you sure you want to delete this product? This action cannot be undone.")) return;
-
     setDeleting(true);
     deleteProduct(id)
-      .then(() => {
-        toast.success("Product deleted successfully");
-        navigate("/products"); // Redirect to products list after successful deletion
-      })
-      .catch((err) => {
-        // Show error toast with specific message
-        toast.error(err.response?.data?.message || err.message || "Failed to delete product");
-      })
+      .then(() => { toast.success("Product deleted successfully"); navigate("/products"); })
+      .catch((err) => { toast.error(err.response?.data?.message || err.message || "Failed to delete product"); })
       .finally(() => setDeleting(false));
   };
 
-  // ============================================================================
-  // COMPUTED VALUES & HELPERS
-  // ============================================================================
-  
-  /**
-   * Reorder photos array to ensure coverPhoto is always first (hero image)
-   * 
-   * Logic:
-   * 1. If coverPhoto exists but photos array is empty, return array with just coverPhoto
-   * 2. If no coverPhoto or no photos, return photos as-is
-   * 3. Extract public ID from URLs to compare (handles different Cloudinary transformations)
-   * 4. Filter out coverPhoto from photos array and prepend it
-   * 
-   * Why: Backend may apply different Cloudinary transformations to coverPhoto vs photos,
-   * so we compare by public ID (the part after /v1/ or the last path segment) rather than
-   * full URL to avoid duplicates.
-   * 
-   * @returns {string[]} Ordered array of photo URLs with coverPhoto first
-   */
-  const displayPhotos = (() => {
-    const rawPhotos = (tour?.photos || []).filter(Boolean);
-    const coverPhoto = tour?.coverPhoto;
-    
-    if (coverPhoto && rawPhotos.length === 0) return [coverPhoto];
-    if (!coverPhoto || rawPhotos.length === 0) return rawPhotos;
-    
-    const extractId = (url) => {
-      if (!url) return '';
-      const m = url.match(/\/(?:v\d+\/)?([^/]+)$/);
-      return m ? m[1] : url;
-    };
-    
-    const coverId = extractId(coverPhoto);
-    const rest = rawPhotos.filter((p) => extractId(p) !== coverId);
-    
-    return [coverPhoto, ...rest];
-  })();
+  const displayPhotos = useMemo(() => tour ? reorderPhotos(tour) : [], [tour]);
+  const proxyUrlFn = useCallback((photoIndex) => `${config.api.baseURL}/tours/${id}/photo?index=${photoIndex}`, [id]);
+  const handleImageError = useImageError(proxyUrlFn);
 
-  /**
-   * Generate optimized Cloudinary thumbnail URL with transformations
-   * 
-   * Transformations applied:
-   * - c_fill: Crop to fill dimensions while maintaining aspect ratio
-   * - w_{width}: Set width in pixels
-   * - h_{height}: Set height in pixels
-   * - q_auto: Automatic quality optimization
-   * - f_auto: Automatic format selection (WebP when supported)
-   * 
-   * Performance benefits:
-   * - Reduces bandwidth usage by 60-80%
-   * - Faster page load times
-   * - Better mobile experience
-   * - Automatic format optimization (WebP, AVIF)
-   * 
-   * @param {string} url - Original Cloudinary URL
-   * @param {number} width - Desired width in pixels (default: 400)
-   * @param {number} height - Desired height in pixels (default: 300)
-   * @returns {string} Optimized URL with transformations or original URL if not Cloudinary
-   */
-  const getCloudinaryThumbnail = (url, width = 400, height = 300) => {
-    if (!url) return url;
-    
-    // Only apply transformations to Cloudinary URLs
-    if (url.includes('cloudinary.com')) {
-      // Pattern: https://res.cloudinary.com/{cloud_name}/image/upload/v{version}/{public_id}
-      // Insert transformations after '/upload/'
-      const uploadIndex = url.indexOf('/upload/');
-      
-      if (uploadIndex !== -1) {
-        const beforeUpload = url.substring(0, uploadIndex + 8); // includes '/upload/'
-        const afterUpload = url.substring(uploadIndex + 8);
-        return `${beforeUpload}c_fill,w_${width},h_${height},q_auto,f_auto/${afterUpload}`;
-      }
-    }
-    
-    // Return original URL for non-Cloudinary images or if pattern doesn't match
-    return url;
-  };
-
-  /**
-   * Get image URL with fallback handling
-   * 
-   * Handles:
-   * - Full HTTP/HTTPS URLs (Cloudinary, external)
-   * - Blob URLs (local file uploads)
-   * - Bare public IDs (when backend Cloudinary env is not configured)
-   * 
-   * @param {string} url - Image URL or public ID
-   * @returns {string} Processed URL
-   * @deprecated Use getCloudinaryThumbnail for better performance
-   */
-  const proxyUrl = (photoIndex) => {
-    const idx = photoIndex != null ? photoIndex : 0;
-    return `${config.api.baseURL}/tours/${id}/photo?index=${idx}`;
-  };
-
-  const getImageUrl = (url, photoIndex) => {
-    if (!url) return url;
-
-    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) {
-      return url;
-    }
-
-    return proxyUrl(photoIndex);
-  };
-
-  const handleImageError = (e, photoIndex) => {
-    console.error('Image failed to load:', e.target.src);
-    const fallback = proxyUrl(photoIndex);
-    if (!e.target.src || e.target.src !== fallback) {
-      e.target.src = fallback;
-      return;
-    }
-    e.target.style.display = "none";
-  };
-
-  // ============================================================================
-  // KEYBOARD NAVIGATION
-  // ============================================================================
-  
-  /**
-   * Setup keyboard navigation for lightbox
-   * 
-   * Supported keys:
-   * - Escape: Close lightbox
-   * - ArrowLeft: Previous image (if not at start)
-   * - ArrowRight: Next image (if not at end)
-   * 
-   * Accessibility: Provides keyboard-only navigation for users who cannot use mouse
-   * UX: Standard lightbox keyboard shortcuts expected by users
-   * 
-   * @effect Runs when lightboxIndex or displayPhotos.length changes
-   */
   useEffect(() => {
-    // Guard: Only setup listeners when lightbox is open
-    if (lightboxIndex === null) return;
-    
-    const handleKey = (e) => {
-      if (e.key === "Escape") setLightboxIndex(null);
-      if (e.key === "ArrowLeft" && lightboxIndex > 0) setLightboxIndex(lightboxIndex - 1);
-      if (e.key === "ArrowRight" && lightboxIndex < displayPhotos.length - 1) setLightboxIndex(lightboxIndex + 1);
-    };
-    
-    window.addEventListener("keydown", handleKey);
-    
-    // Cleanup: Remove listener when lightbox closes or component unmounts
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [lightboxIndex, displayPhotos.length]);
+    if (!menuOpen) return;
+    const close = () => setMenuOpen(false);
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
+  }, [menuOpen]);
 
-  // ============================================================================
-  // LOADING STATE
-  // ============================================================================
-  
-  /**
-   * Loading state UI
-   * 
-   * Shows centered spinner with descriptive text
-   * Displayed while initial product data is being fetched
-   */
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 size={32} className="animate-spin text-[#044b3b]" />
-          <p className="text-sm text-[#64748b]">Loading product details...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <DetailPageSkeleton />;
 
-  // ============================================================================
-  // ERROR STATE
-  // ============================================================================
-  
-  /**
-   * Error state UI
-   * 
-   * Displays user-friendly error message with:
-   * - Error icon for visual recognition
-   * - Clear error message
-   * - Action button to return to products list
-   * 
-   * Handles:
-   * - Network errors
-   * - 404 Not Found
-   * - Server errors
-   * - Permission errors
-   */
   if (error) {
     return (
-      <div className="p-4 md:p-6">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="p-4 md:p-6 max-w-5xl mx-auto">
         <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <div className="bg-[#fef2f2] border border-[#fca5a5] rounded-lg p-6 max-w-md text-center">
-            <AlertCircle size={40} className="text-[#dc2626] mx-auto mb-3" />
-            <h2 className="text-lg font-semibold text-[#991b1b] mb-2">Failed to Load Product</h2>
-            <p className="text-sm text-[#b91c1c] mb-4">{error}</p>
-            <button
-              onClick={() => navigate("/products")}
-              className="px-4 py-2 bg-[#044b3b] text-white rounded-lg text-sm font-medium hover:bg-[#033629] transition-colors"
-            >
-              Back to Products
-            </button>
+          <div className="bg-white rounded-xl border border-slate-100 p-8 max-w-md text-center shadow-sm shadow-slate-900/5">
+            <div className="w-14 h-14 rounded-xl bg-red-50 flex items-center justify-center mx-auto mb-4"><AlertCircle size={28} className="text-red-500" /></div>
+            <h2 className="text-lg font-semibold text-slate-800 mb-2">Failed to Load Product</h2>
+            <p className="text-sm text-slate-500 mb-6">{error}</p>
+            <div className="flex items-center justify-center gap-3">
+              <button onClick={() => window.location.reload()} className="px-4 py-2.5 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-900 transition-all shadow-sm">Try Again</button>
+              <button onClick={() => navigate("/products")} className="px-4 py-2.5 border border-slate-200 text-slate-500 rounded-lg text-sm font-medium hover:bg-slate-50 transition-all">Back to Products</button>
+            </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
-  // Guard: Prevent rendering if tour data is null (shouldn't happen after loading/error checks)
   if (!tour) return null;
 
-  // ============================================================================
-  // DATA EXTRACTION
-  // ============================================================================
-  
-  /**
-   * Extract nested data with safe fallbacks
-   * 
-   * Why: Backend returns deeply nested objects that may be null/undefined
-   * Pattern: Use optional chaining (?.) and nullish coalescing (??) for safety
-   * 
-   * Data structure mirrors backend API response:
-   * - categorization: Product category, duration, difficulty, transport
-   * - productContent: Description, highlights, itinerary, languages
-   * - schedulesAndPricing: Operating days, time slots, pricing
-   * - bookingAndTickets: Booking rules, cancellation policy, meeting point
-   */
   const categorization = tour.categorization || {};
-  const content = {
-    ...tour.productContent,
-    itinerary: normalizeItinerary(tour.productContent?.itinerary),
-  };
+  const content = { ...tour.productContent, itinerary: normalizeItinerary(tour.productContent?.itinerary) };
   const schedules = tour.schedulesAndPricing || {};
   const booking = tour.bookingAndTickets || {};
   const pricingSchedules = schedules.pricingSchedules || {};
-  const pricing = pricingSchedules.schedules?.[0] || {}; // Get first pricing schedule
+  const pricing = pricingSchedules.schedules?.[0] || {};
+  const pricingArr = schedules.pricing || [];
   const cancellation = booking.cancellationPolicy || {};
-  const meetingPoint = booking.meetingPoint || {};
-  const location = content.location || {};
-  const duration = categorization.duration || {};
+  const meetingPoint = (() => {
+    if (booking.meetingPoint?.name) return booking.meetingPoint;
+    if (categorization.location?.meetingPoint) {
+      return { name: categorization.location.meetingPoint, address: '' };
+    }
+    if (booking.meetingPoint) return booking.meetingPoint;
+    return {};
+  })();
+  const location = content.location?.city ? content.location : (categorization.location || {});
+  const duration = categorization.duration;
+  const durationStr = typeof duration === 'string' ? duration : formatDuration(duration || {});
+  const currency = pricingSchedules.currency || schedules.currency || 'GHS';
+  const included = content.included?.length > 0 ? content.included : (categorization.includes || []);
+  const excluded = content.excluded?.length > 0 ? content.excluded : (categorization.excludes || []);
+  const whatToKnow = content.whatToKnow || content.additionalInfo;
 
-  // ============================================================================
-  // RENDER
-  // ============================================================================
-  
+  const normalizedPrices = (() => {
+    if (pricing.prices?.length > 0) {
+      return pricing.prices.map(p => ({
+        label: p.ageGroup || p.travelerType || 'Standard',
+        price: Number(p.retailPrice ?? p.price ?? 0),
+      }));
+    }
+    if (pricingArr.length > 0) {
+      return pricingArr.map(p => ({
+        label: p.travelerType || p.ageGroup || 'Standard',
+        price: Number(p.price ?? p.retailPrice ?? 0),
+      }));
+    }
+    return [];
+  })();
+
+  const hasAnyStat = [tour.totalBookings, tour._count?.bookings, tour.totalRevenue, tour.averageRating, tour._count?.reviews, tour.viewCount].some(v => v > 0);
+
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto">
-      {/* ========================================================================
-          HEADER SECTION
-          - Back button for navigation
-          - Product title with status badge
-          - Creation/update timestamps
-          - Edit and Delete action buttons
-          ======================================================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-        {/* Left side: Back button + Title + Metadata */}
-        <div className="flex items-start gap-3">
-          {/* Back to products list button */}
-          <button
-            onClick={() => navigate("/products")}
-            className="p-2 text-[#64748b] hover:text-[#1e293b] hover:bg-[#f8fafc] rounded-lg transition-colors mt-1"
-            aria-label="Back to products"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          
-          <div>
-            {/* Product title with status badge */}
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-xl md:text-2xl font-bold text-[#1e293b]">{tour.title}</h1>
-              <StatusBadge status={tour.status} label={PRODUCT_STATUSES[tour.status]?.label} size="sm" />
+    <div className="min-h-screen bg-slate-50/80">
+      {/* ===== STICKY HEADER ===== */}
+      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
+        <div className="max-w-5xl mx-auto px-4 md:px-6">
+          <div className="flex items-center justify-between h-14">
+            <div className="flex items-center gap-2 min-w-0">
+              <button onClick={() => navigate("/products")} className="flex items-center gap-1.5 h-8 px-2.5 text-xs font-medium text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all flex-shrink-0">
+                <ArrowLeft size={14} />
+                <span className="hidden sm:inline">Products</span>
+              </button>
+              <span className="text-xs text-slate-300 flex-shrink-0">/</span>
+              <h1 className="text-sm font-semibold text-slate-800 truncate">{tour.title}</h1>
             </div>
-            
-            {/* Timestamps: Created and last updated */}
-            <p className="text-sm text-[#64748b]">
-              Created {formatDate(tour.createdAt)} &middot; Updated {formatDate(tour.updatedAt)}
-            </p>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => navigate(`/products/build/${id}/type`)}
+                className="flex items-center gap-1.5 px-3.5 h-8 bg-emerald-700 text-white rounded-lg text-xs font-medium hover:bg-emerald-800 transition-all shadow-sm shadow-emerald-200"
+              >
+                <Edit size={13} />
+                <span>Edit</span>
+              </button>
+              <div className="relative">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+                  className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all"
+                >
+                  <MoreHorizontal size={16} />
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-0 top-full mt-1 w-36 bg-white rounded-lg border border-slate-200 shadow-lg shadow-slate-900/10 py-1 z-50" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => { setMenuOpen(false); navigate(`/products/build/${id}/type`); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 transition-colors">
+                      <Edit size={13} /> Edit
+                    </button>
+                    <button onClick={handleDelete} disabled={deleting} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50">
+                      {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />} Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-
-        {/* Right side: Action buttons */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Edit button - navigates to product builder */}
-          <button
-            onClick={() => navigate(`/products/build/${id}/type`)}
-            className="flex items-center gap-2 px-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm font-medium text-[#64748b] hover:text-[#044b3b] hover:bg-[#f0fdf4] hover:border-[#044b3b] transition-colors"
-            aria-label="Edit product"
-          >
-            <Edit size={16} />
-            Edit
-          </button>
-          
-          {/* Delete button - shows confirmation dialog */}
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="flex items-center gap-2 px-4 py-2.5 border border-[#eaeaea] rounded-lg text-sm font-medium text-[#64748b] hover:text-[#dc3545] hover:bg-[#ffebeb] hover:border-[#dc3545] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label="Delete product"
-          >
-            {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-            Delete
-          </button>
         </div>
       </div>
 
-      {/* ========================================================================
-          PHOTO GALLERY SECTION
-          - Grid layout: 1 large hero image + 3 smaller thumbnails
-          - First 4 photos displayed in grid
-          - "+X more photos" button if more than 4 photos
-          - Click to open lightbox for full-size viewing
-          - Graceful fallback for failed image loads
-          ======================================================================== */}
-      {displayPhotos.length > 0 && (
-        <div className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 md:grid-rows-[145px_145px] gap-3">
-            {displayPhotos.slice(0, 4).map((photo, i) => (
-              <button
-                key={i}
-                onClick={() => setLightboxIndex(i)}
-                className={`relative w-full overflow-hidden rounded-lg bg-[#f8fafc] text-left ${
-                  i === 0 ? "h-[240px] md:h-full md:row-span-2" : "h-[145px]"
-                }`}
-                aria-label={`View photo ${i + 1} of ${displayPhotos.length}`}
-              >
-                <img
-                  src={getImageUrl(photo, i)}
-                  alt={`${tour.title} - Photo ${i + 1}`}
-                  className="absolute inset-0 h-full w-full object-cover hover:opacity-90 transition-opacity"
-                  onError={(e) => handleImageError(e, i)}
-                />
-              </button>
-            ))}
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
 
-            {displayPhotos.length > 4 && (
-              <button
-                onClick={() => setGalleryOpen(true)}
-                className="relative h-[145px] w-full overflow-hidden rounded-lg cursor-pointer group"
-                aria-label={`View all ${displayPhotos.length} photos`}
-              >
-                <img
-                  src={getImageUrl(displayPhotos[4], 4)}
-                  alt={`${tour.title} - Photo 5`}
-                  className="absolute inset-0 h-full w-full object-cover opacity-40 group-hover:opacity-50 transition-opacity"
-                  onError={(e) => handleImageError(e, 4)}
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
-                  <span className="text-sm font-medium text-[#1e293b]">
-                    +{displayPhotos.length - 4} more photos
-                  </span>
-                </div>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================
-          MAIN LAYOUT: 2-COLUMN GRID
-          - Left column (2/3 width): Main content (description, highlights, itinerary, etc.)
-          - Right column (1/3 width): Sidebar (pricing, details, location, stats)
-          - Responsive: Stacks vertically on mobile
-          ======================================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* ======================================================================
-            LEFT COLUMN: MAIN CONTENT
-            - Product description
-            - Highlights (key selling points)
-            - Itinerary (day-by-day schedule)
-            - What's included/excluded
-            - What to bring
-            - Additional information
-            
-            Pattern: Conditional rendering with optional chaining
-            Only show sections if data exists
-            ====================================================================== */}
-        <div className="lg:col-span-2 space-y-6">
-          
-          {/* Description Section - Always shown */}
-          <div className="bg-white rounded-lg border border-[#eaeaea] p-5">
-            <h2 className="text-base font-semibold text-[#1e293b] mb-3">Description</h2>
-            <p className="text-sm text-[#475569] leading-relaxed whitespace-pre-wrap">
-              {tour.description}
-            </p>
-          </div>
-
-          {/* Highlights Section - Conditional: Only if highlights exist */}
-          {content.highlights?.length > 0 && (
-            <div className="bg-white rounded-lg border border-[#eaeaea] p-5">
-              <h2 className="text-base font-semibold text-[#1e293b] mb-3">Highlights</h2>
-              <ul className="space-y-2">
-                {content.highlights.map((h, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-[#475569]">
-                    <Star size={14} className="text-[#ffc400] mt-0.5 flex-shrink-0" />
-                    <span>{h}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Itinerary Section - Conditional: Only if itinerary exists */}
-          {content.itinerary?.length > 0 && Array.isArray(content.itinerary) && (
-            <div className="bg-white rounded-lg border border-[#eaeaea] p-5">
-              <h2 className="text-base font-semibold text-[#1e293b] mb-4">Itinerary</h2>
-              <div className="space-y-4">
-                {content.itinerary.map((item, index) => (
-                  <div key={index} className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <div className="w-3 h-3 rounded-full bg-[#044b3b] flex-shrink-0 mt-1" />
-                      {index < content.itinerary.length - 1 && (
-                        <div className="w-0.5 flex-1 bg-[#eaeaea] mt-1" />
-                      )}
+        {/* ===== HERO GALLERY + STAT CARDS ===== */}
+        {displayPhotos.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="relative mb-10"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-1 rounded-xl overflow-hidden shadow-sm shadow-slate-900/5">
+              {displayPhotos.slice(0, 5).map((photo, i) => (
+                <button key={i} onClick={() => setLightboxIndex(i)} className={cn("relative overflow-hidden bg-slate-100 group cursor-pointer", i === 0 ? "md:col-span-2 md:row-span-2 min-h-[260px] md:min-h-[440px]" : "min-h-[130px] md:min-h-[219px]")}>
+                  <img src={i === 0 ? getCloudinaryHero(photo) : getCloudinaryUrl(photo, 600, 450)} alt={`${tour.title} - Photo ${i + 1}`} className="absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-105" onError={(e) => handleImageError(e, i)} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                  {i === 0 && (
+                    <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-white/10 backdrop-blur-sm border border-white/20 shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <Camera size={12} /> <span>View all {displayPhotos.length} photos</span>
                     </div>
-                    <div className="flex-1 pb-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        {(item.day || item.time) && (
-                          <span className="text-xs font-semibold text-[#044b3b] uppercase tracking-wider">
-                            {[item.day, item.time].filter(Boolean).join(" — ")}
-                          </span>
-                        )}
-                      </div>
-                      {item.title && (
-                        <h3 className="text-sm font-semibold text-[#1e293b]">{item.title}</h3>
-                      )}
-                      {item.description && (
-                        <p className="text-sm text-[#475569] leading-relaxed mt-1">{item.description}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* What's Included/Excluded Section - Conditional: Only if either list exists */}
-          {(content.included?.length > 0 || content.excluded?.length > 0) && (
-            <div className="bg-white rounded-lg border border-[#eaeaea] p-5">
-              <h2 className="text-base font-semibold text-[#1e293b] mb-3">What's Included</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
-                {/* Included items list */}
-                {content.included?.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium text-[#047857] mb-2 flex items-center gap-1.5">
-                      <Check size={14} /> Included
-                    </h3>
-                    <ul className="space-y-1.5">
-                      {content.included.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-[#475569]">
-                          <Check size={12} className="text-[#00d67f] mt-1 flex-shrink-0" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                
-                {/* Excluded items list */}
-                {content.excluded?.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium text-[#b91c1c] mb-2 flex items-center gap-1.5">
-                      <XIcon size={14} /> Excluded
-                    </h3>
-                    <ul className="space-y-1.5">
-                      {content.excluded.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-[#475569]">
-                          <XIcon size={12} className="text-[#dc3545] mt-1 flex-shrink-0" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* What to Bring Section - Conditional: Only if items exist */}
-          {content.whatToBring?.length > 0 && (
-            <div className="bg-white rounded-lg border border-[#eaeaea] p-5">
-              <h2 className="text-base font-semibold text-[#1e293b] mb-3">What to Bring</h2>
-              <ul className="space-y-1.5">
-                {content.whatToBring.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-[#475569]">
-                    {/* Bullet point indicator */}
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#044b3b] mt-2 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Additional Information Section - Conditional: Only if content exists */}
-          {content.additionalInfo && (
-            <div className="bg-white rounded-lg border border-[#eaeaea] p-5">
-              <h2 className="text-base font-semibold text-[#1e293b] mb-3">Additional Information</h2>
-              <p className="text-sm text-[#475569] leading-relaxed whitespace-pre-wrap">
-                {content.additionalInfo}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* ======================================================================
-            RIGHT COLUMN: SIDEBAR
-            - Pricing information
-            - Product details (category, duration, difficulty, transport)
-            - Location information
-            - Schedule (operating days, time slots)
-            - Booking rules
-            - Languages offered
-            - Statistics (bookings, reviews, ratings, views)
-            
-            Pattern: Sticky sidebar on desktop, stacks below main content on mobile
-            ====================================================================== */}
-        <div className="space-y-4">
-          
-          {/* Pricing Card */}
-          <div className="bg-white rounded-lg border border-[#eaeaea] p-5">
-            <h3 className="text-sm font-semibold text-[#1e293b] mb-3">Pricing</h3>
-            <div className="space-y-3">
-              {/* Price list by age group */}
-              {pricing.prices?.map((price, i) => (
-                <div key={i} className="flex items-center justify-between text-sm">
-                  <span className="text-[#64748b]">{price.ageGroup}</span>
-                  <span className="font-semibold text-[#1e293b]">
-                    {formatCurrency(price.retailPrice, pricingSchedules.currency)}
-                  </span>
-                </div>
+                  )}
+                </button>
               ))}
-              
-              {/* Fallback messages for missing pricing data */}
-              {pricing.prices?.length === 0 && schedules.travelerDetails?.ageGroups?.length > 0 && (
-                <p className="text-sm text-[#9e9e9e]">Pricing configured per age group</p>
-              )}
-              {pricing.prices?.length === 0 && !schedules.travelerDetails?.ageGroups && (
-                <p className="text-sm text-[#9e9e9e]">No pricing data available</p>
-              )}
-              
-              {/* Currency and validity period */}
-              <div className="pt-2 border-t border-[#eaeaea]">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-[#64748b]">Currency</span>
-                  <span className="font-medium text-[#1e293b]">
-                    {pricingSchedules.currency || "USD"}
-                  </span>
-                </div>
-                {pricing.startDate && (
-                  <div className="flex items-center justify-between text-sm mt-1">
-                    <span className="text-[#64748b]">Valid</span>
-                    <span className="font-medium text-[#1e293b]">
-                      {formatDate(pricing.startDate)} - {formatDate(pricing.endDate)}
-                    </span>
+              {displayPhotos.length > 5 && (
+                <button onClick={() => setGalleryOpen(true)} className="relative overflow-hidden bg-slate-100 min-h-[130px] md:min-h-[219px] group cursor-pointer">
+                  <img src={getCloudinaryUrl(displayPhotos[5], 600, 450)} alt={`${tour.title} - Photo 6`} className="absolute inset-0 w-full h-full object-cover transition-all duration-500 group-hover:scale-105" onError={(e) => handleImageError(e, 5)} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent flex items-end justify-center pb-4 sm:pb-5 transition-all duration-300 group-hover:from-black/80">
+                    <span className="text-xs font-semibold text-white/90 bg-white/10 backdrop-blur-sm border border-white/20 px-3 py-1.5 rounded-lg">+{displayPhotos.length - 5} more</span>
                   </div>
-                )}
+                </button>
+              )}
+            </div>
+
+            {/* Stat cards overlay */}
+            {hasAnyStat && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15, duration: 0.35 }}
+                className="relative md:absolute md:bottom-0 md:right-4 md:translate-y-1/2 z-10 mt-4 md:mt-0"
+              >
+                <div className="flex flex-wrap md:flex-nowrap gap-2">
+                  {(tour.totalBookings > 0 || tour._count?.bookings > 0) && (
+                    <div className="flex items-center gap-2.5 bg-white rounded-lg border border-slate-100 px-3.5 py-2.5 shadow-sm shadow-slate-900/5 ring-1 ring-black/5">
+                      <div className="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500"><Calendar size={15} /></div>
+                      <div><p className="text-sm font-bold text-slate-800 leading-none tabular-nums">{tour.totalBookings || tour._count?.bookings}</p><p className="text-[11px] text-slate-400 font-medium leading-tight">Bookings</p></div>
+                    </div>
+                  )}
+                  {tour.totalRevenue > 0 && (
+                    <div className="flex items-center gap-2.5 bg-white rounded-lg border border-slate-100 px-3.5 py-2.5 shadow-sm shadow-slate-900/5 ring-1 ring-black/5">
+                      <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600"><DollarSign size={15} /></div>
+                      <div><p className="text-sm font-bold text-slate-800 leading-none tabular-nums">{formatCurrency(tour.totalRevenue, currency)}</p><p className="text-[11px] text-slate-400 font-medium leading-tight">Revenue</p></div>
+                    </div>
+                  )}
+                  {tour.averageRating > 0 && (
+                    <div className="flex items-center gap-2.5 bg-white rounded-lg border border-slate-100 px-3.5 py-2.5 shadow-sm shadow-slate-900/5 ring-1 ring-black/5">
+                      <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600"><Star size={15} /></div>
+                      <div><p className="text-sm font-bold text-slate-800 leading-none tabular-nums">{tour.averageRating}</p><p className="text-[11px] text-slate-400 font-medium leading-tight">Rating</p></div>
+                    </div>
+                  )}
+                  {tour._count?.reviews > 0 && (
+                    <div className="flex items-center gap-2.5 bg-white rounded-lg border border-slate-100 px-3.5 py-2.5 shadow-sm shadow-slate-900/5 ring-1 ring-black/5">
+                      <div className="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500"><Star size={15} /></div>
+                      <div><p className="text-sm font-bold text-slate-800 leading-none tabular-nums">{tour._count.reviews}</p><p className="text-[11px] text-slate-400 font-medium leading-tight">Reviews</p></div>
+                    </div>
+                  )}
+                  {tour.viewCount > 0 && (
+                    <div className="flex items-center gap-2.5 bg-white rounded-lg border border-slate-100 px-3.5 py-2.5 shadow-sm shadow-slate-900/5 ring-1 ring-black/5">
+                      <div className="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500"><Eye size={15} /></div>
+                      <div><p className="text-sm font-bold text-slate-800 leading-none tabular-nums">{tour.viewCount}</p><p className="text-[11px] text-slate-400 font-medium leading-tight">Views</p></div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+
+        {/* ===== TITLE + METADATA ===== */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08, duration: 0.35 }}
+          className="mb-8"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-1 h-10 bg-gradient-to-b from-emerald-500 to-emerald-300 rounded-full flex-shrink-0" />
+            <div>
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <StatusBadge status={tour.status} label={PRODUCT_STATUSES[tour.status]?.label} size="sm" />
+                <span className="text-xs text-slate-400">Created {formatDate(tour.createdAt)}</span>
+                <span className="text-xs text-slate-300">&middot;</span>
+                <span className="text-xs text-slate-400">Updated {formatDate(tour.updatedAt)}</span>
               </div>
+              <h1 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">{tour.title}</h1>
             </div>
           </div>
+        </motion.div>
 
-          {/* Details Card - Product metadata */}
-          <div className="bg-white rounded-lg border border-[#eaeaea] p-5">
-            <h3 className="text-sm font-semibold text-[#1e293b] mb-3">Details</h3>
-            <div className="space-y-3">
-              
-              {/* Category & Subcategory */}
-              {categorization.category && (
-                <div className="flex items-start gap-3">
-                  <Globe size={16} className="text-[#64748b] mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-[#9e9e9e]">Category</p>
-                    <p className="text-sm text-[#1e293b] capitalize">
-                      {categorization.category}
-                      {categorization.subcategory ? ` / ${categorization.subcategory}` : ""}
-                    </p>
-                  </div>
-                </div>
-              )}
-              
-              {/* Duration (hours and/or days) */}
-              {(duration.hours || duration.days) && (
-                <div className="flex items-start gap-3">
-                  <Clock size={16} className="text-[#64748b] mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-[#9e9e9e]">Duration</p>
-                    <p className="text-sm text-[#1e293b]">
-                      {duration.hours ? `${duration.hours} hour${duration.hours !== 1 ? "s" : ""}` : ""}
-                      {duration.days ? `${duration.days} day${duration.days !== 1 ? "s" : ""}` : ""}
-                    </p>
-                  </div>
-                </div>
-              )}
-              
-              {/* Difficulty Level */}
-              {categorization.difficulty && (
-                <div className="flex items-start gap-3">
-                  <Star size={16} className="text-[#64748b] mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-[#9e9e9e]">Difficulty</p>
-                    <p className="text-sm text-[#1e293b]">{categorization.difficulty}</p>
-                  </div>
-                </div>
-              )}
-              
-              {/* Transport Modes (e.g., "Air: Plane", "Land: Bus, Car") */}
-              {categorization.transportMode && Object.keys(categorization.transportMode).length > 0 && (
-                <div className="flex items-start gap-3">
-                  <MapPin size={16} className="text-[#64748b] mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-[#9e9e9e]">Transport</p>
-                    <p className="text-sm text-[#1e293b]">
-                      {Object.entries(categorization.transportMode)
-                        .map(([mode, items]) =>
-                          items?.length ? `${mode}: ${items.join(", ")}` : ""
-                        )
-                        .filter(Boolean)
-                        .join(" | ") || "Not specified"}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* ===== MAIN LAYOUT ===== */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-          {/* Location Card - Conditional: Only if location data exists */}
-          {(location.city || location.country || tour.latitude) && (
-            <div className="bg-white rounded-lg border border-[#eaeaea] p-5">
-              <h3 className="text-sm font-semibold text-[#1e293b] mb-3">Location</h3>
-              <div className="space-y-2">
-                {/* City and Country */}
-                {location.city && (
-                  <p className="text-sm text-[#1e293b]">
-                    {location.city}{location.country ? `, ${location.country}` : ""}
-                  </p>
-                )}
-                
-                {/* Region */}
-                {location.region && <p className="text-sm text-[#64748b]">{location.region}</p>}
-                
-                {/* GPS Coordinates */}
-                {tour.latitude && tour.longitude && (
-                  <p className="text-xs text-[#9e9e9e]">
-                    {tour.latitude}, {tour.longitude}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
+          {/* ======== LEFT COLUMN (8/12) ======== */}
+          <div className="lg:col-span-8 space-y-6">
 
-          {/* Availability Calendar Card */}
-          <div className="bg-white rounded-lg border border-[#eaeaea] p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-[#1e293b]">Availability</h3>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => {
-                    const [y, m] = availMonth.split("-").map(Number);
-                    const prev = new Date(y, m - 2, 1);
-                    setAvailMonth(`${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`);
-                  }}
-                  className="p-1 text-[#64748b] hover:text-[#1e293b] hover:bg-[#f8fafc] rounded transition-colors"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-                <span className="text-xs font-medium text-[#64748b] min-w-[70px] text-center">
-                  {(() => {
-                    const [y, m] = availMonth.split("-").map(Number);
-                    return new Date(y, m - 1).toLocaleString("default", { month: "short", year: "numeric" });
-                  })()}
-                </span>
-                <button
-                  onClick={() => {
-                    const [y, m] = availMonth.split("-").map(Number);
-                    const next = new Date(y, m, 1);
-                    setAvailMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`);
-                  }}
-                  className="p-1 text-[#64748b] hover:text-[#1e293b] hover:bg-[#f8fafc] rounded transition-colors"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
+            {/* DESCRIPTION */}
+            <SectionCard title="Description">
+              <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{tour.description}</p>
+            </SectionCard>
 
-            {availLoading ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 size={16} className="animate-spin text-[#64748b]" />
-              </div>
-            ) : availability.length > 0 ? (
-              <>
-                <div className="grid grid-cols-7 gap-0.5 mb-2">
-                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-                    <div key={d} className="text-[10px] text-[#9e9e9e] text-center font-medium py-1">{d}</div>
+            {/* HIGHLIGHTS */}
+            {content.highlights?.length > 0 && (
+              <SectionCard title="Highlights">
+                <ul className="space-y-3">
+                  {content.highlights.map((h, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-[7px] flex-shrink-0" />
+                      <span>{h}</span>
+                    </li>
+                  ))}
+                </ul>
+              </SectionCard>
+            )}
+
+            {/* ITINERARY */}
+            {content.itinerary?.length > 0 && Array.isArray(content.itinerary) && (
+              <SectionCard title="Itinerary">
+                <div className="relative">
+                  {/* Gradient timeline rail */}
+                  <div className="absolute left-[19px] top-4 bottom-4 w-0.5 bg-gradient-to-b from-emerald-300 via-emerald-400 to-emerald-300 rounded-full opacity-70" />
+
+                  <div className="space-y-6">
+                    {content.itinerary.map((item, idx) => {
+                      const prevDay = idx > 0 ? content.itinerary[idx - 1].day : null;
+                      const showDayHeader = item.day && item.day !== prevDay;
+
+                      return (
+                        <motion.div
+                          key={idx}
+                          initial={{ opacity: 0, x: -12 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ delay: idx * 0.06, duration: 0.3, ease: "easeOut" }}
+                          className="relative pl-[46px]"
+                        >
+                          {/* Timeline dot */}
+                          <div className="absolute left-[13px] top-[7px] z-10">
+                            <div className="w-[13px] h-[13px] rounded-full bg-emerald-500 ring-[3px] ring-emerald-100 shadow-sm" />
+                          </div>
+
+                          {/* Day header - full width */}
+                          {showDayHeader && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="mb-4 -ml-[46px] pl-[46px]"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="h-px flex-1 bg-gradient-to-r from-emerald-200/60 to-transparent" />
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 shadow-sm whitespace-nowrap">
+                                  <Calendar size={11} />
+                                  {item.day}
+                                </span>
+                                <div className="h-px flex-1 bg-gradient-to-l from-emerald-200/60 to-transparent" />
+                              </div>
+                            </motion.div>
+                          )}
+
+                          {/* Time badge */}
+                          {item.time && (
+                            <div className="mb-2">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200/60">
+                                <Clock size={10} />
+                                {item.time}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Content card */}
+                          <div className={cn(
+                            "rounded-xl border bg-white p-4 transition-all duration-200",
+                            item.title ? "border-slate-100 shadow-sm shadow-slate-900/5" : "border-transparent bg-transparent p-0"
+                          )}>
+                            {(item.title || item.description) && (
+                              <div className="relative pl-3 border-l-2 border-emerald-200/80">
+                                {item.title && (
+                                  <h3 className="text-sm font-semibold text-slate-800 leading-snug">{item.title}</h3>
+                                )}
+                                {item.description && (
+                                  <p className={cn("text-sm text-slate-600 leading-relaxed", item.title && "mt-1.5")}>{item.description}</p>
+                                )}
+                              </div>
+                            )}
+                            {!item.title && !item.description && item.time && (
+                              <span className="text-sm font-medium text-slate-600">{item.time}</span>
+                            )}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Subtle bottom fade */}
+                  <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+                </div>
+              </SectionCard>
+            )}
+
+            {/* INCLUDED / EXCLUDED */}
+            {(included.length > 0 || excluded.length > 0) && (
+              <SectionCard title="What's Included">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+                  {included.length > 0 && (
+                    <div className="pb-4 sm:pb-0 sm:pr-6">
+                      <h3 className="text-xs font-medium text-slate-500 mb-3">Included</h3>
+                      <ul className="space-y-2.5">
+                        {included.map((item, i) => (
+                          <li key={i} className="flex items-start gap-2.5 text-sm text-slate-600">
+                            <div className="w-4 h-4 rounded-full bg-emerald-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <Check size={10} className="text-emerald-500" />
+                            </div>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {excluded.length > 0 && (
+                    <div className="pt-4 sm:pt-0 sm:pl-6">
+                      <h3 className="text-xs font-medium text-slate-500 mb-3">Excluded</h3>
+                      <ul className="space-y-2.5">
+                        {excluded.map((item, i) => (
+                          <li key={i} className="flex items-start gap-2.5 text-sm text-slate-600">
+                            <div className="w-4 h-4 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <XIcon size={10} className="text-red-400" />
+                            </div>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </SectionCard>
+            )}
+
+            {/* WHAT TO BRING */}
+            {content.whatToBring?.length > 0 && (
+              <SectionCard title="What to Bring">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {content.whatToBring.map((item, i) => (
+                    <div key={i} className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-slate-50 text-sm text-slate-600">
+                      <Check size={12} className="text-emerald-500 flex-shrink-0" />
+                      <span>{item}</span>
+                    </div>
                   ))}
                 </div>
-                {(() => {
-                  const [y, m] = availMonth.split("-").map(Number);
-                  const firstDay = new Date(y, m - 1, 1).getDay();
-                  const daysInMonth = new Date(y, m, 0).getDate();
-                  const availMap = {};
-                  availability.forEach((a) => { availMap[a.date] = a; });
-
-                  const cells = [];
-                  for (let i = 0; i < firstDay; i++) {
-                    cells.push(<div key={`empty-${i}`} />);
-                  }
-                  for (let d = 1; d <= daysInMonth; d++) {
-                    const dateStr = `${availMonth}-${String(d).padStart(2, "0")}`;
-                    const day = availMap[dateStr];
-                    const status = day?.status?.toLowerCase() || "available";
-                    const isPast = new Date(dateStr) < new Date(new Date().toDateString());
-                    const colorMap = {
-                      available: "bg-emerald-100 text-emerald-700",
-                      limited: "bg-amber-100 text-amber-700",
-                      full: "bg-red-100 text-red-700",
-                      blocked: "bg-slate-100 text-slate-400",
-                    };
-                    cells.push(
-                      <div
-                        key={dateStr}
-                        className={`text-center text-[11px] py-1 rounded ${isPast ? "opacity-40" : ""} ${colorMap[status] || "bg-slate-50 text-slate-400"}`}
-                        title={`${dateStr}: ${status}${day ? ` (${day.booked}/${day.capacity})` : ""}`}
-                      >
-                        {d}
-                      </div>
-                    );
-                  }
-                  return cells;
-                })()}
-              </>
-            ) : (
-              <p className="text-xs text-[#9e9e9e] text-center py-4">No availability data</p>
+              </SectionCard>
             )}
 
-            <div className="flex items-center justify-center gap-2.5 mt-2 pt-2 border-t border-[#eaeaea]">
-              {[
-                { label: "Available", color: "bg-emerald-100" },
-                { label: "Limited", color: "bg-amber-100" },
-                { label: "Full", color: "bg-red-100" },
-                { label: "Blocked", color: "bg-slate-100" },
-              ].map((l) => (
-                <div key={l.label} className="flex items-center gap-1">
-                  <div className={`w-2 h-2 rounded ${l.color}`} />
-                  <span className="text-[10px] text-[#64748b]">{l.label}</span>
-                </div>
-              ))}
-            </div>
+            {/* WHAT TO KNOW / ADDITIONAL INFO */}
+            {whatToKnow && (
+              <SectionCard title="What to Know">
+                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{whatToKnow}</p>
+              </SectionCard>
+            )}
           </div>
 
-          {/* Operating Days & Time Slots */}
-          {schedules.operatingDays?.length > 0 && (
-            <div className="bg-white rounded-lg border border-[#eaeaea] p-5">
-              <h3 className="text-sm font-semibold text-[#1e293b] mb-3">Schedule</h3>
-              <div className="space-y-2">
-                <div>
-                  <p className="text-xs text-[#9e9e9e] mb-1">Operating Days</p>
-                  <div className="flex flex-wrap gap-1">
-                    {schedules.operatingDays.map((day) => (
-                      <span 
-                        key={day} 
-                        className="text-xs px-2 py-0.5 bg-[#f8fafc] rounded text-[#64748b] capitalize"
-                      >
-                        {day.slice(0, 3)}
+          {/* ======== RIGHT COLUMN (4/12) ======== */}
+          <div className="lg:col-span-4 space-y-5">
+
+            {/* PRICING */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              className="bg-white rounded-xl border border-slate-100 shadow-sm shadow-slate-900/5 overflow-hidden hover:shadow-md hover:shadow-slate-900/5 hover:border-slate-200 transition-all duration-200"
+            >
+              <div className="px-5 py-4 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-0.5 h-4 bg-gradient-to-b from-emerald-500 to-emerald-300 rounded-full flex-shrink-0" />
+                    <h3 className="text-sm font-semibold text-slate-800">Pricing</h3>
+                  </div>
+                  {currency && <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">{currency}</span>}
+                </div>
+              </div>
+              <div className="p-5 space-y-3">
+                {normalizedPrices.length > 0 ? normalizedPrices.map((price, i) => (
+                  <div key={i} className="flex items-center justify-between py-1.5">
+                    <span className="text-sm text-slate-500">{price.label}</span>
+                    <span className="text-sm font-bold text-slate-800 tabular-nums">{formatCurrency(price.price, currency)}</span>
+                  </div>
+                )) : (
+                  <p className="text-sm text-slate-400">No pricing data</p>
+                )}
+                {pricing.startDate && (
+                  <div className="pt-3 mt-3 border-t border-slate-100">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400">Valid period</span>
+                      <span className="font-medium text-slate-500">{formatDate(pricing.startDate)} \u2013 {formatDate(pricing.endDate)}</span>
+                    </div>
+                  </div>
+                )}
+                {/* Discount Perks */}
+                {schedules.discountPerks && (schedules.discountPerks.groupDiscount || schedules.discountPerks.earlyBirdDiscount) && (
+                  <div className="pt-3 mt-3 border-t border-slate-100 space-y-2">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Discount Perks</p>
+                    {schedules.discountPerks.groupDiscount && (
+                      <div className="flex items-center gap-2 text-xs text-slate-600 bg-emerald-50/50 rounded-lg px-3 py-2">
+                        <Percent size={12} className="text-emerald-500 flex-shrink-0" />
+                        <span>Group: <strong>{schedules.discountPerks.groupDiscount.discountPercentage}% off</strong> ({schedules.discountPerks.groupDiscount.minTravelers}+ travelers)</span>
+                      </div>
+                    )}
+                    {schedules.discountPerks.earlyBirdDiscount && (
+                      <div className="flex items-center gap-2 text-xs text-slate-600 bg-amber-50/50 rounded-lg px-3 py-2">
+                        <Percent size={12} className="text-amber-500 flex-shrink-0" />
+                        <span>Early bird: <strong>{schedules.discountPerks.earlyBirdDiscount.discountPercentage}% off</strong> (book {schedules.discountPerks.earlyBirdDiscount.daysBeforeBooking} days ahead)</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            {/* DETAILS */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.35, ease: "easeOut", delay: 0.05 }}
+              className="bg-white rounded-xl border border-slate-100 shadow-sm shadow-slate-900/5 overflow-hidden hover:shadow-md hover:shadow-slate-900/5 hover:border-slate-200 transition-all duration-200"
+            >
+              <div className="px-5 py-4 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-0.5 h-4 bg-gradient-to-b from-emerald-500 to-emerald-300 rounded-full flex-shrink-0" />
+                  <h3 className="text-sm font-semibold text-slate-800">Details</h3>
+                </div>
+              </div>
+              <div className="px-5 py-2">
+                <DetailRow icon={Globe} label="Category" value={categorization.category ? `${categorization.category}${categorization.subcategory ? ` / ${categorization.subcategory}` : ""}` : null} />
+                <DetailRow icon={Activity} label="Activity Type" value={categorization.activityType || tour.activityType} />
+                <DetailRow icon={Clock} label="Duration" value={durationStr} />
+                <DetailRow icon={Activity} label="Difficulty" value={categorization.difficulty} />
+                <DetailRow icon={Users} label="Group Size" value={categorization.groupSize ? `${categorization.groupSize.min || 1}\u2013${categorization.groupSize.max}` : null} />
+                <DetailRow icon={Shield} label="Age Requirement" value={categorization.ageRequirement} />
+                <DetailRow icon={Award} label="Theme" value={tour.theme?.primaryTheme || tour.primaryTheme} />
+                {(() => {
+                  const secondary = tour.theme?.secondaryThemes || tour.secondaryThemes;
+                  return secondary?.length > 0 ? (
+                    <DetailRow icon={Award} label="Themes" value={secondary.join(", ")} />
+                  ) : null;
+                })()}
+                <DetailRow icon={Navigation} label="Transport" value={categorization.transportMode && Object.keys(categorization.transportMode).length > 0 ? Object.entries(categorization.transportMode).map(([mode, items]) => items?.length ? `${mode}: ${items.join(", ")}` : "").filter(Boolean).join(" | ") : null} />
+              </div>
+            </motion.div>
+
+            {/* LOCATION */}
+            {(location.city || location.country || tour.latitude) && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.35, ease: "easeOut", delay: 0.1 }}
+                className="bg-white rounded-xl border border-slate-100 shadow-sm shadow-slate-900/5 overflow-hidden hover:shadow-md hover:shadow-slate-900/5 hover:border-slate-200 transition-all duration-200"
+              >
+                <div className="px-5 py-4 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-0.5 h-4 bg-gradient-to-b from-emerald-500 to-emerald-300 rounded-full flex-shrink-0" />
+                    <h3 className="text-sm font-semibold text-slate-800">Location</h3>
+                  </div>
+                </div>
+                <div className="px-5 py-4">
+                  <p className="text-sm font-medium text-slate-800">{[location.city, location.country].filter(Boolean).join(", ") || "Not specified"}</p>
+                  {location.region && <p className="text-xs text-slate-500 mt-0.5">{location.region}</p>}
+                  {tour.latitude && tour.longitude && (
+                    <p className="text-xs text-slate-400 flex items-center gap-1 mt-1.5">
+                      <Navigation size={10} /> {tour.latitude}, {tour.longitude}
+                    </p>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* AVAILABILITY */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.35, ease: "easeOut", delay: 0.15 }}
+              className="bg-white rounded-xl border border-slate-100 shadow-sm shadow-slate-900/5 overflow-hidden hover:shadow-md hover:shadow-slate-900/5 hover:border-slate-200 transition-all duration-200"
+            >
+              <div className="px-5 py-4 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-0.5 h-4 bg-gradient-to-b from-emerald-500 to-emerald-300 rounded-full flex-shrink-0" />
+                  <h3 className="text-sm font-semibold text-slate-800">Availability</h3>
+                </div>
+              </div>
+              <div className="p-5">
+                {availLoading ? (
+                  <div className="flex items-center justify-center py-8"><Loader2 size={18} className="animate-spin text-slate-400" /></div>
+                ) : availability.length > 0 ? (
+                  <AvailabilityCalendar availability={availability} availMonth={availMonth} setAvailMonth={setAvailMonth} />
+                ) : (
+                  <p className="text-xs text-slate-400 text-center py-6">No availability data for this period</p>
+                )}
+              </div>
+            </motion.div>
+
+            {/* SCHEDULE */}
+            {schedules.operatingDays?.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.35, ease: "easeOut", delay: 0.2 }}
+                className="bg-white rounded-xl border border-slate-100 shadow-sm shadow-slate-900/5 overflow-hidden hover:shadow-md hover:shadow-slate-900/5 hover:border-slate-200 transition-all duration-200"
+              >
+                <div className="px-5 py-4 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-0.5 h-4 bg-gradient-to-b from-emerald-500 to-emerald-300 rounded-full flex-shrink-0" />
+                    <h3 className="text-sm font-semibold text-slate-800">Schedule</h3>
+                  </div>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div>
+                    <p className="text-xs text-slate-400 mb-2">Operating Days</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {schedules.operatingDays.map((day) => (
+                        <span key={day} className="text-xs px-2.5 py-1 rounded-md bg-slate-50 text-slate-500 font-medium border border-slate-100 capitalize">{day.slice(0, 3)}</span>
+                      ))}
+                    </div>
+                  </div>
+                  {schedules.timeSlots?.length > 0 && (
+                    <div>
+                      <p className="text-xs text-slate-400 mb-2">Time Slots</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {schedules.timeSlots.map((slot, i) => {
+                          const start = typeof slot === "string" ? slot : slot.startTime;
+                          const end = slot.endTime;
+                          return <span key={i} className="text-xs px-2.5 py-1 rounded-md bg-slate-50 text-slate-500 font-medium border border-slate-100">{formatTime(start)}{end ? ` \u2013 ${formatTime(end)}` : ""}</span>;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {schedules.capacityPerSlot && (
+                    <div className="flex items-center gap-2 text-xs text-slate-500 pt-1">
+                      <Users size={13} /> Capacity: <strong className="text-slate-700">{schedules.capacityPerSlot}</strong> per slot
+                    </div>
+                  )}
+                  {schedules.availableDates?.length > 0 && (
+                    <div>
+                      <p className="text-xs text-slate-400 mb-2">Available Dates</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {schedules.availableDates.map((date, i) => (
+                          <span key={i} className="text-xs px-2.5 py-1 rounded-md bg-slate-50 text-slate-500 font-medium border border-slate-100">{formatDate(date)}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* BOOKING RULES */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.35, ease: "easeOut", delay: 0.25 }}
+              className="bg-white rounded-xl border border-slate-100 shadow-sm shadow-slate-900/5 overflow-hidden hover:shadow-md hover:shadow-slate-900/5 hover:border-slate-200 transition-all duration-200"
+            >
+              <div className="px-5 py-4 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-0.5 h-4 bg-gradient-to-b from-emerald-500 to-emerald-300 rounded-full flex-shrink-0" />
+                  <h3 className="text-sm font-semibold text-slate-800">Booking Rules</h3>
+                </div>
+              </div>
+              <div className="p-5 space-y-3 text-sm">
+                {meetingPoint.name && (
+                  <div className="bg-slate-50 rounded-lg px-3.5 py-3 -mx-1">
+                    <p className="text-[11px] text-slate-400 uppercase tracking-wider font-medium mb-1">Meeting Point</p>
+                    <p className="font-semibold text-slate-800">{meetingPoint.name}</p>
+                    {meetingPoint.address && <p className="text-xs text-slate-500 mt-0.5">{meetingPoint.address}</p>}
+                  </div>
+                )}
+                {booking.ticketType && (
+                  <div className="flex items-center gap-2.5 text-slate-600">
+                    <Tag size={14} className="text-slate-400 flex-shrink-0" /> <span>Ticket type: <strong className="text-slate-700">{booking.ticketType}</strong></span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2.5 text-slate-600">
+                  {booking.instantBooking ? <Check size={14} className="text-emerald-500 flex-shrink-0" /> : <Clock size={14} className="text-slate-400 flex-shrink-0" />}
+                  <span>{booking.instantBooking ? "Instant booking" : "Request booking"}</span>
+                </div>
+                {typeof booking.instantConfirmation === 'boolean' && (
+                  <div className="flex items-center gap-2.5 text-slate-600">
+                    {booking.instantConfirmation ? <Check size={14} className="text-emerald-500 flex-shrink-0" /> : <Clock size={14} className="text-slate-400 flex-shrink-0" />}
+                    <span>{booking.instantConfirmation ? "Instant confirmation" : "Manual confirmation"}</span>
+                  </div>
+                )}
+                {schedules.travelerDetails?.maxTravelersPerBooking && (
+                  <div className="flex items-center gap-2.5 text-slate-600">
+                    <Users size={14} className="text-slate-400 flex-shrink-0" /> Max travelers: <strong className="text-slate-700">{schedules.travelerDetails.maxTravelersPerBooking}</strong>
+                  </div>
+                )}
+                {booking.maxQuantity && (
+                  <div className="flex items-center gap-2.5 text-slate-600">
+                    <Users size={14} className="text-slate-400 flex-shrink-0" /> Max per booking: <strong className="text-slate-700">{booking.maxQuantity}</strong>
+                  </div>
+                )}
+                {booking.bookingWindow?.start && booking.bookingWindow?.end && (
+                  <div className="flex items-start gap-2.5 text-slate-600">
+                    <Calendar size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
+                    <div><span className="font-medium text-slate-700">Booking window:</span> <span className="text-slate-500">{formatDate(booking.bookingWindow.start)} \u2013 {formatDate(booking.bookingWindow.end)}</span></div>
+                  </div>
+                )}
+                {booking.minAdvanceBookingHours && (
+                  <div className="flex items-center gap-2.5 text-slate-600">
+                    <Clock size={14} className="text-slate-400 flex-shrink-0" /> Book <strong className="text-slate-700">{booking.minAdvanceBookingHours}h</strong> in advance
+                  </div>
+                )}
+                {cancellation.type && (
+                  <div className="flex items-start gap-2.5 text-slate-600">
+                    <Shield size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium text-slate-700">Cancellation:</span> <span className="text-slate-500">{cancellation.type}{cancellation.refundPercentage ? ` (${cancellation.refundPercentage}% refund)` : ""}</span>
+                      {cancellation.refundRules?.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {cancellation.refundRules.map((rule, i) => (
+                            <span key={i} className="text-xs px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 border border-slate-100">{rule.daysBefore ? `${rule.daysBefore}+ days: ` : ""}{rule.refundPercentage}%</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {booking.pickupAvailable && booking.pickupDetails && (
+                  <div className="bg-slate-50 rounded-lg px-3.5 py-3 -mx-1">
+                    <p className="text-[11px] text-slate-400 uppercase tracking-wider font-medium mb-1">Pickup</p>
+                    <p className="text-sm text-slate-600">{booking.pickupDetails}</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            {/* LANGUAGES */}
+            {content.languages?.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.35, ease: "easeOut", delay: 0.3 }}
+                className="bg-white rounded-xl border border-slate-100 shadow-sm shadow-slate-900/5 overflow-hidden hover:shadow-md hover:shadow-slate-900/5 hover:border-slate-200 transition-all duration-200"
+              >
+                <div className="px-5 py-4 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-0.5 h-4 bg-gradient-to-b from-emerald-500 to-emerald-300 rounded-full flex-shrink-0" />
+                    <h3 className="text-sm font-semibold text-slate-800">Languages</h3>
+                  </div>
+                </div>
+                <div className="px-5 py-4">
+                  <div className="flex flex-wrap gap-1.5">
+                    {content.languages.map((lang) => (
+                      <span key={lang} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md bg-slate-50 text-slate-500 font-medium border border-slate-100">
+                        <Globe size={11} /> {lang}
                       </span>
                     ))}
                   </div>
                 </div>
-                {schedules.timeSlots?.length > 0 && (
-                  <div>
-                    <p className="text-xs text-[#9e9e9e] mb-1">Time Slots</p>
-                    <div className="flex flex-wrap gap-1">
-                      {schedules.timeSlots.map((slot, i) => {
-                        const start = typeof slot === "string" ? slot : slot.startTime;
-                        const end = slot.endTime;
-                        return (
-                          <span key={i} className="text-xs px-2 py-0.5 bg-[#f8fafc] rounded text-[#64748b]">
-                            {start}{end ? ` - ${end}` : ""}
-                          </span>
-                        );
-                      })}
-                    </div>
+              </motion.div>
+            )}
+
+            {/* TAGS */}
+            {tour.tags?.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.35, ease: "easeOut", delay: 0.35 }}
+                className="bg-white rounded-xl border border-slate-100 shadow-sm shadow-slate-900/5 overflow-hidden hover:shadow-md hover:shadow-slate-900/5 hover:border-slate-200 transition-all duration-200"
+              >
+                <div className="px-5 py-4 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-0.5 h-4 bg-gradient-to-b from-emerald-500 to-emerald-300 rounded-full flex-shrink-0" />
+                    <h3 className="text-sm font-semibold text-slate-800">Tags</h3>
                   </div>
-                )}
-                {schedules.capacityPerSlot && (
-                  <div className="flex items-center gap-2 text-sm text-[#64748b]">
-                    <Users size={14} />
-                    <span>Capacity: {schedules.capacityPerSlot} per slot</span>
+                </div>
+                <div className="px-5 py-4">
+                  <div className="flex flex-wrap gap-1.5">
+                    {tour.tags.map((tag) => (
+                      <span key={tag} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md bg-slate-50 text-slate-500 font-medium border border-slate-100">
+                        <Tag size={11} /> {tag}
+                      </span>
+                    ))}
                   </div>
-                )}
-              </div>
-            </div>
-          )}
+                </div>
+              </motion.div>
+            )}
 
-          {/* Booking Rules Card - Always shown */}
-          <div className="bg-white rounded-lg border border-[#eaeaea] p-5">
-            <h3 className="text-sm font-semibold text-[#1e293b] mb-3">Booking Rules</h3>
-            <div className="space-y-2 text-sm">
-              
-              {/* Meeting Point */}
-              {meetingPoint.name && (
-                <div>
-                  <p className="text-xs text-[#9e9e9e]">Meeting Point</p>
-                  <p className="text-[#1e293b]">{meetingPoint.name}</p>
-                  {meetingPoint.address && (
-                    <p className="text-[#64748b] text-xs">{meetingPoint.address}</p>
-                  )}
-                </div>
-              )}
-              
-              {/* Maximum travelers per booking */}
-              {schedules.travelerDetails?.maxTravelersPerBooking && (
-                <div className="flex items-center gap-2 text-[#64748b]">
-                  <Users size={14} />
-                  <span>Max travelers: {schedules.travelerDetails.maxTravelersPerBooking}</span>
-                </div>
-              )}
-              
-              {/* Instant booking vs Request booking */}
-              <div className="flex items-center gap-2 text-[#64748b]">
-                <Check 
-                  size={14} 
-                  className={booking.instantBooking ? "text-[#00d67f]" : "text-[#9e9e9e]"} 
-                />
-                <span>{booking.instantBooking ? "Instant booking" : "Request booking"}</span>
-              </div>
-              
-              {/* Minimum advance booking time */}
-              {booking.minAdvanceBookingHours && (
-                <div className="flex items-center gap-2 text-[#64748b]">
-                  <Calendar size={14} />
-                  <span>Book {booking.minAdvanceBookingHours}h in advance</span>
-                </div>
-              )}
-              
-              {/* Cancellation policy */}
-              {cancellation.type && (
-                <div className="flex items-center gap-2 text-[#64748b]">
-                  <XIcon size={14} className="text-[#f97316]" />
-                  <span>
-                    Cancel: {cancellation.type}
-                    {cancellation.refundPercentage ? ` (${cancellation.refundPercentage}% refund)` : ""}
-                  </span>
-                </div>
-              )}
-              
-              {/* Pickup information */}
-              {booking.pickupAvailable && booking.pickupDetails && (
-                <div>
-                  <p className="text-xs text-[#9e9e9e]">Pickup</p>
-                  <p className="text-[#64748b] text-xs">{booking.pickupDetails}</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Languages Card - Conditional: Only if languages exist */}
-          {content.languages?.length > 0 && (
-            <div className="bg-white rounded-lg border border-[#eaeaea] p-5">
-              <h3 className="text-sm font-semibold text-[#1e293b] mb-3">Languages</h3>
-              <div className="flex flex-wrap gap-1">
-                {content.languages.map((lang) => (
-                  <span 
-                    key={lang} 
-                    className="flex items-center gap-1 text-xs px-2 py-1 bg-[#f8fafc] rounded text-[#64748b]"
-                  >
-                    <Languages size={12} />
-                    {lang}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Stats Card - Always shown */}
-          <div className="bg-white rounded-lg border border-[#eaeaea] p-5">
-            <h3 className="text-sm font-semibold text-[#1e293b] mb-3">Stats</h3>
-            <div className="grid grid-cols-2 gap-3">
-              
-              {/* Bookings count - Always shown (defaults to 0) */}
-              <div className="text-center p-2 bg-[#f8fafc] rounded-lg">
-                <p className="text-lg font-bold text-[#044b3b]">{tour._count?.bookings ?? 0}</p>
-                <p className="text-xs text-[#64748b]">Bookings</p>
-              </div>
-              
-              {/* Reviews count - Always shown (defaults to 0) */}
-              <div className="text-center p-2 bg-[#f8fafc] rounded-lg">
-                <p className="text-lg font-bold text-[#044b3b]">{tour._count?.reviews ?? 0}</p>
-                <p className="text-xs text-[#64748b]">Reviews</p>
-              </div>
-              
-              {/* Average rating - Conditional: Only if rating > 0 */}
-              {tour.averageRating > 0 && (
-                <div className="text-center p-2 bg-[#f8fafc] rounded-lg">
-                  <p className="text-lg font-bold text-[#044b3b]">{tour.averageRating}</p>
-                  <p className="text-xs text-[#64748b]">Rating</p>
-                </div>
-              )}
-              
-              {/* View count - Conditional: Only if views > 0 */}
-              {tour.viewCount > 0 && (
-                <div className="text-center p-2 bg-[#f8fafc] rounded-lg">
-                  <p className="text-lg font-bold text-[#044b3b]">{tour.viewCount}</p>
-                  <p className="text-xs text-[#64748b]">Views</p>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Photo Gallery Modal */}
-      {galleryOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-          onClick={() => setGalleryOpen(false)}
-        >
-          <div
-            className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-4 md:p-6 relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-[#1e293b]">All Photos</h2>
-              <button
-                onClick={() => setGalleryOpen(false)}
-                className="p-1 text-[#64748b] hover:text-[#1e293b] rounded-lg hover:bg-[#f8fafc] transition-colors"
-              >
-                <XIcon size={20} />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {displayPhotos.map((photo, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setGalleryOpen(false); setLightboxIndex(i); }}
-                  className="relative h-48 w-full overflow-hidden rounded-lg bg-[#f8fafc] text-left hover:opacity-90 transition-opacity"
-                >
-                  <img
-                    src={getImageUrl(photo, i)}
-                    alt={`${tour.title} - Photo ${i + 1}`}
-                    className="absolute inset-0 h-full w-full object-cover"
-                    onError={(e) => handleImageError(e, i)}
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Lightbox */}
-      {lightboxIndex !== null && displayPhotos[lightboxIndex] && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setLightboxIndex(null)}
-        >
-          <button
-            onClick={(e) => { e.stopPropagation(); setLightboxIndex(null); }}
-            className="absolute top-4 right-4 p-2 text-white/70 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
-          >
-            <XIcon size={24} />
-          </button>
-          {lightboxIndex > 0 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex - 1); }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 p-2 text-white/70 hover:text-white rounded-full hover:bg-white/10 transition-colors"
-            >
-              <ChevronLeft size={32} />
-            </button>
-          )}
-          {lightboxIndex < displayPhotos.length - 1 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex + 1); }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-white/70 hover:text-white rounded-full hover:bg-white/10 transition-colors"
-            >
-              <ChevronRight size={32} />
-            </button>
-          )}
-          <div className="max-w-5xl max-h-[85vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={getImageUrl(displayPhotos[lightboxIndex], lightboxIndex)}
-              alt={`${tour.title} - Photo ${lightboxIndex + 1}`}
-              className="max-w-full max-h-[80vh] object-contain rounded-lg"
-              onError={(e) => handleImageError(e, lightboxIndex)}
-            />
-            <p className="mt-3 text-sm text-white/70">
-              {lightboxIndex + 1} / {displayPhotos.length}
-            </p>
-          </div>
-        </div>
-      )}
+      {/* MODALS */}
+      <AllPhotosModal displayPhotos={displayPhotos} open={galleryOpen} onClose={() => setGalleryOpen(false)} onSelect={setLightboxIndex} handleImageError={handleImageError} tour={tour} />
+      <PhotoGalleryModal displayPhotos={displayPhotos} index={lightboxIndex} setLightboxIndex={setLightboxIndex} handleImageError={handleImageError} tour={tour} />
     </div>
   );
 }
