@@ -211,7 +211,7 @@ export default function LoginPage() {
                     placeholder="you@example.com"
                     autoComplete="email"
                     disabled={loading}
-                    className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-colors disabled:opacity-60 disabled:bg-slate-50"
+                    className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-colors disabled:opacity-60 disabled:bg-slate-50"
                   />
                 </div>
               </div>
@@ -230,7 +230,7 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     autoComplete="current-password"
                     disabled={loading}
-                    className="w-full pl-9 pr-10 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-colors disabled:opacity-60 disabled:bg-slate-50"
+                    className="w-full pl-9 pr-10 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-colors disabled:opacity-60 disabled:bg-slate-50"
                   />
                   <button
                     type="button"
