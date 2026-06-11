@@ -115,6 +115,7 @@ function ProfileTab() {
     description: "", address: "", city: "", country: "", region: "",
     website: "", instagram: "", facebook: "", twitter: "", operatingHours: "",
   });
+  const [initialForm, setInitialForm] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const [currentLogoUrl, setCurrentLogoUrl] = useState(null);
@@ -131,7 +132,7 @@ function ProfileTab() {
         ]);
         if (user) {
           const bi = biz?.businessInfo || {};
-          setForm({
+          const loaded = {
             name: user.name || "", phone: user.phone || "",
             language: user.language || "en", timezone: user.timezone || "UTC",
             email: user.email || "",
@@ -140,7 +141,9 @@ function ProfileTab() {
             region: bi.region || "", website: bi.website || "",
             instagram: bi.instagram || "", facebook: bi.facebook || "",
             twitter: bi.twitter || "", operatingHours: bi.operatingHours || "",
-          });
+          };
+          setForm(loaded);
+          setInitialForm(loaded);
           setCurrentLogoUrl(user.logoUrl || null);
         }
       } catch { /* ignore */ }
@@ -149,11 +152,22 @@ function ProfileTab() {
     load();
   }, []);
 
-  const handleSave = async (e) => {
+  const handleSavePersonal = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
       await updateCurrentUser({ name: form.name, phone: form.phone, language: form.language, timezone: form.timezone });
+      const user = await fetchCurrentUser();
+      if (user) useAuthStore.setState({ user });
+      toast.success("Personal info updated");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update personal info");
+    } finally { setSaving(false); }
+  };
+
+  const handleSaveBusiness = async () => {
+    setSaving(true);
+    try {
       await updateBusinessProfile({
         businessInfo: {
           description: form.description, address: form.address,
@@ -163,11 +177,9 @@ function ProfileTab() {
           operatingHours: form.operatingHours,
         },
       });
-      const user = await fetchCurrentUser();
-      if (user) useAuthStore.setState({ user });
-      toast.success("Profile updated");
+      toast.success("Business profile updated");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to update profile");
+      toast.error(err.response?.data?.message || "Failed to update business profile");
     } finally { setSaving(false); }
   };
 
@@ -206,6 +218,27 @@ function ProfileTab() {
     } catch { toast.error("Failed to remove logo"); }
   };
 
+  const hasPersonalChanges = initialForm && JSON.stringify({
+    name: form.name, phone: form.phone, language: form.language, timezone: form.timezone,
+    email: form.email,
+  }) !== JSON.stringify({
+    name: initialForm.name, phone: initialForm.phone,
+    language: initialForm.language, timezone: initialForm.timezone,
+    email: initialForm.email,
+  });
+
+  const hasBusinessChanges = initialForm && JSON.stringify({
+    description: form.description, address: form.address, city: form.city,
+    country: form.country, region: form.region, website: form.website,
+    instagram: form.instagram, facebook: form.facebook, twitter: form.twitter,
+    operatingHours: form.operatingHours,
+  }) !== JSON.stringify({
+    description: initialForm.description, address: initialForm.address, city: initialForm.city,
+    country: initialForm.country, region: initialForm.region, website: initialForm.website,
+    instagram: initialForm.instagram, facebook: initialForm.facebook, twitter: initialForm.twitter,
+    operatingHours: initialForm.operatingHours,
+  });
+
   if (loading) return <LoadingSkeleton />;
 
   return (
@@ -221,7 +254,7 @@ function ProfileTab() {
             <p className="text-xs text-slate-500">Update your personal details</p>
           </div>
         </div>
-        <form onSubmit={handleSave} className="px-6 py-5 space-y-5">
+        <form onSubmit={handleSavePersonal} className="px-6 py-5 space-y-5">
           <div className="flex flex-col items-center mb-2">
             <div className="w-20 h-20 rounded-full overflow-hidden shadow-lg bg-slate-50 ring-2 ring-emerald-100">
               {(authUser?.photoURL || authUser?.avatar) ? (
@@ -284,8 +317,8 @@ function ProfileTab() {
             </div>
           </div>
           <div className="pt-2">
-            <button type="submit" disabled={saving}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-sm">
+            <button type="submit" disabled={saving || !hasPersonalChanges}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               Save Changes
             </button>
@@ -438,8 +471,8 @@ function ProfileTab() {
           </div>
 
           <div className="pt-2">
-            <button onClick={handleSave} disabled={saving}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-sm">
+            <button onClick={handleSaveBusiness} disabled={saving || !hasBusinessChanges}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               Save Business Profile
             </button>
@@ -453,6 +486,7 @@ function ProfileTab() {
 function NotificationsTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [initialPrefs, setInitialPrefs] = useState(null);
   const [prefs, setPrefs] = useState({
     emailNotifications: { bookings: true, reviews: true, payments: true, systemAlerts: true },
     pushNotifications: { bookings: true, reviews: true, payments: true, systemAlerts: true },
@@ -460,7 +494,12 @@ function NotificationsTab() {
 
   useEffect(() => {
     fetchNotificationPreferences()
-      .then((data) => { if (data) setPrefs(data); })
+      .then((data) => {
+        if (data) {
+          setPrefs(data);
+          setInitialPrefs(data);
+        }
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -546,8 +585,8 @@ function NotificationsTab() {
 
         <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
           <p className="text-xs text-slate-400">Push notifications are delivered via the mobile app and browser</p>
-          <button onClick={handleSave} disabled={saving}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-medium hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-sm">
+          <button onClick={handleSave} disabled={saving || (initialPrefs && JSON.stringify(prefs) === JSON.stringify(initialPrefs))}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-medium hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             Save Preferences
           </button>
@@ -1009,6 +1048,7 @@ function SecurityTab() {
 function TaxTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [initialForm, setInitialForm] = useState(null);
   const [form, setForm] = useState({
     taxId: "", taxCountry: "", legalBusinessName: "", businessType: "individual",
   });
@@ -1017,11 +1057,13 @@ function TaxTab() {
     fetchTaxInfo()
       .then((data) => {
         if (data?.taxInfo) {
-          setForm({
+          const loaded = {
             taxId: data.taxInfo.taxId || "", taxCountry: data.taxInfo.taxCountry || "",
             legalBusinessName: data.taxInfo.legalBusinessName || "",
             businessType: data.taxInfo.businessType || "individual",
-          });
+          };
+          setForm(loaded);
+          setInitialForm(loaded);
         }
       })
       .catch(() => {})
@@ -1090,8 +1132,8 @@ function TaxTab() {
             </div>
           </div>
           <div className="pt-2">
-            <button onClick={handleSave} disabled={saving}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-sm">
+            <button onClick={handleSave} disabled={saving || (initialForm && JSON.stringify(form) === JSON.stringify(initialForm))}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               Save Tax Information
             </button>
@@ -1118,6 +1160,7 @@ function TaxTab() {
 function BookingRulesTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [initialForm, setInitialForm] = useState(null);
   const [form, setForm] = useState({
     confirmationType: "INSTANT",
     maxTravelersPerBooking: 15,
@@ -1129,7 +1172,13 @@ function BookingRulesTab() {
 
   useEffect(() => {
     fetchBookingRules()
-      .then((data) => { if (data) setForm((prev) => ({ ...prev, ...data })); })
+      .then((data) => {
+        if (data) {
+          const merged = { ...form, ...data };
+          setForm(merged);
+          setInitialForm(merged);
+        }
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -1225,8 +1274,8 @@ function BookingRulesTab() {
           </div>
 
           <div className="pt-2">
-            <button onClick={handleSave} disabled={saving}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-sm">
+            <button onClick={handleSave} disabled={saving || (initialForm && JSON.stringify(form) === JSON.stringify(initialForm))}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               Save Booking Rules
             </button>
