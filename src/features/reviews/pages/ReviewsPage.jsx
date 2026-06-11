@@ -21,6 +21,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { optimizeImage } from "@/lib/image";
 import { REVIEW_STATUSES } from "@/lib/constants";
 import {
   addReviewResponse,
@@ -548,7 +549,7 @@ export default function ReviewsPage() {
                   <div className="flex items-start gap-3.5 mb-3">
                     <div className="w-10 h-10 rounded-full shrink-0 ring-1 ring-emerald-200/50 overflow-hidden bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center">
                       {review.customerPhoto ? (
-                        <img src={review.customerPhoto} alt="" className="w-full h-full object-cover" />
+                        <img src={optimizeImage(review.customerPhoto, 40)} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-sm font-bold text-emerald-700">
                           {(review.customerName || "?").charAt(0).toUpperCase()}

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import MessageBubble from "./MessageBubble";
 import { useChatSocket } from "../hooks/useChatSocket";
 import { uploadChatImage } from "../api";
+import { optimizeImage } from "@/lib/image";
 
 function formatDateSeparator(dateStr) {
   const d = new Date(dateStr);
@@ -167,7 +168,7 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
           <span>{headerName.charAt(0).toUpperCase()}</span>
           {otherParticipant?.photoURL && (
             <img
-              src={otherParticipant.photoURL}
+              src={optimizeImage(otherParticipant.photoURL, 36)}
               alt=""
               className="absolute inset-0 h-full w-full object-cover"
               onError={(e) => { e.target.style.display = "none"; }}
@@ -236,7 +237,7 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
                           isOwn={isOwn}
                           status={isOwn ? messageStatuses[msg.id] : undefined}
                           showAvatar={showAvatar && !isOwn}
-                          senderAvatar={isOwn ? undefined : (msg.sender?.photoURL || otherParticipant?.photoURL)}
+                          senderAvatar={isOwn ? undefined : optimizeImage(msg.sender?.photoURL || otherParticipant?.photoURL, 32)}
                           senderName={isOwn ? "You" : headerName}
                         />
                       </div>

@@ -1,4 +1,5 @@
 ﻿import { Trash2 } from "lucide-react";
+import { optimizeImage } from "@/lib/image";
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -79,7 +80,7 @@ export default function ConversationList({ conversations, selectedId, onSelect, 
                 <span>{initial}</span>
                 {otherUser?.photoURL && (
                   <img
-                    src={otherUser.photoURL}
+                    src={optimizeImage(otherUser.photoURL, 40)}
                     alt=""
                     className="absolute inset-0 h-full w-full object-cover"
                     onError={(e) => { e.target.style.display = "none"; }}

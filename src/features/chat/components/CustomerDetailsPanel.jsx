@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { X, Calendar, Users, ChevronRight, Clock, Ticket, DollarSign, Hash, CalendarDays, Phone, Mail, Shield, Circle, Baby, User } from "lucide-react";
 import { fetchCustomerBookings } from "@/features/bookings/api";
 import { useNavigate } from "react-router-dom";
+import { optimizeImage } from "@/lib/image";
 
 const statusConfig = {
   PENDING: { label: "Pending", dot: "bg-amber-400", bg: "bg-amber-50", text: "text-amber-700" },
@@ -90,7 +91,7 @@ export default function CustomerDetailsPanel({ conversation, currentUserId, onCl
               <span>{(cu.name || "?").charAt(0).toUpperCase()}</span>
               {cu.photoURL && (
                 <img
-                  src={cu.photoURL}
+                  src={optimizeImage(cu.photoURL, 56)}
                   alt=""
                   className="absolute inset-0 h-full w-full object-cover"
                   onError={(e) => { e.target.style.display = "none"; }}
@@ -197,11 +198,10 @@ export default function CustomerDetailsPanel({ conversation, currentUserId, onCl
                   <div className="w-10 h-10 rounded-lg shrink-0 overflow-hidden bg-gray-100 flex items-center justify-center">
                     {booking.tourPhoto ? (
                       <img
-                        src={booking.tourPhoto}
+                        src={optimizeImage(booking.tourPhoto, 40)}
                         alt=""
                         className="w-full h-full object-cover"
-                        onError={(e) => { e.target.style.display = "none"; }}
-                      />
+                        onError={(e) => { e.target.style.display = "none"; }} />
                     ) : (
                       <Ticket size={16} className="text-gray-300" />
                     )}

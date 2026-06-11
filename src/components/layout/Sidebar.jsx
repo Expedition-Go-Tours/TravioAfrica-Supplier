@@ -4,33 +4,20 @@ import { useSidebarStore } from "@/stores/sidebarStore";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
 import { loadSupplierProfile } from "@/features/auth/api";
-import { Compass, LogOut, ChevronLeft, ChevronRight, Menu, X, LayoutDashboard, Package, Ticket, CalendarDays, Users, DollarSign, Star, Bell, BarChart3, BadgeCheck } from "lucide-react";
+import { LogOut, ChevronLeft, ChevronRight, Menu, X, LayoutDashboard, Package, Ticket, CalendarDays, Users, DollarSign, Star, Bell, BarChart3, BadgeCheck, Settings } from "lucide-react";
+import { optimizeImage } from "@/lib/image";
 
-const navGroups = [
-  {
-    label: "Main",
-    items: [
-      { label: "Dashboard", path: "/", icon: <LayoutDashboard size={18} /> },
-      { label: "Products", path: "/products", icon: <Package size={18} /> },
-      { label: "Bookings", path: "/bookings", icon: <Ticket size={18} /> },
-      { label: "Availability", path: "/availability", icon: <CalendarDays size={18} /> },
-    ],
-  },
-  {
-    label: "Management",
-    items: [
-      { label: "Customers", path: "/chat", icon: <Users size={18} /> },
-      { label: "Finance", path: "/finance", icon: <DollarSign size={18} /> },
-      { label: "Reviews", path: "/reviews", icon: <Star size={18} /> },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { label: "Notifications", path: "/notifications", icon: <Bell size={18} /> },
-      { label: "Analytics", path: "/analytics", icon: <BarChart3 size={18} /> },
-    ],
-  },
+const navItems = [
+  { label: "Dashboard", path: "/", icon: <LayoutDashboard size={20} /> },
+  { label: "Products", path: "/products", icon: <Package size={20} /> },
+  { label: "Bookings", path: "/bookings", icon: <Ticket size={20} /> },
+  { label: "Availability", path: "/availability", icon: <CalendarDays size={20} /> },
+  { label: "Customers", path: "/chat", icon: <Users size={20} /> },
+  { label: "Finance", path: "/finance", icon: <DollarSign size={20} /> },
+  { label: "Reviews", path: "/reviews", icon: <Star size={20} /> },
+  { label: "Notifications", path: "/notifications", icon: <Bell size={20} /> },
+  { label: "Analytics", path: "/analytics", icon: <BarChart3 size={20} /> },
+  { label: "Settings", path: "/settings", icon: <Settings size={20} /> },
 ];
 
 function extractBusinessName(businessInfo) {
@@ -42,12 +29,12 @@ function extractBusinessName(businessInfo) {
 }
 
 const SIDEBAR_STATUS_STYLES = {
-  PENDING: { dot: "bg-amber-400", text: "text-amber-300/80", label: "Pending" },
-  UNDER_REVIEW: { dot: "bg-blue-400", text: "text-blue-300/80", label: "Under Review" },
-  APPROVED: { dot: "bg-blue-400", text: "text-blue-300/80", label: "Approved" },
-  ACTIVE: { dot: "bg-emerald-400", text: "text-emerald-300/80", label: "Verified" },
-  SUSPENDED: { dot: "bg-red-400", text: "text-red-300/80", label: "Suspended" },
-  REJECTED: { dot: "bg-red-400", text: "text-red-300/80", label: "Rejected" },
+  PENDING: { dot: "bg-amber-300", text: "text-white/70", label: "Pending" },
+  UNDER_REVIEW: { dot: "bg-blue-300", text: "text-white/70", label: "Under Review" },
+  APPROVED: { dot: "bg-blue-300", text: "text-white/70", label: "Approved" },
+  ACTIVE: { dot: "bg-white", text: "text-white", label: "Verified" },
+  SUSPENDED: { dot: "bg-red-300", text: "text-white/70", label: "Suspended" },
+  REJECTED: { dot: "bg-red-300", text: "text-white/70", label: "Rejected" },
 };
 
 export default function Sidebar() {
@@ -71,7 +58,7 @@ export default function Sidebar() {
   }, [user?.roles]);
 
   useEffect(() => {
-    if (isCollapsed) setShowLogoutConfirm(false); // eslint-disable-line react-hooks/set-state-in-effect
+    if (isCollapsed) setShowLogoutConfirm(false);
   }, [isCollapsed]);
 
   const statusStyle = SIDEBAR_STATUS_STYLES[supplierProfile?.status] || null;
@@ -88,10 +75,10 @@ export default function Sidebar() {
       return (
         <button
           onClick={() => toast.info("Coming soon")}
-          className={`relative flex items-center gap-3 w-full text-left text-emerald-300/40 cursor-default select-none ${isCollapsed ? "justify-center px-2 py-2.5" : "px-3 py-2.5"}`}
+          className={`relative flex items-center gap-6 w-full text-left text-white/30 cursor-default select-none ${isCollapsed ? "justify-center px-2 py-2.5" : "px-3 py-2.5"}`}
           title={isCollapsed ? item.label : undefined}
         >
-          <span className="shrink-0 opacity-40">{item.icon}</span>
+          <span className="shrink-0 opacity-30">{item.icon}</span>
           {!isCollapsed && <span className="text-sm font-medium truncate">{item.label}</span>}
         </button>
       );
@@ -102,24 +89,23 @@ export default function Sidebar() {
         to={item.path}
         onClick={closeMobile}
         className={({ isActive: navActive }) =>
-          `relative flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-200 group ${
+          `relative flex items-center gap-6 w-full rounded-lg text-sm font-medium transition-all duration-200 group ${
             isActive || navActive
-              ? "bg-emerald-700/60 text-white shadow-sm shadow-black/10"
-              : "text-emerald-200/60 hover:text-white hover:bg-emerald-800/60"
+              ? "bg-white/15 text-white font-semibold"
+              : "text-white/70 hover:bg-white/10 hover:text-white"
           } ${isCollapsed ? "justify-center px-2 py-2.5" : "px-3 py-2.5"}`
         }
         title={isCollapsed ? item.label : undefined}
       >
-        {/* Active left bar */}
         {(isActive) && (
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-gradient-to-b from-emerald-400 to-emerald-300 rounded-r-full" />
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[5px] h-[34px] bg-white rounded-r-full" />
         )}
         <span className="shrink-0 relative">{item.icon}</span>
         {!isCollapsed && (
-          <span className="truncate tracking-wide">{item.label}</span>
+          <span className="truncate tracking-normal text-[15px]">{item.label}</span>
         )}
         {isCollapsed && (
-          <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2.5 py-1.5 bg-emerald-800 text-white text-xs font-medium rounded-lg shadow-lg shadow-black/20 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-[70]">
+          <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2.5 py-1.5 bg-white text-[#333] text-xs font-medium rounded-lg shadow-lg border border-[#eaeaea] whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-[70]">
             {item.label}
           </div>
         )}
@@ -131,81 +117,69 @@ export default function Sidebar() {
     <>
       <button
         onClick={() => useSidebarStore.getState().toggleMobile()}
-        className="fixed top-3 left-3 z-[60] p-2.5 rounded-xl bg-emerald-900 text-white shadow-lg shadow-emerald-950/30 lg:hidden hover:bg-emerald-800 transition-colors"
+        className="fixed top-3 left-3 z-[60] p-2.5 rounded-xl bg-[#059669] text-white shadow-lg lg:hidden hover:bg-[#047857] transition-colors"
         aria-label="Toggle menu"
       >
         {isMobileOpen ? <X size={18} /> : <Menu size={18} />}
       </button>
 
       <aside
-        className={`fixed left-0 top-0 h-screen bg-gradient-to-b from-emerald-900 via-emerald-900 to-emerald-950 border-r border-emerald-800/60 transition-all duration-300 z-50 flex flex-col
+        className={`fixed left-0 top-0 h-screen bg-[#059669] border-r border-white/10 transition-all duration-300 z-50 flex flex-col
           ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
           ${isCollapsed ? "lg:w-[64px] lg:translate-x-0" : "lg:w-[270px] lg:translate-x-0"}
           w-[260px]`}
       >
         {/* Brand */}
-        <div className={`flex items-center gap-3.5 h-[76px] border-b border-emerald-800/40 flex-shrink-0 ${isCollapsed ? "justify-center px-2" : "px-5"}`}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-950/40">
-            <Compass size={19} className="text-white" />
-          </div>
+        <div className={`flex items-center gap-3 h-[88px] flex-shrink-0 ${isCollapsed ? "justify-center px-2" : "px-6"}`}>
           {!isCollapsed && (
-            <div className="min-w-0 py-0.5">
-              <span className="text-[17px] font-bold text-white tracking-normal block leading-none" style={{ fontFamily: "'DM Sans', system-ui, sans-serif", letterSpacing: "-0.02em" }}>TravioAfrica</span>
-              <span className="text-[10px] font-medium text-emerald-400/50 block mt-1.5">Dashboard</span>
+            <div className="min-w-0">
+              <span className="text-xl font-bold text-white tracking-tight block leading-none">TravioAfrica</span>
+              <span className="text-[11px] font-medium text-white/60 block mt-1">Dashboard</span>
             </div>
           )}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 scrollbar-thin">
-          {navGroups.map((group) => (
-            <div key={group.label} className="mb-4 last:mb-0">
-              {!isCollapsed && (
-                <div className="px-5 mb-1.5">
-                  <span className="text-[9px] font-semibold text-emerald-400/40 uppercase tracking-[0.15em]">{group.label}</span>
-                </div>
-              )}
-              <ul className={`space-y-0.5 ${isCollapsed ? "px-2" : "px-2.5"}`}>
-                {group.items.map((item) => (
-                  <li key={item.path}>
-                    <NavItem item={item} isCollapsed={isCollapsed} closeMobile={closeMobile} />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 scrollbar-thin">
+          <ul className={`space-y-[2px] ${isCollapsed ? "px-2" : "px-3"}`}>
+            {navItems.map((item) => (
+              <li key={item.path}>
+                <NavItem item={item} isCollapsed={isCollapsed} closeMobile={closeMobile} />
+              </li>
+            ))}
+          </ul>
         </nav>
 
         {/* Supplier Info */}
-        <div className={`border-t border-emerald-800/50 flex-shrink-0 ${isCollapsed ? "py-3" : "py-3 px-3.5"}`}>
+        <div className={`border-t border-white/10 flex-shrink-0 ${isCollapsed ? "py-3" : "py-3 px-4"}`}>
           <div className={`flex items-center gap-3 ${isCollapsed ? "justify-center" : ""}`}>
             <div className="relative shrink-0">
               {logoUrl ? (
-                <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-emerald-700/60 shadow-sm shadow-black/20">
-                  <img src={logoUrl} alt="" className="w-full h-full object-cover" />
+                <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-white/30 shadow-sm">
+                  <img src={optimizeImage(logoUrl, 36)} alt="" className="w-full h-full object-cover" />
                 </div>
               ) : (
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center ring-2 ring-emerald-700/60 shadow-sm shadow-black/20">
+                <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/30 shadow-sm">
                   <span className="text-sm font-bold text-white">
                     {(businessName || user?.name || "S").charAt(0).toUpperCase()}
                   </span>
                 </div>
               )}
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-emerald-900" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-white rounded-full border-2 border-[#059669]" />
             </div>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate-100 truncate leading-tight" title={businessName || user?.name}>
+                <p className="text-sm font-semibold text-white truncate leading-tight" title={businessName || user?.name}>
                   {businessName || user?.name || "Supplier"}
                 </p>
                 {statusStyle && (
-                  <div className="flex items-center gap-1.5 mt-2">
+                  <div className="flex items-center gap-1.5 mt-1.5">
                     {statusStyle.label === "Verified" ? (
-                      <BadgeCheck size={13} className="text-emerald-400" />
+                      <BadgeCheck size={12} className="text-white" />
                     ) : (
                       <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
                     )}
-                    <span className={`text-xs font-medium ${statusStyle.text}`}>{statusStyle.label}</span>
+                    <span className={`text-[11px] font-medium ${statusStyle.text}`}>{statusStyle.label}</span>
                   </div>
                 )}
               </div>
@@ -214,10 +188,10 @@ export default function Sidebar() {
         </div>
 
         {/* Collapse + Logout */}
-        <div className="border-t border-emerald-800/50 p-2 flex items-center gap-0.5 flex-shrink-0">
+        <div className={`border-t border-white/10 flex items-center gap-0.5 flex-shrink-0 ${isCollapsed ? "p-1" : "p-2"}`}>
           <button
             onClick={toggle}
-            className="flex-1 flex items-center justify-center p-2 text-emerald-400/50 hover:text-emerald-300 hover:bg-emerald-800/50 rounded-lg transition-all duration-200"
+            className={`flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 flex-1 ${isCollapsed ? "p-1" : "p-2"}`}
             title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
@@ -226,18 +200,18 @@ export default function Sidebar() {
             <button
               onClick={() => setShowLogoutConfirm(!showLogoutConfirm)}
               onBlur={() => setTimeout(() => setShowLogoutConfirm(false), 200)}
-              className="flex-1 flex items-center justify-center p-2 text-emerald-400/50 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-all duration-200"
+              className={`flex items-center justify-center text-white/50 hover:text-red-300 hover:bg-white/10 rounded-lg transition-all duration-200 flex-1 ${isCollapsed ? "p-1" : "p-2"}`}
               title="Sign out"
             >
               <LogOut size={15} />
             </button>
             {showLogoutConfirm && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white rounded-xl shadow-xl shadow-black/20 p-3 min-w-[160px] z-[70] border border-slate-100">
-                <p className="text-xs font-medium text-slate-700 mb-2.5 text-center whitespace-nowrap">Sign out of dashboard?</p>
+              <div className={`absolute bottom-full mb-2 bg-white rounded-xl shadow-xl shadow-black/10 p-3 min-w-[200px] z-[70] border border-[#eaeaea] ${isCollapsed ? "left-0" : "left-1/2 -translate-x-1/2"}`}>
+                <p className="text-xs font-medium text-[#464255] mb-2.5 text-center whitespace-nowrap">Sign out of dashboard?</p>
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => setShowLogoutConfirm(false)}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                    className="flex-1 px-3 py-1.5 text-xs font-medium text-[#64748b] bg-[#f5f5f5] hover:bg-[#eaeaea] rounded-lg transition-colors"
                   >
                     Cancel
                   </button>

@@ -16,3 +16,98 @@ export async function uploadSupplierLogo(formData) {
   });
   return response.data?.data || null;
 }
+
+export async function fetchBusinessProfile() {
+  const response = await api.get("/suppliers/settings/business-profile", { skipGlobalErrorHandler: true });
+  return response.data?.data || null;
+}
+
+export async function updateBusinessProfile(data) {
+  const response = await api.patch("/suppliers/settings/business-profile", data, { skipGlobalErrorHandler: true });
+  return response.data?.data || null;
+}
+
+export async function fetchNotificationPreferences() {
+  const response = await api.get("/suppliers/settings/notification-preferences", { skipGlobalErrorHandler: true });
+  return response.data?.data || null;
+}
+
+export async function updateNotificationPreferences(data) {
+  const response = await api.put("/suppliers/settings/notification-preferences", data, { skipGlobalErrorHandler: true });
+  return response.data?.data || null;
+}
+
+export async function fetchTaxInfo() {
+  const response = await api.get("/suppliers/settings/tax-info", { skipGlobalErrorHandler: true });
+  return response.data?.data || null;
+}
+
+export async function updateTaxInfo(data) {
+  const response = await api.patch("/suppliers/settings/tax-info", data, { skipGlobalErrorHandler: true });
+  return response.data?.data || null;
+}
+
+export async function fetchBookingRules() {
+  const response = await api.get("/suppliers/settings/booking-rules", { skipGlobalErrorHandler: true });
+  return response.data?.data || null;
+}
+
+export async function updateBookingRules(data) {
+  const response = await api.put("/suppliers/settings/booking-rules", data, { skipGlobalErrorHandler: true });
+  return response.data?.data || null;
+}
+
+export async function fetchTeamMembers() {
+  const response = await api.get("/suppliers/settings/team/members", { skipGlobalErrorHandler: true });
+  return response.data?.data?.members || [];
+}
+
+export async function inviteTeamMember(data) {
+  const response = await api.post("/suppliers/settings/team/invite", data, { skipGlobalErrorHandler: true });
+  return response.data?.data?.member || null;
+}
+
+export async function removeTeamMember(id) {
+  return api.delete(`/suppliers/settings/team/members/${id}`, { skipGlobalErrorHandler: true });
+}
+
+export async function updateTeamMemberRole(id, role) {
+  return api.patch(`/suppliers/settings/team/members/${id}/role`, { role }, { skipGlobalErrorHandler: true });
+}
+
+export async function directAddTeamMember(data) {
+  const response = await api.post("/suppliers/settings/team/direct-add", data, { skipGlobalErrorHandler: true });
+  return response.data?.data?.member || null;
+}
+
+export async function fetchInviteDetails(token) {
+  const response = await api.get(`/suppliers/settings/team/invite/${token}`, { skipGlobalErrorHandler: true });
+  return response.data?.data || null;
+}
+
+export async function acceptInvite(token) {
+  const response = await api.post(`/suppliers/settings/team/invite/${token}/accept`, {}, { skipGlobalErrorHandler: true });
+  return response.data?.data?.member || null;
+}
+
+export async function declineInvite(token) {
+  return api.post(`/suppliers/settings/team/invite/${token}/decline`, {}, { skipGlobalErrorHandler: true });
+}
+
+export async function fetchPayoutMethods() {
+  const response = await api.get("/payout-methods/me", { skipGlobalErrorHandler: true });
+  return response.data?.data?.methods || [];
+}
+
+export async function createPayoutMethod(data) {
+  return api.post("/payout-methods", data, { skipGlobalErrorHandler: true });
+}
+
+export async function deletePayoutMethod(id) {
+  return api.delete(`/payout-methods/${id}`, { skipGlobalErrorHandler: true });
+}
+
+export async function fetchPayouts(params = {}) {
+  const response = await api.get("/payouts/me", { params, skipGlobalErrorHandler: true });
+  return response.data?.data || null;
+}

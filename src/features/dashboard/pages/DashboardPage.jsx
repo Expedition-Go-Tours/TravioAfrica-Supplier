@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import Chart from "react-apexcharts";
+
 import { Loader2, RefreshCw, ArrowUpRight, ShoppingBag, CheckCircle2, Star, DollarSign, MessageCircle, AlertTriangle, ClipboardList, MapPin, TrendingUp, Bell, Check } from "lucide-react";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -130,24 +130,45 @@ export default function DashboardPage() {
     }));
   }, [totalRevenue]);
 
-  const gaugeOptions = {
-    chart: { type: "radialBar", sparkline: { enabled: true } },
-    colors: cancellationRate === 0 ? ["#044b3b"] : cancellationRate <= 2 ? ["#059669"] : cancellationRate <= 5 ? ["#d97706"] : ["#dc2626"],
-    plotOptions: {
-      radialBar: {
-        startAngle: -90, endAngle: 90,
-        track: { background: "#e2e8f0", strokeWidth: "97%", margin: 5 },
-        dataLabels: {
-          name: { show: false },
-          value: { offsetY: -2, fontSize: "22px", fontWeight: 700, color: "#1e293b", formatter: (v) => `${v}%` },
-        },
-      },
-    },
-    labels: ["Cancellation Rate"],
-  };
-
   const gaugeLabel = cancellationRate === 0 ? "Excellent" : cancellationRate <= 2 ? "Good" : cancellationRate <= 5 ? "Average" : "Needs Attention";
   const gaugeLabelColor = cancellationRate === 0 ? "text-emerald-600" : cancellationRate <= 2 ? "text-emerald-600" : cancellationRate <= 5 ? "text-amber-600" : "text-red-600";
+
+  const CancellationGauge = ({ value }) => {
+    const maxVal = 8;
+    const cx = 100, cy = 72, r = 62;
+    const circ = 2 * Math.PI * r;
+    const half = circ / 2;
+    const clamped = Math.min(Math.max(value, 0), maxVal);
+
+    const seg = (from, to) => {
+      const f = Math.max(from, 0);
+      const t = Math.min(to, maxVal);
+      if (t <= f) return "0 0";
+      const start = half + (f / maxVal) * half;
+      const len = ((t - f) / maxVal) * half;
+      return `0 ${start} ${len} ${circ - start - len}`;
+    };
+
+    const needleRad = (clamped / maxVal) * Math.PI;
+    const nx = -r * Math.cos(needleRad);
+    const ny = -r * Math.sin(needleRad);
+
+    const pct = clamped === 0 ? "0" : clamped >= maxVal ? "8+" : `${clamped}`;
+
+    return (
+      <svg viewBox="0 0 200 155" className="w-full">
+        <g transform={`translate(${cx}, ${cy})`}>
+          <circle r={r} fill="none" stroke="#059669" strokeWidth="20" strokeDasharray={seg(0, 2)} />
+          <circle r={r} fill="none" stroke="#a7f3d0" strokeWidth="20" strokeDasharray={seg(2, 5)} />
+          <circle r={r} fill="none" stroke="#f43f5e" strokeWidth="20" strokeDasharray={seg(5, 8)} />
+          <line x1="0" y1="0" x2={nx} y2={ny} stroke="#1e293b" strokeWidth="3" strokeLinecap="round" />
+          <circle r="5" fill="#1e293b" />
+          <circle r="2" fill="white" />
+        </g>
+        <text x={cx} y={145} textAnchor="middle" fontSize="26" fontWeight="700" fill="#1e293b" fontFamily="DM Sans, sans-serif">{pct}%</text>
+      </svg>
+    );
+  };
 
   return (
     <div className="p-5 md:p-6 max-w-7xl mx-auto space-y-5">
@@ -237,90 +258,97 @@ export default function DashboardPage() {
         {/* Right Column */}
         <div className="space-y-4">
           {/* Notifications */}
-          <div className="bg-white border border-emerald-100/60 rounded-xl hover:border-emerald-200 transition-all overflow-hidden">
-            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-emerald-50">
+          <div className="bg-white border border-emerald-100/60 rounded-xl hover:border-emerald-200 transition-all overflow-hidden shadow-sm">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-emerald-50">
               <div className="flex items-center gap-2.5">
                 <div className="relative">
-                  <Bell size={16} className="text-slate-600" />
+                  <Bell size={16} className={unreadCount > 0 ? "text-emerald-600" : "text-slate-400"} />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[9px] font-bold text-white bg-emerald-600 rounded-full">
+                    <span className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[9px] font-bold text-white bg-[#059669] rounded-full ring-2 ring-white">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
                 </div>
-                <h3 className="text-sm font-semibold text-slate-800">Notifications</h3>
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-800 leading-tight">Notifications</h3>
+                  {unreadCount > 0 && (
+                    <p className="text-[10px] text-slate-400 leading-tight mt-px">{unreadCount} unread</p>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 {unreadCount > 0 && (
                   <button onClick={handleMarkAllRead}
-                    className="text-[11px] font-medium text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors"
+                    className="px-2.5 py-1.5 text-[11px] font-medium text-emerald-600 hover:text-white hover:bg-[#059669] rounded-lg transition-all"
                   >
-                    <Check size={12} /> Mark all read
+                    <Check size={11} className="inline mr-0.5" /> Mark read
                   </button>
                 )}
-                <button onClick={() => navigate("/notifications")} className="text-[11px] font-medium text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
-                  View all <ArrowUpRight size={11} />
+                <button onClick={() => navigate("/notifications")} className="px-2.5 py-1.5 text-[11px] font-medium text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all">
+                  View all <ArrowUpRight size={11} className="inline" />
                 </button>
               </div>
             </div>
-            <div className="divide-y divide-emerald-50/80 max-h-[380px] overflow-y-auto">
+            <div className="p-3 max-h-[380px] overflow-y-auto space-y-2">
               {loading ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex items-start gap-3 px-5 py-4">
-                    <div className="w-9 h-9 rounded-lg bg-gray-100 animate-pulse shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-3 w-1/2 bg-gray-100 rounded animate-pulse" />
-                      <div className="h-2.5 w-3/4 bg-gray-100 rounded animate-pulse" />
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-start gap-3.5 p-3">
+                      <div className="w-9 h-9 rounded-lg bg-slate-100 animate-pulse shrink-0" />
+                      <div className="flex-1 space-y-2 pt-0.5">
+                        <div className="h-3 w-3/5 bg-slate-100 rounded animate-pulse" />
+                        <div className="h-2.5 w-4/5 bg-slate-100 rounded animate-pulse" />
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : notifications.length > 0 ? (
                 notifications.slice(0, 5).map((n) => {
-                  const iconConfig = NOTIFICATION_ICONS[n.type] || { icon: MessageCircle, color: "text-slate-600", bg: "bg-slate-50" };
+                  const iconConfig = NOTIFICATION_ICONS[n.type] || { icon: MessageCircle, color: "text-slate-500", bg: "bg-slate-50" };
                   const Icon = iconConfig.icon;
                   const isUnread = !n.readAt;
                   const notifType = n.type?.replace(/_/g, ' ') || 'general';
                   return (
                     <div
                       key={n.id}
-                      className={`relative pl-4 pr-5 py-4 hover:bg-emerald-50/30 transition-colors cursor-pointer ${
-                        isUnread ? "bg-gradient-to-r from-emerald-50/60 to-transparent" : ""
-                      }`}
                       onClick={() => navigate("/notifications")}
+                      className={`relative rounded-lg border transition-all cursor-pointer ${
+                        isUnread
+                          ? "border-[#059669]/20 bg-gradient-to-r from-[#059669]/[0.04] to-transparent hover:border-[#059669]/40 hover:shadow-sm"
+                          : "border-transparent hover:border-slate-200 hover:bg-slate-50/80"
+                      }`}
                     >
-                      {isUnread && (
-                        <span className="absolute left-0 top-3 bottom-3 w-1 bg-emerald-500 rounded-r-full" />
-                      )}
-                      <div className="flex items-start gap-3.5">
-                        <div className={`w-10 h-10 rounded-xl ${iconConfig.bg} flex items-center justify-center shrink-0 ring-1 ring-black/5`}>
-                          <Icon size={16} className={iconConfig.color} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              {n.title && (
-                                <p className={`text-sm leading-snug mb-0.5 ${isUnread ? "font-semibold text-slate-800" : "font-medium text-slate-700"}`}>
-                                  {n.title}
-                                </p>
-                              )}
-                              <p className={`text-sm leading-relaxed ${n.title ? "text-slate-500" : isUnread ? "font-semibold text-slate-800" : "font-medium text-slate-700"}`}>
-                                {n.message || n.title || "Notification"}
-                              </p>
-                            </div>
-                            <span className="shrink-0 text-[11px] font-medium text-slate-400 whitespace-nowrap mt-0.5">
-                              {timeAgo(n.createdAt)}
-                            </span>
+                      <div className="p-3">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-9 h-9 rounded-lg ${iconConfig.bg} flex items-center justify-center shrink-0 ${isUnread ? "ring-1 ring-black/[0.06]" : ""}`}>
+                            <Icon size={15} className={iconConfig.color} />
                           </div>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500 capitalize">
-                              {notifType}
-                            </span>
-                            {n.data?.bookingId && (
-                              <span className="text-[10px] font-medium text-emerald-600">View booking</span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className={`text-sm leading-snug ${isUnread ? "font-semibold text-slate-800" : "text-slate-600"}`}>
+                                {n.title || n.message || "Notification"}
+                              </p>
+                              <span className="shrink-0 text-[11px] text-slate-400 whitespace-nowrap mt-px font-medium">
+                                {timeAgo(n.createdAt)}
+                              </span>
+                            </div>
+                            {n.title && n.message && (
+                              <p className="text-xs text-slate-400 leading-relaxed mt-0.5 line-clamp-2">{n.message}</p>
                             )}
-                            {n.data?.payoutId && (
-                              <span className="text-[10px] font-medium text-emerald-600">View payout</span>
-                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-400 capitalize">
+                                {notifType}
+                              </span>
+                              {isUnread && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
+                              )}
+                              {n.data?.bookingId && (
+                                <span className="ml-auto text-[10px] font-medium text-[#059669]">View booking →</span>
+                              )}
+                              {n.data?.payoutId && (
+                                <span className="ml-auto text-[10px] font-medium text-[#059669]">View payout →</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -328,12 +356,14 @@ export default function DashboardPage() {
                   );
                 })
               ) : (
-                <div className="flex flex-col items-center justify-center py-12 px-5 text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mb-4 ring-1 ring-emerald-100/60">
-                    <Bell size={22} className="text-emerald-300" />
+                <div className="flex flex-col items-center justify-center py-10 px-5 text-center">
+                  <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center mb-3">
+                    <Bell size={18} className="text-slate-300" />
                   </div>
-                  <p className="text-sm font-semibold text-slate-600">All clear</p>
-                  <p className="text-xs text-slate-400 mt-1 max-w-[180px]">Notifications about bookings, payouts, and updates will show up here.</p>
+                  <p className="text-sm font-semibold text-slate-500">All caught up</p>
+                  <p className="text-xs text-slate-400 mt-1 max-w-[200px] leading-relaxed">
+                    New notifications about bookings, payouts, and updates will appear here.
+                  </p>
                 </div>
               )}
             </div>
@@ -346,7 +376,7 @@ export default function DashboardPage() {
               <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Cancellations</h3>
             </div>
             <p className={`text-xs font-semibold mb-2 ${gaugeLabelColor}`}>{gaugeLabel}</p>
-            <Chart options={gaugeOptions} series={[cancellationRate]} type="radialBar" height={110} />
+            <CancellationGauge value={cancellationRate} />
             <div className="flex items-center justify-between text-[10px] font-medium text-slate-400 mt-1">
               <span>0%</span>
               <span>5+%</span>

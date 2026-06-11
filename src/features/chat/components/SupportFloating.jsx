@@ -20,6 +20,7 @@ import {
   getUnreadCount,
   uploadChatImage,
 } from "../api";
+import { optimizeImage } from "@/lib/image";
 
 const SOCKET_URL = config.api.baseURL.replace("/api", "") || "";
 const ADMIN_SUPPORT_ID = config.support?.adminId || "";
@@ -529,7 +530,7 @@ export default function SupportFloating() {
                                   isOwn={isOwn}
                                   status={isOwn ? messageStatuses[msg.id] : undefined}
                                   showAvatar={showAvatar && !isOwn}
-                                  senderAvatar={isOwn ? undefined : (msg.sender?.photoURL || otherParticipant?.photoURL)}
+                                  senderAvatar={isOwn ? undefined : optimizeImage(msg.sender?.photoURL || otherParticipant?.photoURL, 24)}
                                   senderName={isOwn ? "You" : "Admin Support"}
                                   compact
                                 />

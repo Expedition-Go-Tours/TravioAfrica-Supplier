@@ -262,9 +262,10 @@ export default function ChatPage() {
     emitMarkRead(selectedConv.id);
   }, [selectedConv?.id, currentUserId, emitMarkRead]);
 
+  const customerConversations = conversations.filter((c) => c.type === "SUPPLIER_CUSTOMER");
   const filteredConversations = activeTab === "unread"
-    ? conversations.filter((c) => (c.unreadCount ?? 0) > 0)
-    : conversations;
+    ? customerConversations.filter((c) => (c.unreadCount ?? 0) > 0)
+    : customerConversations;
 
   const otherParticipant = selectedConv?.participants?.find(
     (p) => currentUserId ? p.userId !== currentUserId : false
@@ -279,7 +280,7 @@ export default function ChatPage() {
           <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
             {TABS.map((tab) => {
               const isActive = activeTab === tab.key;
-              const unreadCount = conversations.filter((c) => (c.unreadCount ?? 0) > 0).length;
+              const unreadCount = conversations.filter((c) => c.type === "SUPPLIER_CUSTOMER" && (c.unreadCount ?? 0) > 0).length;
               return (
                 <button
                   key={tab.key}

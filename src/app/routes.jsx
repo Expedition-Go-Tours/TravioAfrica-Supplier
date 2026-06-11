@@ -25,6 +25,10 @@ import LoginPage from "@/features/auth/pages/LoginPage";
 // Supplier Pages (rendered outside AppShell)
 import SupplierStatusPage from "@/features/supplier/pages/SupplierStatusPage";
 
+// Team Invite (auth-only, no supplier check)
+import TeamInvitePage from "@/pages/TeamInvitePage";
+import AuthOnlyRoute from "@/components/shared/AuthOnlyRoute";
+
 // Error Pages
 import NotFoundPage from "@/pages/errors/NotFoundPage";
 import ServerErrorPage from "@/pages/errors/ServerErrorPage";
@@ -53,6 +57,11 @@ export default function AppRoutes() {
       <Route path="/error/500" element={<ServerErrorPage />} />
       <Route path="/error/403" element={<ForbiddenPage />} />
       <Route path="/error/network" element={<NetworkErrorPage />} />
+
+      {/* Auth-only routes (no supplier status check) */}
+      <Route element={<AuthOnlyRoute />}>
+        <Route path="/team/invite" element={<TeamInvitePage />} />
+      </Route>
 
       {/* Protected layout — checks auth & supplier status */}
       <Route element={<ProtectedRoute />}>

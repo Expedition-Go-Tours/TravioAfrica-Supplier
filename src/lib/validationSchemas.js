@@ -234,6 +234,47 @@ export const notificationPreferencesSchema = z.object({
   }),
 });
 
+export const businessProfileSchema = z.object({
+  description: z.string().max(2000, "Description must not exceed 2000 characters").optional(),
+  website: urlSchema.or(z.literal("")).optional(),
+  instagram: z.string().max(200).optional().or(z.literal("")),
+  facebook: z.string().max(200).optional().or(z.literal("")),
+  twitter: z.string().max(200).optional().or(z.literal("")),
+  operatingHours: z.string().max(500).optional().or(z.literal("")),
+  phoneNumber: z.string().optional().or(z.literal("")),
+  address: z.string().optional().or(z.literal("")),
+});
+
+export const taxInfoSchema = z.object({
+  legalBusinessName: z.string().min(1, "Legal business name is required"),
+  businessType: z.enum(["individual", "company", "non_profit"]),
+  taxId: z.string().min(1, "Tax ID is required"),
+  taxCountry: z.string().min(2, "Country is required"),
+});
+
+export const bookingRulesSchema = z.object({
+  confirmationType: z.enum(["INSTANT", "MANUAL"]),
+  maxTravelersPerBooking: z.number().min(1, "Minimum 1 traveler").max(100, "Maximum 100 travelers"),
+  minAdvanceHours: z.number().min(0, "Cannot be negative").max(720, "Maximum 30 days"),
+  maxAdvanceDays: z.number().min(1, "Minimum 1 day").max(730, "Maximum 2 years"),
+  cancellationPolicy: z.string().min(1, "Cancellation policy is required"),
+  cancellationWindowHours: z.number().min(0, "Cannot be negative").max(720),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: passwordSchema,
+  confirmNewPassword: z.string(),
+}).refine((data) => data.newPassword === data.confirmNewPassword, {
+  message: "Passwords don't match",
+  path: ["confirmNewPassword"],
+});
+
+export const teamInviteSchema = z.object({
+  email: emailSchema,
+  role: z.enum(["admin", "editor", "finance", "support"]),
+});
+
 // Export all schemas
 export const validationSchemas = {
   // Auth
@@ -265,4 +306,9 @@ export const validationSchemas = {
   // Settings
   companyProfile: companyProfileSchema,
   notificationPreferences: notificationPreferencesSchema,
+  businessProfile: businessProfileSchema,
+  taxInfo: taxInfoSchema,
+  bookingRules: bookingRulesSchema,
+  changePassword: changePasswordSchema,
+  teamInvite: teamInviteSchema,
 };
