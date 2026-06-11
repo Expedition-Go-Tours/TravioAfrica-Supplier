@@ -151,35 +151,37 @@ export default function Sidebar() {
         </nav>
 
         {/* Supplier Info */}
-        <div className={`border-t border-white/10 flex-shrink-0 ${isCollapsed ? "py-3" : "py-3 px-4"}`}>
-          <div className={`flex items-center gap-3 ${isCollapsed ? "justify-center" : ""}`}>
+        <div className={`border-t border-white/10 flex-shrink-0 ${isCollapsed ? "py-4" : "py-4 px-4"}`}>
+          <div className={`flex items-center gap-4 ${isCollapsed ? "justify-center" : ""}`}>
             <div className="relative shrink-0">
               {logoUrl ? (
-                <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-white/30 shadow-sm">
-                  <img src={optimizeImage(logoUrl, 36)} alt="" className="w-full h-full object-cover" />
+                <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-white/30 shadow-sm">
+                  <img src={optimizeImage(logoUrl, 48)} alt="" className="w-full h-full object-cover" />
                 </div>
               ) : (
-                <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/30 shadow-sm">
-                  <span className="text-sm font-bold text-white">
+                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/30 shadow-sm">
+                  <span className="text-lg font-bold text-white">
                     {(businessName || user?.name || "S").charAt(0).toUpperCase()}
                   </span>
                 </div>
               )}
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-white rounded-full border-2 border-[#065f46]" />
+              {statusStyle?.label === "Verified" && (
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-white rounded-full border-2 border-[#065f46]" />
+              )}
             </div>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-white truncate leading-tight" title={businessName || user?.name}>
+                <p className="text-sm font-bold text-white truncate leading-tight" title={businessName || user?.name}>
                   {businessName || user?.name || "Supplier"}
                 </p>
                 {statusStyle && (
                   <div className="flex items-center gap-1.5 mt-1.5">
                     {statusStyle.label === "Verified" ? (
-                      <BadgeCheck size={12} className="text-white" />
+                      <BadgeCheck size={16} className="text-blue-400 shrink-0" />
                     ) : (
                       <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
                     )}
-                    <span className={`text-[11px] font-medium ${statusStyle.text}`}>{statusStyle.label}</span>
+                    <span className={`text-xs font-medium ${statusStyle.text}`}>{statusStyle.label}</span>
                   </div>
                 )}
               </div>
