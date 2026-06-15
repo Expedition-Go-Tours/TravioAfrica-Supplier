@@ -30,29 +30,17 @@ export default function MessageBubble({ message, isOwn, status, showAvatar, send
 
   return (
     <div className={`flex gap-1.5 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
-      {isOwn ? (
-        <div className={`${spacer} shrink-0`} />
-      ) : showAvatar ? (
+      {showAvatar ? (
         <div className={`relative flex ${a} shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-600 font-bold text-white`}>
-          {compact ? (
-            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none">
-              <circle cx="12" cy="12" r="10" fill="currentColor" className="text-white/90" />
-              <circle cx="8.5" cy="10" r="1.2" fill="#059669" />
-              <circle cx="15.5" cy="10" r="1.2" fill="#059669" />
-              <path d="M7.5 14.5c1.2 1.2 3 1.8 4.5 1.8s3.3-0.6 4.5-1.8" stroke="#059669" strokeWidth="1.2" strokeLinecap="round" />
-            </svg>
+          {senderAvatar ? (
+            <img
+              src={senderAvatar}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+              onError={(e) => { e.target.style.display = "none"; }}
+            />
           ) : (
-            <>
-              <span>{senderName?.charAt(0)?.toUpperCase() || "?"}</span>
-              {senderAvatar && (
-                <img
-                  src={senderAvatar}
-                  alt=""
-                  className="absolute inset-0 h-full w-full object-cover"
-                  onError={(e) => { e.target.style.display = "none"; }}
-                />
-              )}
-            </>
+            <span className={compact ? "text-[9px]" : "text-xs"}>{senderName?.charAt(0)?.toUpperCase() || "?"}</span>
           )}
         </div>
       ) : (

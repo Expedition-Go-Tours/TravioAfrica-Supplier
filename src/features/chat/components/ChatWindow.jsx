@@ -6,6 +6,7 @@ import { useChatSocket } from "../hooks/useChatSocket";
 import { uploadChatImage } from "../api";
 import { optimizeImage } from "@/lib/image";
 import { CHAT_BG_STYLE } from "../utils/chatBackground";
+import { useAuthStore } from "@/stores/authStore";
 
 function formatDateSeparator(dateStr) {
   const d = new Date(dateStr);
@@ -58,6 +59,7 @@ const MessageSkeleton = ({ align = "left" }) => (
 );
 
 export default function ChatWindow({ conversation, messages, messageStatuses, onSendMessage, onLoadMore, hasMore, loading, loadingMore, sending, currentUserId, onOpenDetails, showDetailsButton, showDetails }) {
+  const currentUser = useAuthStore((s) => s.user);
   const [input, setInput] = useState("");
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const messagesEndRef = useRef(null);
@@ -237,8 +239,8 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
                           message={msg}
                           isOwn={isOwn}
                           status={isOwn ? messageStatuses[msg.id] : undefined}
-                          showAvatar={showAvatar && !isOwn}
-                          senderAvatar={isOwn ? undefined : optimizeImage(msg.sender?.photoURL || otherParticipant?.photoURL, 32)}
+                          showAvatar={showAvatar}
+                          senderAvatar={isOwn ? optimizeImage(currentUser?.avatar, 32) : optimizeImage(msg.sender?.photoURL || otherParticipant?.photoURL, 32)}
                           senderName={isOwn ? "You" : headerName}
                         />
                       </div>

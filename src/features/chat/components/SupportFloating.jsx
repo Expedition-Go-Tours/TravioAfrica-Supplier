@@ -541,8 +541,8 @@ export default function SupportFloating() {
                                   message={msg}
                                   isOwn={isOwn}
                                   status={isOwn ? messageStatuses[msg.id] : undefined}
-                                  showAvatar={showAvatar && !isOwn}
-                                  senderAvatar={isOwn ? undefined : optimizeImage(msg.sender?.photoURL || otherParticipant?.photoURL, 24)}
+                                  showAvatar={showAvatar}
+                                  senderAvatar={isOwn ? optimizeImage(user?.avatar, 24) : optimizeImage(msg.sender?.photoURL || otherParticipant?.photoURL, 24)}
                                   senderName={isOwn ? "You" : "Admin Support"}
                                   compact
                                 />
