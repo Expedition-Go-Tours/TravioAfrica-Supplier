@@ -44,3 +44,4 @@ playwright-report
 playwright.config.js
 test.yml
 .vercel
+.playwright-mcp
