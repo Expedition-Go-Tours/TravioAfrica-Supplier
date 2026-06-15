@@ -16,6 +16,7 @@ import {
   sendMessage,
   markConversationAsRead,
   getOrCreateConversation,
+  getAdminSupportId,
   getUnreadCount,
   uploadChatImage,
 } from "../api";
@@ -280,10 +281,11 @@ export default function SupportFloating() {
     if (!conv) {
       let adminId = ADMIN_SUPPORT_ID;
       if (!adminId) {
-        const adminParticipant = conversations
-          .flatMap((c) => c.participants || [])
-          .find((p) => p.user?.roles?.includes("admin"));
-        adminId = adminParticipant?.userId || "";
+        try {
+          adminId = await getAdminSupportId();
+        } catch (err) {
+          console.error('[SupportFloating] Failed to fetch admin support ID:', err);
+        }
       }
       if (!adminId) {
         toast.error("Support is not configured yet");
@@ -295,7 +297,7 @@ export default function SupportFloating() {
       getChatSocket(currentUserId).emit("chat:join", { conversationId: conv.id });
     }
     return conv;
-  }, [selectedConv, conversations]);
+  }, [selectedConv]);
 
   const handleSend = useCallback(async (content, attachment) => {
     const text = content?.trim();

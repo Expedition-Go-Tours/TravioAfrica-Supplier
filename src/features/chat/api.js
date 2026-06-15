@@ -50,6 +50,11 @@ export async function uploadChatImage(file) {
   return res.data.data;
 }
 
+export async function getAdminSupportId() {
+  const res = await api.get("/chat/admin-support");
+  return res.data.data?.adminId || null;
+}
+
 export async function deleteConversation(conversationId) {
   const res = await api.delete(`/chat/conversations/${conversationId}`);
   return res.data;
