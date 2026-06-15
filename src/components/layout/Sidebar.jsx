@@ -151,7 +151,7 @@ export default function Sidebar() {
         </nav>
 
         {/* Supplier Info */}
-        <div className={`border-t border-white/10 flex-shrink-0 ${isCollapsed ? "py-4" : "py-4 px-4"}`}>
+        <button onClick={() => navigate("/settings?tab=profile")} className={`border-t border-white/10 flex-shrink-0 w-full text-left cursor-pointer hover:bg-white/5 transition-colors ${isCollapsed ? "py-4" : "py-4 px-4"}`}>
           <div className={`flex items-center gap-4 ${isCollapsed ? "justify-center" : ""}`}>
             <div className="relative shrink-0">
               {logoUrl ? (
@@ -187,7 +187,7 @@ export default function Sidebar() {
               </div>
             )}
           </div>
-        </div>
+        </button>
 
         {/* Collapse + Logout */}
         <div className={`border-t border-white/10 flex items-center gap-0.5 flex-shrink-0 ${isCollapsed ? "p-1" : "p-2"}`}>

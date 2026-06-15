@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   User, Bell, CreditCard, Shield, FileText, ClipboardList, Users,
   Check, Loader2, ImagePlus, Upload, Trash2, X, Plus, Building2,
@@ -50,7 +51,8 @@ const FADE_UP = {
 
 export default function SettingsPage() {
   const authUser = useAuthStore((state) => state.user);
-  const [activeTab, setActiveTab] = useState("profile");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "profile";
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -70,7 +72,7 @@ export default function SettingsPage() {
         {TABS.map((tab) => {
           const Icon = tab.icon;
           return (
-            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+            <button key={tab.key} onClick={() => setSearchParams({ tab: tab.key })}
               className={cn(
                 "relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0",
                 activeTab === tab.key ? "text-white" : "text-slate-500 hover:text-slate-700"
