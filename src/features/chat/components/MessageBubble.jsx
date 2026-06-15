@@ -59,7 +59,7 @@ export default function MessageBubble({ message, isOwn, status, showAvatar, send
         <div className={`${spacer} shrink-0`} />
       )}
 
-      <div className={`flex ${maxW} flex-col ${isOwn ? "items-end" : "items-start"}`}>
+      <div className={`flex ${maxW} min-w-0 flex-col ${isOwn ? "items-end" : "items-start"}`}>
         <div
           className={`relative ${bubblePad} ${bubbleText} shadow-sm ${
             isOwn
@@ -77,7 +77,7 @@ export default function MessageBubble({ message, isOwn, status, showAvatar, send
             </div>
           )}
           {message.content && (
-            <span className="whitespace-pre-wrap break-words">{message.content}</span>
+            <span className="whitespace-pre-wrap" style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}>{message.content}</span>
           )}
           <div className={`mt-0.5 flex items-center gap-1 ${isOwn ? "justify-end" : "justify-start"}`}>
             <span className={`${tsSize} leading-none ${isOwn ? "text-white/70" : "text-slate-400"}`}>
