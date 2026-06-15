@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import config from "@/config";
 import { useAuthStore } from "@/stores/authStore";
+import { CHAT_BG_STYLE } from "../utils/chatBackground";
 import { useChatFloatingStore } from "@/stores/chatFloatingStore";
 import MessageBubble from "./MessageBubble";
 import {
@@ -505,7 +506,8 @@ export default function SupportFloating() {
                       <div
                         ref={messagesContainerRef}
                         onScroll={handleScroll}
-                        className="flex-1 overflow-y-auto bg-gray-50/50 px-4 py-3"
+                        className="flex-1 overflow-y-auto px-4 py-3"
+                        style={CHAT_BG_STYLE}
                       >
                         {hasMore && (
                           <div className="mb-3 flex justify-center">

@@ -5,6 +5,7 @@ import MessageBubble from "./MessageBubble";
 import { useChatSocket } from "../hooks/useChatSocket";
 import { uploadChatImage } from "../api";
 import { optimizeImage } from "@/lib/image";
+import { CHAT_BG_STYLE } from "../utils/chatBackground";
 
 function formatDateSeparator(dateStr) {
   const d = new Date(dateStr);
@@ -191,7 +192,7 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
       </div>
 
       <div key={conversation?.id} style={{ animation: "chatSlideIn 0.25s ease-out" }} className="flex flex-1 flex-col min-h-0">
-      <div ref={messagesContainerRef} onScroll={handleScroll} className="relative flex-1 overflow-y-auto bg-slate-50/50">
+      <div ref={messagesContainerRef} onScroll={handleScroll} className="relative flex-1 overflow-y-auto" style={CHAT_BG_STYLE}>
         <div className="px-4 py-3">
           {loading ? (
             <div className="space-y-2 pt-4">
