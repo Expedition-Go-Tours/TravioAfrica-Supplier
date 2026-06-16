@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { Loader2, CheckCircle2, XCircle, Clock, Mail, Shield, Building2, AlertTriangle, ArrowRight } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
+import { useTeamRole } from "@/hooks/useTeamRole";
 import { fetchInviteDetails, acceptInvite, declineInvite } from "@/features/settings/api";
 
 const STATUS = {
@@ -22,6 +23,7 @@ export default function TeamInvitePage() {
   const navigate = useNavigate();
   const token = searchParams.get("token");
   const { isAuthenticated, user } = useAuthStore();
+  const { refetch } = useTeamRole();
 
   const [status, setStatus] = useState(STATUS.LOADING);
   const [invite, setInvite] = useState(null);
@@ -49,6 +51,7 @@ export default function TeamInvitePage() {
           setStatus(STATUS.ACCEPTING);
           try {
             await acceptInvite(token);
+            refetch();
             setStatus(STATUS.SUCCESS);
           } catch (err) {
             const msg = err?.response?.data?.message || "Failed to accept invitation.";
@@ -58,7 +61,7 @@ export default function TeamInvitePage() {
         })();
       }
     }
-  }, [status, invite, isAuthenticated, user, token]);
+  }, [status, invite, isAuthenticated, user, token, refetch]);
 
   const loadInvite = async () => {
     setStatus(STATUS.LOADING);
@@ -113,6 +116,7 @@ export default function TeamInvitePage() {
     setStatus(STATUS.ACCEPTING);
     try {
       await acceptInvite(token);
+      refetch();
       setStatus(STATUS.SUCCESS);
     } catch (err) {
       const msg = err?.response?.data?.message || "Failed to accept invitation.";

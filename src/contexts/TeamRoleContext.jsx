@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useCallback } from "react";
 import api from "@/lib/axios";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -9,7 +9,10 @@ export function TeamRoleProvider({ children }) {
   const [permissions, setPermissions] = useState([]);
   const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [fetchKey, setFetchKey] = useState(0);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  const refetch = useCallback(() => setFetchKey((k) => k + 1), []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -45,7 +48,7 @@ export function TeamRoleProvider({ children }) {
 
     fetchTeamRole();
     return () => { cancelled = true; };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchKey]);
 
   const hasPermission = (permission) => {
     if (isOwner) return true;
@@ -67,6 +70,7 @@ export function TeamRoleProvider({ children }) {
         permissions,
         isOwner,
         loading,
+        refetch,
         hasPermission,
         canManageTeam,
         canManageTours,
