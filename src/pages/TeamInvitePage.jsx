@@ -51,7 +51,7 @@ export default function TeamInvitePage() {
           setStatus(STATUS.ACCEPTING);
           try {
             await acceptInvite(token);
-            refetch();
+            await refetch();
             setStatus(STATUS.SUCCESS);
           } catch (err) {
             const msg = err?.response?.data?.message || "Failed to accept invitation.";
@@ -116,7 +116,7 @@ export default function TeamInvitePage() {
     setStatus(STATUS.ACCEPTING);
     try {
       await acceptInvite(token);
-      refetch();
+      await refetch();
       setStatus(STATUS.SUCCESS);
     } catch (err) {
       const msg = err?.response?.data?.message || "Failed to accept invitation.";

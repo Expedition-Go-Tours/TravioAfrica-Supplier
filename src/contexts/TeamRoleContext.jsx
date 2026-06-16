@@ -9,10 +9,29 @@ export function TeamRoleProvider({ children }) {
   const [permissions, setPermissions] = useState([]);
   const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [fetchKey, setFetchKey] = useState(0);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  const refetch = useCallback(() => setFetchKey((k) => k + 1), []);
+  const fetchAndSet = useCallback(async () => {
+    try {
+      const response = await api.get("/suppliers/settings/team/my-role", {
+        skipGlobalErrorHandler: true,
+      });
+      const data = response.data?.data;
+      setTeamRole(data?.role || null);
+      setPermissions(data?.permissions || []);
+      setIsOwner(data?.isOwner || false);
+    } catch {
+      setTeamRole(null);
+      setPermissions([]);
+      setIsOwner(false);
+    }
+  }, []);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    await fetchAndSet();
+    setLoading(false);
+  }, [fetchAndSet]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -48,7 +67,7 @@ export function TeamRoleProvider({ children }) {
 
     fetchTeamRole();
     return () => { cancelled = true; };
-  }, [isAuthenticated, fetchKey]);
+  }, [isAuthenticated]);
 
   const hasPermission = (permission) => {
     if (isOwner) return true;
