@@ -277,7 +277,7 @@ export default function LoginPage() {
               type="button"
               onClick={handleGoogleSignIn}
               disabled={googleLoading}
-              className="w-1/2 mx-auto flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-emerald-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-slate-900/5"
+              className="w-full sm:w-1/2 mx-auto flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-emerald-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-slate-900/5"
             >
               {googleLoading ? (
                 <Loader2 size={20} className="animate-spin text-emerald-600" />
@@ -303,27 +303,23 @@ export default function LoginPage() {
                 Create one on TravioAfrica
               </a>
             </p>
+
+            <p className="mt-4 text-center text-[11px] text-slate-400 leading-relaxed">
+              Only suppliers with <strong className="text-slate-500 font-medium">Approved</strong> or{" "}
+              <strong className="text-slate-500 font-medium">Active</strong> status can access the dashboard.
+              <br />
+              <a
+                href="https://travioafrica.com/become-a-supplier"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-emerald-600 hover:text-emerald-700 underline underline-offset-2 mt-1 inline-block font-medium"
+              >
+                Apply to become a supplier
+              </a>
+            </p>
           </div>
         </div>
       </motion.div>
-
-      {/* Footer */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.25, duration: 0.35 }}
-        className="absolute bottom-6 text-xs text-center text-slate-400 leading-relaxed max-w-md"
-      >
-        Only suppliers with <strong className="text-slate-600 font-medium">Approved</strong> or{" "}
-        <strong className="text-slate-600 font-medium">Active</strong> status can access the dashboard.
-        <br />
-        <a
-          href="https://travioafrica.com/become-a-supplier"
-          className="text-emerald-700 hover:text-emerald-800 underline underline-offset-2 mt-1 inline-block font-medium"
-        >
-          Apply to become a supplier
-        </a>
-      </motion.p>
     </div>
   );
 }
