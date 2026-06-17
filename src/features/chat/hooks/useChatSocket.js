@@ -30,8 +30,8 @@ export function useChatSocket(conversationId, userId) {
     return () => { socket.off("chat:delivered", handler); };
   }, [socket]);
 
-  const emitTyping = useCallback((convId) => {
-    socket.emit("chat:typing", { conversationId: convId });
+  const emitTyping = useCallback((convId, isTyping) => {
+    socket.emit("chat:typing", { conversationId: convId, isTyping });
   }, [socket]);
 
   const emitMarkRead = useCallback((convId) => {

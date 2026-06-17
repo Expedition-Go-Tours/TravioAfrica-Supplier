@@ -103,6 +103,8 @@ export default function SupportFloating() {
   const isFetchingRef = useRef(false);
   const selectedIdRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const typingIntervalRef = useRef(null);
+  const typingStopRef = useRef(null);
   const convCacheRef = useRef({ data: null, time: 0 });
   const scrollPosRef = useRef(0);
 
@@ -205,12 +207,14 @@ export default function SupportFloating() {
     };
 
     const onTyping = (data) => {
-      if (data.conversationId === selectedIdRef.current && data.isTyping) {
-        setAdminTyping(true);
-        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = setTimeout(() => setAdminTyping(false), 3000);
-      } else {
-        setAdminTyping(false);
+      if (data.conversationId === selectedIdRef.current) {
+        if (data.isTyping) {
+          setAdminTyping(true);
+          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = setTimeout(() => setAdminTyping(false), 3000);
+        } else {
+          setAdminTyping(false);
+        }
       }
     };
 
@@ -249,10 +253,29 @@ export default function SupportFloating() {
   }, [selectedConv?.id, currentUserId]);
 
   useEffect(() => {
+    return () => {
+      if (typingIntervalRef.current) {
+        clearInterval(typingIntervalRef.current);
+        typingIntervalRef.current = null;
+      }
+      if (typingStopRef.current) {
+        clearTimeout(typingStopRef.current);
+        typingStopRef.current = null;
+      }
+    };
+  }, [selectedConv?.id]);
+
+  useEffect(() => {
     if (messages.length > 0 && messagesEndRef.current && !loadingMore) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages.length, loadingMore]);
+
+  useEffect(() => {
+    if (adminTyping && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [adminTyping]);
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -305,6 +328,7 @@ export default function SupportFloating() {
     if (!text && !attachment) return;
     if (sending) return;
     setSending(true);
+    stopTypingSignal();
     try {
       const conv = await ensureConversation();
       if (!conv) { setSending(false); return; }
@@ -350,6 +374,39 @@ export default function SupportFloating() {
     }
     e.target.value = "";
   }, [handleSend]);
+
+  const stopTypingSignal = useCallback(() => {
+    const socket = getChatSocket(currentUserId);
+    if (selectedConv?.id) {
+      socket.emit("chat:typing", { conversationId: selectedConv.id, isTyping: false });
+    }
+    if (typingIntervalRef.current) {
+      clearInterval(typingIntervalRef.current);
+      typingIntervalRef.current = null;
+    }
+    if (typingStopRef.current) {
+      clearTimeout(typingStopRef.current);
+      typingStopRef.current = null;
+    }
+  }, [selectedConv?.id, currentUserId]);
+
+  const handleInputChange = useCallback((value) => {
+    setInput(value);
+    if (selectedConv?.id) {
+      const socket = getChatSocket(currentUserId);
+      if (!typingIntervalRef.current) {
+        socket.emit("chat:typing", { conversationId: selectedConv.id, isTyping: true });
+        typingIntervalRef.current = setInterval(() => {
+          const s = getChatSocket(currentUserId);
+          if (selectedConv?.id) s.emit("chat:typing", { conversationId: selectedConv.id, isTyping: true });
+        }, 2000);
+      }
+      if (typingStopRef.current) clearTimeout(typingStopRef.current);
+      typingStopRef.current = setTimeout(() => {
+        stopTypingSignal();
+      }, 1500);
+    }
+  }, [selectedConv?.id, currentUserId, stopTypingSignal]);
 
   const handleLoadMore = useCallback(async () => {
     if (!selectedConv?.id || !hasMore || loadingMore || isFetchingRef.current) return;
@@ -452,9 +509,7 @@ export default function SupportFloating() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold leading-tight">Admin Support</p>
                       <p className="truncate text-[10px] text-white/70 leading-tight">
-                        {adminTyping ? (
-                          <TypingDots />
-                        ) : selectedConv ? (
+                        {selectedConv ? (
                           <span className="flex items-center gap-1">
                             <motion.span className="h-1.5 w-1.5 rounded-full bg-green-400" animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} />
                             <span className="text-green-300">Online</span>
@@ -541,10 +596,29 @@ export default function SupportFloating() {
                               </div>
                             );
                           })}
+                          {adminTyping && (
+                            <div className="flex items-start gap-2 py-0.5">
+                              <div className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#2563eb] text-[10px] font-bold text-white">
+                                <span>A</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 rounded-[18px] rounded-bl-[4px] border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                                <span className="flex gap-1">
+                                  {[0, 1, 2].map((i) => (
+                                    <motion.span
+                                      key={i}
+                                      className="h-2 w-2 rounded-full bg-[#2563eb]"
+                                      animate={{ y: [0, -5, 0] }}
+                                      transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
+                                    />
+                                  ))}
+                                </span>
+                              </div>
+                            </div>
+                          )}
                           <div ref={messagesEndRef} />
                         </div>
                       </div>
-                      <InputBar value={input} onChange={setInput} onSend={handleSubmit} onKeyDown={handleKeyDown} onFileChange={handleFileChange} sending={sending} fileInputRef={fileInputRef} />
+                      <InputBar value={input} onChange={handleInputChange} onSend={handleSubmit} onKeyDown={handleKeyDown} onFileChange={handleFileChange} sending={sending} fileInputRef={fileInputRef} />
                     </motion.div>
                   ) : (
                     <AnimatePresence mode="popLayout">
