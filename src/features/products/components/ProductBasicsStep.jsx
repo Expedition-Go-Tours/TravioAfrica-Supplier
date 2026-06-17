@@ -239,7 +239,7 @@ export default function ProductBasicsStep() {
                 value={product.duration}
                 onChange={(e) => handleChange("duration", e.target.value)}
                 placeholder="3"
-                className={fieldClasses(errors.duration)}
+                className={`${fieldClasses(errors.duration)} w-20`}
               />
               <Select
                 value={product.durationUnit}
@@ -249,6 +249,7 @@ export default function ProductBasicsStep() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="minutes">Minutes</SelectItem>
                   <SelectItem value="hours">Hours</SelectItem>
                   <SelectItem value="days">Days</SelectItem>
                   <SelectItem value="weeks">Weeks</SelectItem>

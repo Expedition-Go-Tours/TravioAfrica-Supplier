@@ -12,7 +12,9 @@ function buildFormData(product) {
 
   // Build duration
   let durationValue = 0;
-  if (product.durationUnit === "hours") {
+  if (product.durationUnit === "minutes") {
+    durationValue = Number(product.duration) || 0;
+  } else if (product.durationUnit === "hours") {
     durationValue = Number(product.duration) || 0;
   } else if (product.durationUnit === "days") {
     durationValue = Number(product.duration) || 0;
@@ -51,7 +53,11 @@ function buildFormData(product) {
     activityType: product.activityType || "Guided Tour",
     difficulty: product.difficulty || "Easy",
     ...buildCategorizationProductTypeFields(product),
-    duration: { hours: product.durationUnit === "hours" ? durationValue : 0, days: product.durationUnit === "days" ? durationValue : 0 },
+    duration: {
+      minutes: product.durationUnit === "minutes" ? durationValue : 0,
+      hours: product.durationUnit === "hours" ? durationValue : 0,
+      days: product.durationUnit === "days" || product.durationUnit === "weeks" ? durationValue : 0,
+    },
     groupSize: {
       min: product.bookingRules?.minGroupSize ?? 1,
       max: product.bookingRules?.maxGroupSize ?? 20,

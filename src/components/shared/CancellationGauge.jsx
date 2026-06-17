@@ -8,7 +8,7 @@
   const pct = clamped === 0 ? "0" : clamped >= 6 ? "6+" : String(Math.round(clamped));
 
   // Symmetrical multi-zone tracking logic for the indicator dot
-  let finalAngle = 180;
+  let finalAngle;
   if (clamped <= 2) {
     finalAngle = 180 - (clamped / 2) * 45;
   } else if (clamped <= 5) {
@@ -38,6 +38,14 @@
 
   return (
     <svg viewBox="0 0 260 200" className={"w-full " + className}>
+      <style>{`.nd { transition: cx 0.45s ease, cy 0.45s ease; }`}</style>
+
+      {/* Ghost background track */}
+      <path 
+        d={`M ${x180} ${y180} A ${R} ${R} 0 0 1 ${x0} ${y0}`} 
+        fill="none" stroke="#f1f5f9" strokeWidth="10" strokeLinecap="round" 
+      />
+
       {/* Gauge Tracks - Calculated Dynamically */}
       <path 
         d={`M ${x180} ${y180} A ${R} ${R} 0 0 1 ${x135} ${y135}`} 
@@ -53,7 +61,7 @@
       />
       
       {/* Indicator Dot */}
-      <circle cx={nx} cy={ny} r="5" fill="#115E59" stroke="white" strokeWidth="2" />
+      <circle className="nd" cx={nx} cy={ny} r="5" fill="#115E59" stroke="white" strokeWidth="2" />
       
       {/* Central Value & Status Label */}
       <text x="130" y="118" textAnchor="middle" fontSize="44" fontWeight="700" fill="#1e293b" fontFamily="DM Sans, sans-serif">

@@ -9,7 +9,9 @@ import { buildCategorizationProductTypeFields } from "@/features/products/utils/
 export const buildProductPayload = (product) => {
   // Build duration object for backend
   const durationPayload = {};
-  if (product.durationUnit === "hours") {
+  if (product.durationUnit === "minutes") {
+    durationPayload.minutes = Number(product.duration) || 0;
+  } else if (product.durationUnit === "hours") {
     durationPayload.hours = Number(product.duration) || 0;
   } else if (product.durationUnit === "days") {
     durationPayload.days = Number(product.duration) || 0;

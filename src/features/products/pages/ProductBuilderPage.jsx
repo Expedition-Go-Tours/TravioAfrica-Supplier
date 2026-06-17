@@ -63,9 +63,10 @@ function tourToProduct(tour) {
   });
 
   const durationHours = duration.hours || 0;
+  const durationMinutes = duration.minutes || 0;
   const durationDays = duration.days || 0;
-  const durationValue = durationHours || durationDays;
-  const durationUnit = durationDays > 0 ? "days" : "hours";
+  const durationValue = durationMinutes || durationHours || durationDays;
+  const durationUnit = durationMinutes > 0 ? "minutes" : durationDays > 0 ? "days" : "hours";
 
   const dayMapping = {
     Monday: "monday", Tuesday: "tuesday", Wednesday: "wednesday",
