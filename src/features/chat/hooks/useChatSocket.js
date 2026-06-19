@@ -38,6 +38,12 @@ export function useChatSocket(conversationId, userId) {
     socket.emit("chat:mark-read", { conversationId: convId });
   }, [socket]);
 
+  const onTyping = useCallback((cb) => {
+    const handler = (data) => cb(data);
+    socket.on("chat:typing", handler);
+    return () => { socket.off("chat:typing", handler); };
+  }, [socket]);
+
   const emitDelivered = useCallback((convId, messageIds) => {
     socket.emit("chat:delivered", {
       conversationId: convId,
@@ -45,5 +51,5 @@ export function useChatSocket(conversationId, userId) {
     });
   }, [socket]);
 
-  return { onNewMessage, onMarkRead, onDelivered, emitTyping, emitMarkRead, emitDelivered };
+  return { onNewMessage, onMarkRead, onDelivered, onTyping, emitTyping, emitMarkRead, emitDelivered };
 }

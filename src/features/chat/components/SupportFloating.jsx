@@ -61,22 +61,6 @@ function isNewDay(a, b) {
   );
 }
 
-function TypingDots() {
-  return (
-    <span className="flex items-center gap-1">
-      {[0, 1, 2].map((i) => (
-        <motion.span
-          key={i}
-          className="h-1.5 w-1.5 rounded-full bg-white/70"
-          animate={{ opacity: [0.4, 1, 0.4] }}
-          transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2, ease: "easeInOut" }}
-        />
-      ))}
-      <span className="ml-1">typing...</span>
-    </span>
-  );
-}
-
 export default function SupportFloating() {
   const user = useAuthStore((state) => state.user);
   const currentUserId = user?.id;

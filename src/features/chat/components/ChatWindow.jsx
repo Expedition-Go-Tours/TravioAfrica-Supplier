@@ -1,5 +1,6 @@
 ﻿import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, ChevronDown, ChevronLeft, ChevronRight, Paperclip } from "lucide-react";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import MessageBubble from "./MessageBubble";
 import { useChatSocket } from "../hooks/useChatSocket";
@@ -62,6 +63,7 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
   const currentUser = useAuthStore((s) => s.user);
   const [input, setInput] = useState("");
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [adminTyping, setAdminTyping] = useState(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
@@ -69,8 +71,11 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
   const prevCountRef = useRef(messages.length);
   const prevConvIdRef = useRef(null);
   const pendingScrollRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const typingIntervalRef = useRef(null);
+  const typingStopRef = useRef(null);
 
-  const { onNewMessage, emitTyping, emitMarkRead } = useChatSocket(conversation?.id, currentUserId);
+  const { onNewMessage, onTyping, emitTyping, emitMarkRead } = useChatSocket(conversation?.id, currentUserId);
 
   const isNearBottom = useCallback(() => {
     const el = messagesContainerRef.current;
@@ -99,6 +104,31 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
     prevCountRef.current = messages.length;
   }, [messages.length, conversation?.id, scrollToBottom]);
 
+  useEffect(() => {
+    if (!conversation?.id || !onTyping) return;
+    const unsub = onTyping((data) => {
+      if (data.conversationId === conversation.id) {
+        if (data.isTyping) {
+          setAdminTyping(true);
+          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = setTimeout(() => setAdminTyping(false), 3000);
+        } else {
+          setAdminTyping(false);
+        }
+      }
+    });
+    return () => {
+      unsub();
+      setAdminTyping(false);
+    };
+  }, [conversation?.id, onTyping]);
+
+  useEffect(() => {
+    if (adminTyping && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [adminTyping]);
+
   const handleScroll = useCallback(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
@@ -110,13 +140,28 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
     }
   }, [hasMore, loadingMore, onLoadMore, isNearBottom]);
 
+  const stopTypingSignal = useCallback(() => {
+    if (conversation?.id) {
+      emitTyping(conversation.id, false);
+    }
+    if (typingIntervalRef.current) {
+      clearInterval(typingIntervalRef.current);
+      typingIntervalRef.current = null;
+    }
+    if (typingStopRef.current) {
+      clearTimeout(typingStopRef.current);
+      typingStopRef.current = null;
+    }
+  }, [conversation?.id, emitTyping]);
+
   const handleSend = useCallback(async () => {
     const trimmed = input.trim();
     if (!trimmed || sending) return;
     setInput("");
+    stopTypingSignal();
     await onSendMessage(trimmed);
     requestAnimationFrame(() => scrollToBottom(true));
-  }, [input, sending, onSendMessage, scrollToBottom]);
+  }, [input, sending, onSendMessage, scrollToBottom, stopTypingSignal]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -127,7 +172,16 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
-    if (conversation?.id) emitTyping(conversation.id);
+    if (conversation?.id) {
+      emitTyping(conversation.id, true);
+      if (!typingIntervalRef.current) {
+        typingIntervalRef.current = setInterval(() => {
+          if (conversation?.id) emitTyping(conversation.id, true);
+        }, 2000);
+      }
+      if (typingStopRef.current) clearTimeout(typingStopRef.current);
+      typingStopRef.current = setTimeout(stopTypingSignal, 1500);
+    }
     if (inputRef.current) {
       inputRef.current.style.height = "auto";
       inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 120) + "px";
@@ -145,6 +199,23 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
     }
     e.target.value = "";
   };
+
+  useEffect(() => {
+    return () => {
+      if (typingIntervalRef.current) {
+        clearInterval(typingIntervalRef.current);
+        typingIntervalRef.current = null;
+      }
+      if (typingStopRef.current) {
+        clearTimeout(typingStopRef.current);
+        typingStopRef.current = null;
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+    };
+  }, [conversation?.id]);
 
   const otherParticipant = conversation?.participants?.find(
     (p) => p.userId !== currentUserId
@@ -255,6 +326,25 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
                     </div>
                   );
                 })}
+                {adminTyping && (
+                  <div className="flex items-start gap-2 py-1">
+                    <div className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-600 text-[10px] font-bold text-white shadow-sm">
+                      <span>A</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 rounded-[18px] rounded-bl-[4px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                      <span className="flex gap-1">
+                        {[0, 1, 2].map((i) => (
+                          <motion.span
+                            key={i}
+                            className="h-2 w-2 rounded-full bg-emerald-600"
+                            animate={{ y: [0, -5, 0] }}
+                            transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
+                          />
+                        ))}
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
             </>
