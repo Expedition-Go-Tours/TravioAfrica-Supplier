@@ -1,23 +1,28 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Star,
-  MessageSquare,
-  Search,
-  Loader2,
-  RefreshCw,
-  Send,
-  Trash2,
-  X,
-  Pen,
-  Camera,
-  ThumbsUp,
-  TrendingUp,
+  ArrowUpRight,
+  Calendar,
   Clock,
-  AlertCircle,
   Inbox,
+  Loader2,
+  Mail,
+  MessageSquare,
+  Pen,
+  Phone,
+  RefreshCw,
+  Search,
+  Send,
+  Star,
+  ThumbsUp,
+  Ticket,
+  Trash2,
+  TrendingUp,
+  Users,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -30,6 +35,7 @@ import {
   updateReviewResponse,
 } from "../api";
 import { getAuthToken } from "@/stores/authStore";
+import { fetchCustomerBookings } from "@/features/bookings/api";
 
 const REVIEW_TABS = [
   { key: "all", label: "All Reviews", status: undefined },
@@ -271,8 +277,12 @@ export default function ReviewsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+  const navigate = useNavigate();
   const [replyTarget, setReplyTarget] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerBookings, setCustomerBookings] = useState([]);
+  const [customerBookingsLoading, setCustomerBookingsLoading] = useState(false);
 
   const currentTab = REVIEW_TABS.find((t) => t.key === activeTab) || REVIEW_TABS[0];
 
@@ -347,6 +357,32 @@ export default function ReviewsPage() {
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to remove response");
     }
+  };
+
+  const handleCustomerClick = async (review) => {
+    setSelectedCustomer(review);
+    if (!review.customerId) return;
+    setCustomerBookingsLoading(true);
+    try {
+      const bookings = await fetchCustomerBookings(review.customerId);
+      setCustomerBookings(bookings || []);
+    } catch {
+      setCustomerBookings([]);
+    } finally {
+      setCustomerBookingsLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount, currency = "EUR") =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
+
+  const BOOKING_STATUS_CONFIG = {
+    PENDING: { label: "Pending", dot: "bg-amber-400", bg: "bg-amber-50", text: "text-amber-700" },
+    CONFIRMED: { label: "Confirmed", dot: "bg-blue-500", bg: "bg-blue-50", text: "text-blue-700" },
+    COMPLETED: { label: "Completed", dot: "bg-emerald-500", bg: "bg-emerald-50", text: "text-emerald-700" },
+    CANCELLED: { label: "Cancelled", dot: "bg-red-400", bg: "bg-red-50", text: "text-red-600" },
+    NO_SHOW: { label: "No Show", dot: "bg-slate-400", bg: "bg-slate-50", text: "text-slate-600" },
+    REFUNDED: { label: "Refunded", dot: "bg-purple-400", bg: "bg-purple-50", text: "text-purple-600" },
   };
 
   return (
@@ -547,7 +583,10 @@ export default function ReviewsPage() {
                 <div className="pl-5 pr-5 py-5">
                   {/* Top row */}
                   <div className="flex items-start gap-3.5 mb-3">
-                    <div className="w-10 h-10 rounded-full shrink-0 ring-1 ring-emerald-200/50 overflow-hidden bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center">
+                    <button
+                      onClick={() => handleCustomerClick(review)}
+                      className="w-10 h-10 rounded-full shrink-0 ring-1 ring-emerald-200/50 overflow-hidden bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center hover:ring-emerald-400 transition-all"
+                    >
                       {review.customerPhoto ? (
                         <img src={optimizeImage(review.customerPhoto, 40)} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -555,15 +594,32 @@ export default function ReviewsPage() {
                           {(review.customerName || "?").charAt(0).toUpperCase()}
                         </span>
                       )}
-                    </div>
+                    </button>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1">
-                        <span className="text-sm font-semibold text-slate-800">{review.customerName}</span>
+                        <button
+                          onClick={() => handleCustomerClick(review)}
+                          className="text-sm font-semibold text-slate-800 hover:text-emerald-700 transition-colors"
+                        >
+                          {review.customerName}
+                        </button>
                         <StarRating rating={review.rating} />
                         <span className="text-[11px] font-medium text-slate-400">{review.rating}.0</span>
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-slate-400">{review.tourName}</span>
+                        <button
+                          onClick={() => navigate(`/products/${review.tourId}`)}
+                          className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-600 transition-colors"
+                        >
+                          {review.tourPhoto ? (
+                            <img src={optimizeImage(review.tourPhoto, 32)} alt="" className="w-4 h-4 rounded object-cover" />
+                          ) : (
+                            <span className="w-4 h-4 rounded bg-slate-100 flex items-center justify-center">
+                              <ArrowUpRight size={10} className="text-slate-300" />
+                            </span>
+                          )}
+                          <span>{review.tourName}</span>
+                        </button>
                         <span className="text-slate-300">·</span>
                         <span className="text-xs text-slate-400">{formatDate(review.date)}</span>
                       </div>
@@ -679,6 +735,169 @@ export default function ReviewsPage() {
             onSubmit={handleSubmitReply}
             submitting={submitting}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Customer Profile Panel */}
+      <AnimatePresence>
+        {selectedCustomer && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/20 z-40"
+              onClick={() => { setSelectedCustomer(null); setCustomerBookings([]); }}
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="fixed right-0 top-0 h-full w-full max-w-[420px] bg-white shadow-2xl shadow-black/10 z-50 flex flex-col"
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-[#044b3b] to-emerald-700 px-5 h-16 flex items-center justify-between relative shrink-0">
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
+                <h3 className="relative text-sm font-semibold text-white/90">Customer Profile</h3>
+                <button
+                  onClick={() => { setSelectedCustomer(null); setCustomerBookings([]); }}
+                  className="relative flex h-7 w-7 items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              {/* Customer card */}
+              <div className="relative -mt-4 px-4 shrink-0">
+                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#044b3b] to-emerald-500 text-xl font-bold text-white shadow-sm ring-2 ring-white/80">
+                      <span>{(selectedCustomer.customerName || "?").charAt(0).toUpperCase()}</span>
+                      {selectedCustomer.customerPhoto && (
+                        <img
+                          src={optimizeImage(selectedCustomer.customerPhoto, 56)}
+                          alt=""
+                          className="absolute inset-0 h-full w-full object-cover"
+                          onError={(e) => { e.target.style.display = "none"; }}
+                        />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{selectedCustomer.customerName || "Unknown"}</p>
+                      <div className="mt-1 space-y-0.5">
+                        {selectedCustomer.customerEmail && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                            <Mail size={10} className="shrink-0 text-gray-400" />
+                            <span className="truncate">{selectedCustomer.customerEmail}</span>
+                          </div>
+                        )}
+                        {selectedCustomer.customerPhone && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                            <Phone size={10} className="shrink-0 text-gray-400" />
+                            <span>{selectedCustomer.customerPhone}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats row */}
+              {!customerBookingsLoading && customerBookings.length > 0 && (
+                <div className="mx-4 mt-2.5 bg-gray-50 rounded-lg border border-gray-100 shrink-0">
+                  <div className="flex items-center divide-x divide-gray-200">
+                    <div className="flex-1 flex flex-col items-center py-2">
+                      <span className="text-sm font-bold text-gray-900">{customerBookings.length}</span>
+                      <span className="text-[9px] text-gray-500 uppercase tracking-wider mt-0.5">Bookings</span>
+                    </div>
+                    <div className="flex-1 flex flex-col items-center py-2">
+                      <span className="text-sm font-bold text-gray-900">{formatCurrency(customerBookings.reduce((s, b) => s + (b.total || 0), 0))}</span>
+                      <span className="text-[9px] text-gray-500 uppercase tracking-wider mt-0.5">Total</span>
+                    </div>
+                    <div className="flex-1 flex flex-col items-center py-2">
+                      <span className="text-sm font-bold text-gray-900">
+                        {formatCurrency(Math.round(customerBookings.reduce((s, b) => s + (b.total || 0), 0) / customerBookings.length))}
+                      </span>
+                      <span className="text-[9px] text-gray-500 uppercase tracking-wider mt-0.5">Average</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Bookings list */}
+              <div className="flex-1 overflow-y-auto">
+                {customerBookingsLoading ? (
+                  <div className="px-4 pt-4 space-y-2">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 animate-pulse">
+                        <div className="w-10 h-10 rounded-lg bg-gray-200 shrink-0" />
+                        <div className="flex-1 space-y-1.5">
+                          <div className="h-2.5 bg-gray-200 rounded w-2/3" />
+                          <div className="h-2 bg-gray-200 rounded w-1/3" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : customerBookings.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center pt-16 text-center px-4">
+                    <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center mb-3">
+                      <Ticket size={20} className="text-gray-300" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-600">No bookings yet</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Customer hasn't made any bookings</p>
+                  </div>
+                ) : (
+                  <div className="px-4 pt-4 pb-4 space-y-1">
+                    <div className="flex items-center gap-1.5 mb-2 px-1">
+                      <Ticket size={12} className="text-gray-400" />
+                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                        {customerBookings.length} Booking{customerBookings.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+
+                    {customerBookings.map((booking) => {
+                      const st = BOOKING_STATUS_CONFIG[booking.status] || { label: booking.status, dot: "bg-gray-400", bg: "bg-gray-50", text: "text-gray-600" };
+                      return (
+                        <div
+                          key={booking.id}
+                          className="flex items-start gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors group"
+                          onClick={() => navigate(`/bookings?bookingId=${booking.id}`)}
+                        >
+                          <div className="w-10 h-10 rounded-lg shrink-0 overflow-hidden bg-gray-100 flex items-center justify-center">
+                            {booking.tourPhoto ? (
+                              <img src={optimizeImage(booking.tourPhoto, 40)} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = "none"; }} />
+                            ) : (
+                              <Ticket size={16} className="text-gray-300" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold text-gray-900 truncate">{booking.tourName}</p>
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ${st.bg} ${st.text}`}>
+                                <span className={`w-1 h-1 rounded-full ${st.dot}`} />
+                                {st.label}
+                              </span>
+                              <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                                <Calendar size={9} />
+                                {formatDate(booking.travelDate)}
+                              </span>
+                              <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                                <Users size={9} />
+                                {booking.travelers}
+                              </span>
+                            </div>
+                            <span className="text-[11px] font-semibold text-gray-900 mt-1.5 block">{formatCurrency(booking.total, booking.currency)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
