@@ -313,7 +313,12 @@ export default function DashboardPage() {
                                 <span className="ml-auto text-[10px] font-medium text-[#059669]">View booking →</span>
                               )}
                               {n.data?.payoutId && (
-                                <span className="ml-auto text-[10px] font-medium text-[#059669]">View payout →</span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/finance?tab=payouts&payoutId=${n.data.payoutId}`); }}
+                                  className="ml-auto text-[10px] font-medium text-[#059669] hover:text-[#047857] transition-colors"
+                                >
+                                  View payout →
+                                </button>
                               )}
                             </div>
                           </div>

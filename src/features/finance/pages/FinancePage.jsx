@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   DollarSign, Wallet, CreditCard, Loader2, RefreshCw, Plus, Trash2,
   TrendingUp, TrendingDown, Building2, Landmark,
@@ -41,7 +42,9 @@ const STAGGER = {
 };
 
 export default function FinancePage() {
-  const [activeTab, setActiveTab] = useState("earnings");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "earnings");
+  const [highlightedPayoutId, setHighlightedPayoutId] = useState(searchParams.get("payoutId") || null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [earnings, setEarnings] = useState([]);
@@ -105,6 +108,25 @@ export default function FinancePage() {
       toast.error(err.response?.data?.message || "Failed to delete payout method");
     }
   };
+
+  useEffect(() => {
+    if (!highlightedPayoutId || payouts.length === 0) return;
+    const id = highlightedPayoutId;
+    const scrollTimer = setTimeout(() => {
+      const el = document.querySelector(`[data-payout-id="${id}"]`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 500);
+    const clearTimer = setTimeout(() => {
+      setHighlightedPayoutId(null);
+      setSearchParams((prev) => {
+        if (!prev.get("payoutId")) return prev;
+        const next = new URLSearchParams(prev);
+        next.delete("payoutId");
+        return next;
+      }, { replace: true });
+    }, 3000);
+    return () => { clearTimeout(scrollTimer); clearTimeout(clearTimer); };
+  }, [payouts, highlightedPayoutId]);
 
   const summaryStats = useMemo(() => {
     if (activeTab === "earnings") return [
@@ -324,10 +346,14 @@ export default function FinancePage() {
                       {payouts.map((p, i) => (
                         <motion.tr
                           key={p.id}
+                          data-payout-id={p.id}
                           initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: i * 0.03 }}
-                          className="border-b border-slate-50 last:border-0 hover:bg-emerald-50/30 transition-colors"
+                          className={cn(
+                            "border-b border-slate-50 last:border-0 hover:bg-emerald-50/30 transition-colors duration-500",
+                            highlightedPayoutId === p.id && "bg-emerald-100"
+                          )}
                         >
                           <td className="py-3 px-4"><span className="font-mono text-[10px] font-semibold text-emerald-700">{p.id}</span></td>
                           <td className="py-3 px-4 text-[11px] text-slate-600">{p.bookingNumber}</td>
