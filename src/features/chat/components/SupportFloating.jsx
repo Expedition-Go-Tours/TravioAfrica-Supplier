@@ -307,6 +307,21 @@ export default function SupportFloating() {
     return conv;
   }, [selectedConv, currentUserId]);
 
+  const stopTypingSignal = useCallback(() => {
+    const socket = getChatSocket(currentUserId);
+    if (selectedConv?.id) {
+      socket.emit("chat:typing", { conversationId: selectedConv.id, isTyping: false });
+    }
+    if (typingIntervalRef.current) {
+      clearInterval(typingIntervalRef.current);
+      typingIntervalRef.current = null;
+    }
+    if (typingStopRef.current) {
+      clearTimeout(typingStopRef.current);
+      typingStopRef.current = null;
+    }
+  }, [selectedConv, currentUserId]);
+
   const handleSend = useCallback(async (content, attachment) => {
     const text = content?.trim();
     if (!text && !attachment) return;
@@ -331,7 +346,7 @@ export default function SupportFloating() {
     } finally {
       setSending(false);
     }
-  }, [sending, ensureConversation]);
+  }, [sending, ensureConversation, stopTypingSignal]);
 
   const handleSubmit = useCallback(() => {
     if (!input.trim() || sending) return;
@@ -359,21 +374,6 @@ export default function SupportFloating() {
     e.target.value = "";
   }, [handleSend]);
 
-  const stopTypingSignal = useCallback(() => {
-    const socket = getChatSocket(currentUserId);
-    if (selectedConv?.id) {
-      socket.emit("chat:typing", { conversationId: selectedConv.id, isTyping: false });
-    }
-    if (typingIntervalRef.current) {
-      clearInterval(typingIntervalRef.current);
-      typingIntervalRef.current = null;
-    }
-    if (typingStopRef.current) {
-      clearTimeout(typingStopRef.current);
-      typingStopRef.current = null;
-    }
-  }, [selectedConv?.id, currentUserId]);
-
   const handleInputChange = useCallback((value) => {
     setInput(value);
     if (selectedConv?.id) {
@@ -390,7 +390,7 @@ export default function SupportFloating() {
         stopTypingSignal();
       }, 1500);
     }
-  }, [selectedConv?.id, currentUserId, stopTypingSignal]);
+  }, [selectedConv, currentUserId, stopTypingSignal]);
 
   const handleLoadMore = useCallback(async () => {
     if (!selectedConv?.id || !hasMore || loadingMore || isFetchingRef.current) return;
