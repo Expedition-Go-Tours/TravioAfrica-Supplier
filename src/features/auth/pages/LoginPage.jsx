@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -48,6 +48,14 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  useEffect(() => {
+    const onPageShow = (e) => {
+      if (e.persisted) setGoogleLoading(false);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
+
   const handleEmailSignIn = async (event) => {
     event.preventDefault();
     setError("");
@@ -69,8 +77,12 @@ export default function LoginPage() {
   const handleGoogleSignIn = () => {
     setError("");
     setGoogleLoading(true);
-    const baseUrl = config.api.baseURL;
-    window.location.href = `${baseUrl}/auth/google`;
+    try {
+      const baseUrl = config.api.baseURL;
+      window.location.href = `${baseUrl}/auth/google`;
+    } catch {
+      setGoogleLoading(false);
+    }
   };
 
   return (
