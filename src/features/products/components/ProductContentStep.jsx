@@ -42,7 +42,7 @@ export default function ProductContentStep() {
   const isSectionComplete = (sectionId) => {
     switch (sectionId) {
       case "meeting":
-        return !!content.meetingInstructions?.trim() && !!content.pickupDescription?.trim();
+        return !!content.meetingInstructions?.trim() && (!!content.meetingPoint?.trim() || content.pickupAvailable);
       case "details":
         return content.itinerary?.length > 0 && highlights.length > 0;
       case "languages":
@@ -63,15 +63,38 @@ export default function ProductContentStep() {
       case "meeting":
         return (
           <div className="space-y-6">
+            <div className="flex items-start gap-2.5 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+              <Info size={16} className="text-blue-600 shrink-0 mt-0.5" />
+              <p className="text-sm text-blue-800">
+                Travelers want to book products with accurate pickup locations so they can plan their day.
+              </p>
+            </div>
             <div>
               <label className="block text-sm font-medium text-slate-800 mb-2">
-                Meeting Point Instructions
+                Meeting Point
+              </label>
+              <input
+                type="text"
+                value={content.meetingPoint || ""}
+                onChange={(e) => updateNested("content.meetingPoint", e.target.value)}
+                placeholder="e.g. Accra, Ghana"
+                className={`w-full px-4 py-2.5 border rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none ${
+                  errors.meetingPoint ? "border-red-500" : "border-slate-200"
+                }`}
+              />
+              {errors.meetingPoint && (
+                <p className="mt-1 text-xs text-red-500">{errors.meetingPoint}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-800 mb-2">
+                Meeting Instructions
               </label>
               <textarea
                 value={content.meetingInstructions}
                 onChange={(e) => updateNested("content.meetingInstructions", e.target.value)}
-                rows={4}
-                placeholder="Describe where and how customers will meet you or your guide..."
+                rows={3}
+                placeholder="Please only include information about how to find the meeting point..."
                 className={`w-full px-4 py-2.5 border rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none resize-none ${
                   errors.meetingInstructions ? "border-red-500" : "border-slate-200"
                 }`}
@@ -79,18 +102,6 @@ export default function ProductContentStep() {
               {errors.meetingInstructions && (
                 <p className="mt-1 text-xs text-red-500">{errors.meetingInstructions}</p>
               )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-800 mb-2">
-                Pickup Description
-              </label>
-              <textarea
-                value={content.pickupDescription}
-                onChange={(e) => updateNested("content.pickupDescription", e.target.value)}
-                rows={4}
-                placeholder="Describe pickup services, locations, and any restrictions..."
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none resize-none"
-              />
             </div>
           </div>
         );
@@ -177,34 +188,107 @@ export default function ProductContentStep() {
       case "inclusions":
         return (
           <div className="space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <TagList
-                label="What's Included"
-                accent="green"
-                items={content.included}
-                placeholder="e.g. Professional guide"
-                onChange={(items) => updateNested("content.included", items)}
-              />
-              <TagList
-                label="What's Excluded"
-                accent="red"
-                items={content.excluded}
-                placeholder="e.g. Personal expenses"
-                onChange={(items) => updateNested("content.excluded", items)}
-              />
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-slate-800">What's Included</h3>
+              <div className="space-y-2">
+                {(content.included || []).map((item, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={item}
+                      onChange={(e) => {
+                        const next = [...(content.included || [])];
+                        next[index] = e.target.value;
+                        updateNested("content.included", next);
+                      }}
+                      placeholder="Enter item..."
+                      className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = (content.included || []).filter((_, i) => i !== index);
+                        updateNested("content.included", next);
+                      }}
+                      className="p-2 text-slate-400 hover:text-red-500 transition-colors shrink-0"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => updateNested("content.included", [...(content.included || []), ""])}
+                  className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
+                >
+                  <Plus size={16} strokeWidth={2.5} />
+                  Add an inclusion
+                </button>
+              </div>
             </div>
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-slate-800">What's Excluded</h3>
+              <div className="space-y-2">
+                {(content.excluded || []).map((item, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={item}
+                      onChange={(e) => {
+                        const next = [...(content.excluded || [])];
+                        next[index] = e.target.value;
+                        updateNested("content.excluded", next);
+                      }}
+                      placeholder="Enter item..."
+                      className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = (content.excluded || []).filter((_, i) => i !== index);
+                        updateNested("content.excluded", next);
+                      }}
+                      className="p-2 text-slate-400 hover:text-red-500 transition-colors shrink-0"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => updateNested("content.excluded", [...(content.excluded || []), ""])}
+                  className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
+                >
+                  <Plus size={16} strokeWidth={2.5} />
+                  Add an exclusion
+                </button>
+              </div>
+            </div>
+            <label className="flex items-start gap-3 cursor-pointer pt-2">
+              <input
+                type="checkbox"
+                checked={content.inclusionsConfirmed || false}
+                onChange={(e) => updateNested("content.inclusionsConfirmed", e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600/20 mt-0.5"
+              />
+              <span className="text-sm text-slate-600 leading-relaxed">
+                I confirm that the information provided above is an accurate reflection of all additional
+                costs that may apply, including all mandatory fees (if any) that are required to be paid
+                to third parties in-destination by the travelers who book my experience.
+              </span>
+            </label>
           </div>
         );
 
       case "unique":
         return (
-          <div className="space-y-4">
-            <div>
+          <div className="space-y-6">
+            <div className="space-y-1.5">
               <label className="block text-sm font-medium text-slate-800 mb-2">
-                What makes your product unique?
+                What sets your activity apart?
               </label>
               <p className="text-xs text-slate-500 mb-2">
-                Describe what sets your experience apart from others. This will be shown prominently on your product page.
+                Encourage travelers to book your activity by highlighting what makes it unique and interesting.
               </p>
               <textarea
                 value={content.uniqueSellingPoints}
@@ -218,7 +302,65 @@ export default function ProductContentStep() {
               {errors.uniqueSellingPoints && (
                 <p className="mt-1 text-xs text-red-500">{errors.uniqueSellingPoints}</p>
               )}
+              <div className="flex justify-end">
+                {(content.uniqueSellingPoints || "").trim().length < 100 ? (
+                  <span className="text-xs text-slate-400">
+                    {100 - (content.uniqueSellingPoints || "").trim().length} characters needed
+                  </span>
+                ) : (
+                  <span className="text-xs text-emerald-600">
+                    {(content.uniqueSellingPoints || "").trim().length} characters
+                  </span>
+                )}
+              </div>
             </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-slate-800">Is this a private activity?</label>
+                <Info size={14} className="text-slate-400 cursor-help" />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => updateNested("content.isPrivateActivity", true)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    content.isPrivateActivity
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "bg-slate-50 text-slate-600 border border-slate-200/80"
+                  }`}
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateNested("content.isPrivateActivity", false)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    !content.isPrivateActivity
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "bg-slate-50 text-slate-600 border border-slate-200/80"
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+            {!content.isPrivateActivity && (
+              <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-800 mb-2 block">
+                Enter the maximum number of travelers who can participate
+              </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={content.maxTravelers}
+                  onChange={(e) => updateNested("content.maxTravelers", Number(e.target.value))}
+                  className="w-full max-w-[200px] px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none"
+                />
+                <p className="text-xs text-slate-500 mt-2">
+                  Before you can update your new maximum number here, you'll need to reduce your tiered pricing booking limit under the Schedules & prices tab.
+                </p>
+              </div>
+            )}
           </div>
         );
 

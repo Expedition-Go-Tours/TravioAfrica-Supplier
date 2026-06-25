@@ -762,11 +762,11 @@ export default function ProductDetailPage() {
                 )) : (
                   <p className="text-sm text-slate-400">No pricing data</p>
                 )}
-                {pricing.startDate && (
+                {pricing.schedules?.[0]?.startDate && (
                   <div className="pt-3 mt-3 border-t border-slate-100">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-slate-400">Valid period</span>
-                      <span className="font-medium text-slate-500">{formatDate(pricing.startDate)} \u2013 {formatDate(pricing.endDate)}</span>
+                      <span className="font-medium text-slate-500">{formatDate(pricing.schedules[0].startDate)} \u2013 {formatDate(pricing.schedules[0].endDate)}</span>
                     </div>
                   </div>
                 )}

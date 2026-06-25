@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Archive, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useProductBuilderStore } from "@/features/products/stores/productBuilderStore";
+import { useProductBuilderStore, SECTIONS } from "@/features/products/stores/productBuilderStore";
 import { createProduct, updateProduct } from "@/features/products/api";
 
 import { normalizeHighlights } from "@/features/products/utils/normalizeHighlights";
@@ -10,7 +11,6 @@ import { buildCategorizationProductTypeFields } from "@/features/products/utils/
 function buildFormData(product) {
   const formData = new FormData();
 
-  // Build duration
   let durationValue = 0;
   if (product.durationUnit === "minutes") {
     durationValue = Number(product.duration) || 0;
@@ -22,7 +22,6 @@ function buildFormData(product) {
     durationValue = (Number(product.duration) || 0) * 7;
   }
 
-  // Build transport mode
   const transportMode = {};
   if (product.tourTransportationModes?.length) {
     transportMode.land = product.tourTransportationModes.filter((m) =>
@@ -33,20 +32,20 @@ function buildFormData(product) {
     );
   }
 
-  // Age groups from pricing tiers
-  const ageGroups = (product.pricing?.tiers || []).map((tier) => ({
-    label: tier.name,
-    minAge: tier.minAge,
-    maxAge: tier.maxAge,
+  const ageGroups = (product.pricing?.ageGroups || [])
+    .filter((ag) => ag.enabled)
+    .map((ag) => ({
+      label: ag.name,
+      minAge: ag.minAge,
+      maxAge: ag.maxAge,
+    }));
+
+  const prices = (product.pricing?.schedules?.[0]?.prices || []).map((p) => ({
+    ageGroup: p.ageGroup,
+    retailPrice: Number(p.retailPrice) || 0,
+    commissionRate: Number(p.commissionRate) || 15,
   }));
 
-  // Prices for pricing schedule
-  const prices = (product.pricing?.tiers || []).map((tier) => ({
-    ageGroup: tier.name,
-    retailPrice: Number(tier.price) || 0,
-  }));
-
-  // categorization (JSON string - backend parses it)
   const categorization = {
     category: product.category || "",
     subcategory: product.subcategory || "",
@@ -66,7 +65,6 @@ function buildFormData(product) {
   };
   formData.append("categorization", JSON.stringify(categorization));
 
-  // theme (JSON string - backend parses it)
   const theme = {
     primary: product.primaryTheme || product.theme || "",
     secondary: product.secondaryThemes || [],
@@ -74,7 +72,6 @@ function buildFormData(product) {
   };
   formData.append("theme", JSON.stringify(theme));
 
-  // productContent (JSON string)
   const productContent = {
     highlights: normalizeHighlights(product.content?.highlights),
     included: product.content?.included || [],
@@ -94,19 +91,19 @@ function buildFormData(product) {
   };
   formData.append("productContent", JSON.stringify(productContent));
 
-  // schedulesAndPricing (JSON string)
   const schedulesAndPricing = {
     travelerDetails: {
       pricingModel: product.pricing?.pricingModel || "perPerson",
-      maxTravelersPerBooking: product.bookingRules?.maxGroupSize ?? 20,
+      vehicleType: product.pricing?.vehicleType || "",
+      maxTravelersPerBooking: product.pricing?.maxTravelersPerBooking ?? 2,
       ageGroups,
     },
     pricingSchedules: {
       currency: product.pricing?.currency || "USD",
       schedules: [
         {
-          startDate: product.pricing?.startDate || new Date().toISOString().split("T")[0],
-          endDate: product.pricing?.endDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          startDate: product.pricing?.schedules?.[0]?.startDate || new Date().toISOString().split("T")[0],
+          endDate: product.pricing?.schedules?.[0]?.endDate || "",
           prices,
         },
       ],
@@ -117,7 +114,6 @@ function buildFormData(product) {
   };
   formData.append("schedulesAndPricing", JSON.stringify(schedulesAndPricing));
 
-  // bookingAndTickets (JSON string)
   const bookingAndTickets = {
     instantBooking: product.bookingRules?.instantBooking ?? false,
     minAdvanceBookingHours: product.bookingRules?.minAdvanceBookingHours ?? 48,
@@ -140,16 +136,12 @@ function buildFormData(product) {
   };
   formData.append("bookingAndTickets", JSON.stringify(bookingAndTickets));
 
-  // Flat fields
   formData.append("title", product.title || "");
   formData.append("description", product.description || "");
   formData.append("metaTitle", product.metaTitle || product.title || "");
   formData.append("metaDescription", product.metaDescription || product.description?.substring(0, 160) || "");
   formData.append("status", (product.status || "draft").toUpperCase());
 
-  // Latitude / Longitude: only append when they have real numeric values
-  // Empty/null values are omitted so the backend doesn't receive them at all,
-  // avoiding the "must be a number" validation error
   if (product.latitude != null && product.latitude !== "") {
     formData.append("latitude", String(product.latitude));
   }
@@ -157,13 +149,11 @@ function buildFormData(product) {
     formData.append("longitude", String(product.longitude));
   }
 
-  // Tags: send as multiple form entries (multer builds an array, avoiding "must be an array" error)
   if (product.tags?.length > 0) {
     const validTags = product.tags.slice(0, 10);
     validTags.forEach((tag) => formData.append("tags", tag));
   }
 
-  // Photos as file objects (newly selected files only)
   (product.photos || []).forEach((photo) => {
     const file = typeof photo === 'object' && photo.file instanceof File ? photo.file : null;
     if (file) {
@@ -171,7 +161,6 @@ function buildFormData(product) {
     }
   });
 
-  // Existing photo URLs that should be kept
   const existingUrls = (product.photos || [])
     .filter((p) => {
       if (typeof p === 'string') return !p.startsWith('blob:');
@@ -182,7 +171,6 @@ function buildFormData(product) {
     formData.append("existingPhotos", JSON.stringify(existingUrls));
   }
 
-  // Cover photo: send URL for existing photos or index among uploaded files
   const heroPhoto = product.photos?.find((p) => {
     const id = typeof p === 'object' ? p.id : null;
     return id === product.heroImage;
@@ -205,16 +193,40 @@ function buildFormData(product) {
 export default function WizardNavFooter() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentStep, steps, isDirty, isSaving, product, lastSaved, nextStep, prevStep, validateStep, setSaving } = useProductBuilderStore();
+  const [isNavigating, setIsNavigating] = useState(false);
+  const {
+    currentStep,
+    steps,
+    isDirty,
+    isSaving,
+    product,
+    lastSaved,
+    nextStep,
+    prevStep,
+    validateStep,
+    setSaving,
+    currentSectionId,
+    currentStepId,
+  } = useProductBuilderStore();
   const isFirst = currentStep === 0;
   const isLast = currentStep === steps.length - 1;
 
   const isEditing = id && id !== "new";
 
+  const currentSection = SECTIONS.find((s) => s.id === currentSectionId);
+  const currentSectionStep = currentSection?.steps.find(
+    (s) => s.id === currentStepId
+  );
+
   const handleNext = () => {
+    setIsNavigating(true);
     const isValid = validateStep(currentStep);
-    if (!isValid) return;
+    if (!isValid) {
+      setIsNavigating(false);
+      return;
+    }
     nextStep();
+    setIsNavigating(false);
   };
 
   const handleSave = () => {
@@ -265,6 +277,17 @@ export default function WizardNavFooter() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Section context indicator */}
+      {currentSection && currentSectionStep && (
+        <div className="flex items-center gap-2 text-xs text-slate-400">
+          <span className="font-medium text-emerald-700 uppercase tracking-wider">
+            {currentSection.label}
+          </span>
+          <span className="text-slate-300">/</span>
+          <span>{currentSectionStep.label}</span>
+        </div>
+      )}
+
       {/* Main Footer Buttons */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3">
@@ -317,10 +340,17 @@ export default function WizardNavFooter() {
             <button
               type="button"
               onClick={handleNext}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
+              disabled={isNavigating}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <span className="hidden sm:inline">Next</span>
-              <ChevronRight size={16} />
+              {isNavigating ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <>
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight size={16} />
+                </>
+              )}
             </button>
           )}
         </div>

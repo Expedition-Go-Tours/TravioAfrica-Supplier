@@ -1,18 +1,109 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Layers, FileText, ScrollText, Image, DollarSign, CalendarDays, ClipboardList, CheckCircle } from "lucide-react";
+import { Layers, ScrollText, Image, DollarSign, CalendarDays, ClipboardList, CheckCircle, MapPin, Globe, Check, Sparkles, Info, Users, Clock, Shield, Ticket } from "lucide-react";
 import { normalizeHighlights } from "@/features/products/utils/normalizeHighlights";
 
 const STEPS = [
-  { id: "type", label: "Product Type", number: 1, icon: Layers },
-  { id: "basics", label: "Product Basics", number: 2, icon: FileText },
-  { id: "content", label: "Product Content", number: 3, icon: ScrollText },
+  { id: "language-and-title", label: "Language & Title", number: 1, icon: Layers },
+  { id: "categorization", label: "Categorization", number: 2, icon: Layers },
+  { id: "theme", label: "Theme", number: 3, icon: Layers },
   { id: "photos", label: "Photos & Media", number: 4, icon: Image },
-  { id: "pricing", label: "Pricing & Tickets", number: 5, icon: DollarSign },
-  { id: "schedule", label: "Schedule & Availability", number: 6, icon: CalendarDays },
-  { id: "booking", label: "Booking Rules", number: 7, icon: ClipboardList },
-  { id: "review", label: "Review & Submit", number: 8, icon: CheckCircle },
+  { id: "meeting-and-pickup", label: "Meeting & Pickup", number: 5, icon: MapPin },
+  { id: "tour-details", label: "Tour Details", number: 6, icon: ScrollText },
+  { id: "languages-offered", label: "Languages Offered", number: 7, icon: Globe },
+  { id: "inclusions-exclusions", label: "Inclusions & Exclusions", number: 8, icon: Check },
+  { id: "unique-selling-points", label: "What Makes Your Product Unique", number: 9, icon: Sparkles },
+  { id: "info-travelers-need", label: "Information Travelers Need", number: 10, icon: Info },
+  { id: "traveler-details", label: "Traveler Details", number: 11, icon: Users },
+  { id: "pricing-schedules", label: "Pricing Schedules", number: 12, icon: DollarSign },
+  { id: "booking-process", label: "Booking Process", number: 13, icon: Clock },
+  { id: "cancellation-policy", label: "Cancellation Policy", number: 14, icon: Shield },
+  { id: "traveler-required-info", label: "Traveler Required Info", number: 15, icon: ClipboardList },
+  { id: "preview", label: "Preview", number: 16, icon: ScrollText },
 ];
+
+export const SECTIONS = [
+  {
+    id: "basics",
+    label: "BASICS",
+    steps: [
+      { id: "language-and-title", label: "Language & Title", stepIndex: 0 },
+      { id: "categorization", label: "Categorization", stepIndex: 1 },
+      { id: "theme", label: "Theme", stepIndex: 2 },
+      { id: "photos", label: "Photos", stepIndex: 3 },
+    ],
+  },
+  {
+    id: "product-content",
+    label: "PRODUCT CONTENT",
+    steps: [
+      { id: "meeting-and-pickup", label: "Meeting & Pickup", stepIndex: 4 },
+      { id: "tour-details", label: "Tour Details", stepIndex: 5 },
+      { id: "languages-offered", label: "Languages Offered", stepIndex: 6 },
+      { id: "inclusions-exclusions", label: "Inclusions & Exclusions", stepIndex: 7 },
+      { id: "unique-selling-points", label: "What Makes Your Product Unique", stepIndex: 8 },
+      { id: "info-travelers-need", label: "Information Travelers Need", stepIndex: 9 },
+    ],
+  },
+  {
+    id: "schedules-and-pricing",
+    label: "SCHEDULES & PRICING",
+    steps: [
+      { id: "traveler-details", label: "Traveler Details", stepIndex: 10 },
+      { id: "pricing-schedules", label: "Pricing Schedules", stepIndex: 11 },
+    ],
+  },
+  {
+    id: "booking-and-tickets",
+    label: "BOOKING & TICKETS",
+    steps: [
+      { id: "booking-process", label: "Booking Process", stepIndex: 12 },
+      { id: "cancellation-policy", label: "Cancellation Policy", stepIndex: 13 },
+      { id: "traveler-required-info", label: "Traveler Required Info", stepIndex: 14 },
+    ],
+  },
+  {
+    id: "finish",
+    label: "FINISH",
+    steps: [
+      { id: "preview", label: "Preview", stepIndex: 15 },
+    ],
+  },
+];
+
+const STEP_INDEX_TO_SECTION_STEP = {
+  0: { sectionId: "basics", stepId: "language-and-title" },
+  1: { sectionId: "basics", stepId: "categorization" },
+  2: { sectionId: "basics", stepId: "theme" },
+  3: { sectionId: "basics", stepId: "photos" },
+  4: { sectionId: "product-content", stepId: "meeting-and-pickup" },
+  5: { sectionId: "product-content", stepId: "tour-details" },
+  6: { sectionId: "product-content", stepId: "languages-offered" },
+  7: { sectionId: "product-content", stepId: "inclusions-exclusions" },
+  8: { sectionId: "product-content", stepId: "unique-selling-points" },
+  9: { sectionId: "product-content", stepId: "info-travelers-need" },
+  10: { sectionId: "schedules-and-pricing", stepId: "traveler-details" },
+  11: { sectionId: "schedules-and-pricing", stepId: "pricing-schedules" },
+  12: { sectionId: "booking-and-tickets", stepId: "booking-process" },
+  13: { sectionId: "booking-and-tickets", stepId: "cancellation-policy" },
+  14: { sectionId: "booking-and-tickets", stepId: "traveler-required-info" },
+  15: { sectionId: "finish", stepId: "preview" },
+};
+
+function findSectionStep(sectionId, stepId) {
+  for (const section of SECTIONS) {
+    if (section.id === sectionId) {
+      for (const step of section.steps) {
+        if (step.id === stepId) return step;
+      }
+    }
+  }
+  return null;
+}
+
+function getDefaultSectionStep() {
+  return { sectionId: "basics", stepId: "language-and-title" };
+}
 
 const INITIAL_PRODUCT = {
   title: "",
@@ -45,16 +136,22 @@ const INITIAL_PRODUCT = {
   heroImage: null,
   videoUrl: "",
   pricing: {
-    basePrice: "",
-    currency: "USD",
     pricingModel: "perPerson",
-    startDate: "",
-    endDate: "",
-    tiers: [
-      { name: "Adult", price: "", minAge: 18, maxAge: 64 },
-      { name: "Child", price: "", minAge: 3, maxAge: 17 },
-      { name: "Senior", price: "", minAge: 65, maxAge: 99 },
+    vehicleType: "",
+    ageGroups: [
+      { name: "Adult", enabled: true, minAge: 18, maxAge: 64 },
+      { name: "Infant", enabled: false, minAge: 0, maxAge: 2 },
+      { name: "Child", enabled: false, minAge: 3, maxAge: 17 },
+      { name: "Youth", enabled: false, minAge: 12, maxAge: 17 },
+      { name: "Senior", enabled: false, minAge: 65, maxAge: 99 },
     ],
+    maxTravelersPerBooking: 2,
+    currency: "USD",
+    schedules: [{
+      startDate: "",
+      endDate: "",
+      prices: [],
+    }],
     taxes: "",
     fees: "",
     commissionRate: 15,
@@ -84,6 +181,10 @@ const INITIAL_PRODUCT = {
     pickupDetails: "",
     inclusions: [],
     exclusions: [],
+    travelerRequiredInfo: [],
+    ticketTypes: [],
+    redemptionInstructions: "",
+    redemptionVenueAddress: "",
   },
   content: {
     itinerary: [],
@@ -92,11 +193,58 @@ const INITIAL_PRODUCT = {
     excluded: [],
     whatToBring: [],
     meetingInstructions: "",
+    meetingPoint: "",
+    meetingPointAddress: "",
+    meetingPointLat: null,
+    meetingPointLng: null,
+    inclusionsConfirmed: false,
+    isPrivateActivity: false,
+    maxTravelers: 20,
+    pickupAvailable: false,
+    pickupAreas: [],
+    pickupLocations: [],
+    pickupCustomLocation: false,
+    pickupLeadTime: 30,
+    dropoffAvailable: false,
+    dropoffSameAsPickup: true,
+    dropoffTime: 0,
+    pickupAdditionalDetails: "",
+    pickupType: "",
+    pickupAppearance: "",
+    pickupPhotoUrls: [],
     pickupDescription: "",
     additionalInfo: "",
     uniqueSellingPoints: "",
     travelerRequirements: "",
     languages: ["English"],
+    writingLanguage: "English",
+    hasGuideLead: false,
+    guideType: "",
+    resellerType: "not_reseller",
+    accessibility: {
+      wheelchairAccessible: true,
+      transportationWheelchairAccessible: true,
+      surfacesWheelchairAccessible: true,
+      strollerAccessible: true,
+      serviceAnimalsAllowed: true,
+      publicTransportation: true,
+      infantsOnLaps: true,
+      infantSeatsAvailable: true,
+    },
+    healthRestrictions: [
+      "Not recommended for travelers with back problems",
+      "Not recommended for pregnant travelers",
+    ],
+    physicalDifficulty: "easy",
+    contactPhone: {
+      countryCode: "+233",
+      number: "",
+    },
+    passportRequired: false,
+    flightInfoRequired: false,
+    shipInfoRequired: false,
+    trainInfoRequired: false,
+    hotelInfoRequired: false,
   },
   status: "draft",
   totalBookings: 0,
@@ -122,28 +270,88 @@ export const useProductBuilderStore = create(
       errors: {},
       hasHydrated: false,
 
+      currentSectionId: "basics",
+      currentStepId: "language-and-title",
+      completedStepIds: [],
+
       setHasHydrated: (state) => set({ hasHydrated: state }),
 
       setStep: (step) => {
-        set({ currentStep: step });
+        const mapping = STEP_INDEX_TO_SECTION_STEP[step] || getDefaultSectionStep();
+        set({
+          currentStep: step,
+          currentSectionId: mapping.sectionId,
+          currentStepId: mapping.stepId,
+        });
       },
 
       nextStep: () => {
-        const { currentStep, completedSteps } = get();
+        const { currentStep, completedSteps, currentStepId, completedStepIds } = get();
         const newCompleted = [...new Set([...completedSteps, currentStep])];
+        const newCompletedStepIds = [
+          ...new Set([...completedStepIds, currentStepId]),
+        ];
+        const nextIndex = Math.min(currentStep + 1, STEPS.length - 1);
+        const mapping = STEP_INDEX_TO_SECTION_STEP[nextIndex] || getDefaultSectionStep();
         set({
-          currentStep: Math.min(currentStep + 1, STEPS.length - 1),
+          currentStep: nextIndex,
           completedSteps: newCompleted,
+          currentSectionId: mapping.sectionId,
+          currentStepId: mapping.stepId,
+          completedStepIds: newCompletedStepIds,
         });
       },
 
       prevStep: () => {
         const { currentStep } = get();
-        set({ currentStep: Math.max(currentStep - 1, 0) });
+        const prevIndex = Math.max(currentStep - 1, 0);
+        const mapping = STEP_INDEX_TO_SECTION_STEP[prevIndex] || getDefaultSectionStep();
+        set({
+          currentStep: prevIndex,
+          currentSectionId: mapping.sectionId,
+          currentStepId: mapping.stepId,
+        });
       },
 
       goToStep: (step) => {
-        set({ currentStep: step });
+        const mapping = STEP_INDEX_TO_SECTION_STEP[step] || getDefaultSectionStep();
+        set({
+          currentStep: step,
+          currentSectionId: mapping.sectionId,
+          currentStepId: mapping.stepId,
+        });
+      },
+
+      navigateTo: (sectionId, stepId) => {
+        const step = findSectionStep(sectionId, stepId);
+        if (!step) return;
+        set({
+          currentSectionId: sectionId,
+          currentStepId: stepId,
+          currentStep: step.stepIndex,
+        });
+      },
+
+      getSectionProgress: (sectionId) => {
+        const { completedStepIds } = get();
+        const section = SECTIONS.find((s) => s.id === sectionId);
+        if (!section) return { completed: 0, total: 0, percentage: 0 };
+        const completed = section.steps.filter((s) =>
+          completedStepIds.includes(s.id)
+        ).length;
+        const total = section.steps.length;
+        return {
+          completed,
+          total,
+          percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
+        };
+      },
+
+      getOverallProgress: () => {
+        const { completedStepIds } = get();
+        const totalSteps = SECTIONS.reduce((sum, s) => sum + s.steps.length, 0);
+        if (totalSteps === 0) return 0;
+        return Math.round((completedStepIds.length / totalSteps) * 100);
       },
 
       updateProduct: (updates) => {
@@ -180,11 +388,22 @@ export const useProductBuilderStore = create(
         const errors = {};
 
         switch (stepIndex) {
-          case 0: // Product Type
+          case 0: // Language & Title
+            if (!product.title?.trim()) {
+              errors.title = "Title is required";
+            } else if (product.title.length > 200) {
+              errors.title = "Title must be less than 200 characters";
+            }
+
+            if (!product.content?.writingLanguage) {
+              errors.writingLanguage = "Please select a language";
+            }
+            break;
+
+          case 1: // Categorization
             if (!product.productType) errors.productType = "Please select a product type";
             if (product.productType === "tour") {
               if (!product.tourTransportationModes?.length) errors.tourTransportationModes = "Please select at least one transportation mode";
-              if (!product.tourDurationCategory) errors.tourDurationCategory = "Please select a tour duration";
             }
             if (product.productType === "activity") {
               if (!product.activityCategories?.length) errors.activityCategories = "Please select at least one activity category";
@@ -194,58 +413,12 @@ export const useProductBuilderStore = create(
             }
             break;
 
-          case 1: // Basics
-            if (!product.title?.trim()) {
-              errors.title = "Title is required";
-            } else if (product.title.length > 200) {
-              errors.title = "Title must be less than 200 characters";
+          case 2: // Theme
+            if (!product.secondaryThemes?.length) {
+              errors.secondaryThemes = "Please select at least one theme";
+            } else if (product.secondaryThemes.length > 3) {
+              errors.secondaryThemes = "Maximum 3 themes allowed";
             }
-
-            if (!product.description?.trim()) {
-              errors.description = "Description is required";
-            } else if (product.description.trim().length < 50) {
-              errors.description = "Description must be at least 50 characters";
-            } else if (product.description.length > 5000) {
-              errors.description = "Description must be less than 5000 characters";
-            }
-
-            if (!product.category) errors.category = "Category is required";
-            if (!product.subcategory?.trim()) errors.subcategory = "Subcategory is required";
-            if (!product.activityType) errors.activityType = "Activity type is required";
-            if (!product.city?.trim()) errors.city = "City is required";
-            if (!product.country?.trim()) errors.country = "Country is required";
-            if (!product.metaTitle?.trim()) errors.metaTitle = "Meta title is required";
-            if (!product.duration) errors.duration = "Duration is required";
-
-            // Latitude / longitude: both must be present together or neither
-            const hasLat = product.latitude !== null && product.latitude !== undefined && product.latitude !== '';
-            const hasLng = product.longitude !== null && product.longitude !== undefined && product.longitude !== '';
-            if (hasLat !== hasLng) {
-              if (hasLat) errors.longitude = "Both latitude and longitude must be provided together";
-              if (hasLng) errors.latitude = "Both latitude and longitude must be provided together";
-            }
-            if (hasLat) {
-              const lat = Number(product.latitude);
-              if (Number.isNaN(lat) || lat < -90 || lat > 90) {
-                errors.latitude = "Latitude must be a number between -90 and 90";
-              }
-            }
-            if (hasLng) {
-              const lng = Number(product.longitude);
-              if (Number.isNaN(lng) || lng < -180 || lng > 180) {
-                errors.longitude = "Longitude must be a number between -180 and 180";
-              }
-            }
-            break;
-
-          case 2: // Content
-            if (!product.content.itinerary?.length) errors.itinerary = "At least one itinerary item is required";
-            if (normalizeHighlights(product.content.highlights).length === 0) {
-              errors.highlights = "At least one tour highlight is required";
-            }
-            if (!product.content.meetingInstructions?.trim()) errors.meetingInstructions = "Meeting instructions are required";
-            if (!product.content.uniqueSellingPoints?.trim()) errors.uniqueSellingPoints = "Please describe what makes your product unique";
-            if (!product.content.languages?.length) errors.languages = "At least one language is required";
             break;
 
           case 3: // Photos & Media
@@ -256,38 +429,87 @@ export const useProductBuilderStore = create(
             }
             break;
 
-          case 4: // Pricing
-            if (!product.pricing.basePrice || Number(product.pricing.basePrice) <= 0) {
-              errors.basePrice = "Base price must be greater than 0";
+          case 4: // Meeting & Pickup
+            if (product.content.pickupAvailable) {
+              if (!product.content.pickupAreas?.length) errors.pickupAreas = "Select at least one pickup area";
+              if (!product.content.pickupLocations?.length) errors.pickupLocations = "Add at least one pickup location";
+              if (!product.content.pickupLeadTime && product.content.pickupLeadTime !== 0) errors.pickupLeadTime = "Pickup lead time is required";
+              if (!product.content.pickupType?.trim()) errors.pickupType = "Pickup type is required";
+            } else {
+              if (!product.content.meetingPoint?.trim()) errors.meetingPoint = "Meeting point is required";
             }
-            if (!product.pricing.startDate) errors.pricingStartDate = "Pricing start date is required";
-            if (!product.pricing.endDate) errors.pricingEndDate = "Pricing end date is required";
-            if (!product.pricing.currency || product.pricing.currency.length !== 3) {
-              errors.currency = "Valid 3-letter currency code is required (e.g. USD)";
-            }
-            if (!product.pricing.tiers || product.pricing.tiers.length === 0) {
-              errors.pricingSchedule = "At least one pricing schedule is required";
+            if (!product.content.meetingInstructions?.trim()) errors.meetingInstructions = "Meeting instructions are required";
+            break;
+
+          case 5: // Tour Details
+            if (!product.content.itinerary?.length) errors.itinerary = "At least one itinerary item is required";
+            if (normalizeHighlights(product.content.highlights).length === 0) {
+              errors.highlights = "At least one tour highlight is required";
             }
             break;
 
-          case 5: // Schedule
+          case 6: // Languages Offered
+            if (!product.content.languages?.length) errors.languages = "At least one language is required";
+            break;
+
+          case 7: // Inclusions & Exclusions
+            if (!product.content.included?.length) errors.included = "Add at least one inclusion";
+            if (!product.content.excluded?.length) errors.excluded = "Add at least one exclusion";
+            if (!product.content.inclusionsConfirmed) errors.inclusionsConfirmed = "Please confirm the information is accurate";
+            break;
+
+          case 8: // What Makes Your Product Unique
+            if (!product.content.uniqueSellingPoints?.trim()) {
+              errors.uniqueSellingPoints = "Please describe what makes your product unique";
+            } else if (product.content.uniqueSellingPoints.trim().length < 100) {
+              errors.uniqueSellingPoints = "Please enter a minimum of 100 characters";
+            }
+            break;
+
+          case 9: // Information Travelers Need
+            break;
+
+          case 10: // Traveler Details
+            break;
+
+          case 11: // Pricing Schedules
+            if (!product.pricing.pricingModel) {
+              errors.pricingModel = "Pricing model is required";
+            }
+            if (!product.pricing.currency || product.pricing.currency.length !== 3) {
+              errors.currency = "Valid currency is required";
+            }
+            if (!product.pricing.ageGroups?.some((ag) => ag.enabled)) {
+              errors.ageGroups = "At least one age group must be enabled";
+            }
+            if (!product.pricing.maxTravelersPerBooking || product.pricing.maxTravelersPerBooking < 1) {
+              errors.maxTravelers = "Maximum travelers per booking is required";
+            }
+            break;
+
+          case 12: // Booking Process
             if (!product.schedule.operatingDays?.length) {
               errors.operatingDays = "At least one operating day is required";
             }
+            if (!product.bookingRules.minAdvanceBookingHours || product.bookingRules.minAdvanceBookingHours < 1) {
+              errors.minAdvanceBookingHours = "Minimum advance booking hours is required";
+            }
             break;
 
-          case 6: // Booking Rules
-            if (!product.bookingRules.meetingPoint?.trim()) errors.meetingPoint = "Meeting point is required";
-            if (!product.bookingRules.meetingPointAddress?.trim()) errors.meetingPointAddress = "Meeting point address is required";
+          case 13: // Cancellation Policy
+            break;
+
+          case 14: // Traveler Required Info
+            break;
+
+          case 15: // Ticket Builder
+            break;
+
+          case 16: // Ticket Redemption
             break;
 
           default:
             break;
-        }
-
-        // Global tag validation (applies across all steps)
-        if (product.tags && product.tags.length > 10) {
-          errors.tags = "Maximum 10 tags allowed";
         }
 
         const isValid = Object.keys(errors).length === 0;
@@ -304,6 +526,9 @@ export const useProductBuilderStore = create(
           isSaving: false,
           lastSaved: null,
           errors: {},
+          currentSectionId: "basics",
+          currentStepId: "language-and-title",
+          completedStepIds: [],
         });
       },
 
@@ -336,11 +561,21 @@ export const useProductBuilderStore = create(
         },
         currentStep: state.currentStep,
         completedSteps: state.completedSteps,
+        currentSectionId: state.currentSectionId,
+        currentStepId: state.currentStepId,
+        completedStepIds: state.completedStepIds,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasHydrated = true;
-          // Strip invalid blob URLs from persisted photos
+          state.product = {
+            ...INITIAL_PRODUCT,
+            ...state.product,
+            content: { ...INITIAL_PRODUCT.content, ...state.product?.content },
+            bookingRules: { ...INITIAL_PRODUCT.bookingRules, ...state.product?.bookingRules },
+            pricing: { ...INITIAL_PRODUCT.pricing, ...state.product?.pricing },
+            schedule: { ...INITIAL_PRODUCT.schedule, ...state.product?.schedule },
+          };
           if (state.product?.photos) {
             state.product.photos = state.product.photos.filter(
               (p) => !p.url?.startsWith?.('blob:'),

@@ -775,3 +775,6 @@
 .dashboard-date-picker .react-datepicker__day--selected .availability-day-dot {
   background: #fff;
 }
+
+.scrollbar-none {-ms-overflow-style: none;scrollbar-width: none;}
+.scrollbar-none::-webkit-scrollbar {display: none;}

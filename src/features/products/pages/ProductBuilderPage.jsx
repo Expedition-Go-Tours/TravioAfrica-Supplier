@@ -1,18 +1,27 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { RotateCcw, X, Loader2, AlertCircle } from "lucide-react";
-import { useProductBuilderStore } from "@/features/products/stores/productBuilderStore";
+import { X, Loader2, AlertCircle, Menu } from "lucide-react";
+import { useProductBuilderStore, SECTIONS } from "@/features/products/stores/productBuilderStore";
 import { getMyProduct } from "@/features/products/api";
 import WizardStepLayout from "@/features/products/components/WizardStepLayout";
-import ProductTypeStep from "@/features/products/components/ProductTypeStep";
-import ProductBasicsStep from "@/features/products/components/ProductBasicsStep";
+import WizardSidebar from "@/features/products/components/WizardSidebar";
+import LanguageTitleStep from "@/features/products/components/LanguageTitleStep";
+import CategorizationStep from "@/features/products/components/CategorizationStep";
+import ThemeStep from "@/features/products/components/ThemeStep";
 import ProductPhotosStep from "@/features/products/components/ProductPhotosStep";
-import ProductPricingStep from "@/features/products/components/ProductPricingStep";
-import ProductScheduleStep from "@/features/products/components/ProductScheduleStep";
-import ProductBookingStep from "@/features/products/components/ProductBookingStep";
-import ProductContentStep from "@/features/products/components/ProductContentStep";
-import ProductReviewStep from "@/features/products/components/ProductReviewStep";
+import MeetingPickupStep from "@/features/products/components/MeetingPickupStep";
+import TourDetailsStep from "@/features/products/components/TourDetailsStep";
+import LanguagesOfferedStep from "@/features/products/components/LanguagesOfferedStep";
+import InclusionsExclusionsStep from "@/features/products/components/InclusionsExclusionsStep";
+import USPStep from "@/features/products/components/USPStep";
+import TravelerInfoStep from "@/features/products/components/TravelerInfoStep";
+import TravelerDetailsStep from "@/features/products/components/TravelerDetailsStep";
+import PricingSchedulesStep from "@/features/products/components/PricingSchedulesStep";
+import BookingProcessStep from "@/features/products/components/BookingProcessStep";
+import CancellationPolicyStep from "@/features/products/components/CancellationPolicyStep";
+import TravelerRequiredInfoStep from "@/features/products/components/TravelerRequiredInfoStep";
+import PreviewStep from "@/features/products/components/PreviewStep";
 import { normalizeHighlights } from "@/features/products/utils/normalizeHighlights";
 import { normalizeItinerary } from "@/features/products/utils/normalizeItinerary";
 import {
@@ -20,14 +29,22 @@ import {
 } from "@/features/products/utils/productTypeFromCategorization";
 
 const STEPS = [
-  { id: "type", label: "Product Type", description: "Choose the type of product you are creating.", component: ProductTypeStep },
-  { id: "basics", label: "Product Basics", description: "Enter the basic information about your product.", component: ProductBasicsStep },
-  { id: "content", label: "Product Content", description: "Add itinerary, highlights, languages, and other content.", component: ProductContentStep },
+  { id: "language-and-title", label: "Language & Title", description: "Choose your writing language and set your product title.", component: LanguageTitleStep },
+  { id: "categorization", label: "Categorization", description: "Choose your product type and categorize it.", component: CategorizationStep },
+  { id: "theme", label: "Theme", description: "Choose themes that best describe your product.", component: ThemeStep },
   { id: "photos", label: "Photos & Media", description: "Upload photos and add media to showcase your product.", component: ProductPhotosStep },
-  { id: "pricing", label: "Pricing & Tickets", description: "Set pricing tiers, taxes, and cancellation policies.", component: ProductPricingStep },
-  { id: "schedule", label: "Schedule & Availability", description: "Define when your product operates and capacity limits.", component: ProductScheduleStep },
-  { id: "booking", label: "Booking Rules", description: "Configure how customers can book your product.", component: ProductBookingStep },
-  { id: "review", label: "Review & Submit", description: "Review all details before submitting your product.", component: ProductReviewStep },
+  { id: "meeting-and-pickup", label: "Meeting & Pickup", description: "Set meeting and pickup instructions.", component: MeetingPickupStep },
+  { id: "tour-details", label: "Tour Details", description: "Add itinerary and highlights for your product.", component: TourDetailsStep },
+  { id: "languages-offered", label: "Languages Offered", description: "Select languages your product is offered in.", component: LanguagesOfferedStep },
+  { id: "inclusions-exclusions", label: "Inclusions & Exclusions", description: "Specify what's included and excluded.", component: InclusionsExclusionsStep },
+  { id: "unique-selling-points", label: "What Makes Your Product Unique", description: "Describe what sets your product apart.", component: USPStep },
+  { id: "info-travelers-need", label: "Information Travelers Need", description: "Provide important information for travelers.", component: TravelerInfoStep },
+  { id: "traveler-details", label: "Traveler Details", description: "Select details to collect from travelers.", component: TravelerDetailsStep },
+  { id: "pricing-schedules", label: "Pricing Schedules", description: "Set pricing tiers, taxes, and fees.", component: PricingSchedulesStep },
+  { id: "booking-process", label: "Booking Process", description: "Configure booking confirmation, cut-off, and operating days.", component: BookingProcessStep },
+  { id: "cancellation-policy", label: "Cancellation Policy", description: "Set cancellation and refund policies.", component: CancellationPolicyStep },
+  { id: "traveler-required-info", label: "Traveler Required Info", description: "Select information to collect from travelers.", component: TravelerRequiredInfoStep },
+  { id: "preview", label: "Preview", description: "Preview your product before submitting.", component: PreviewStep },
 ];
 
 function tourToProduct(tour) {
@@ -110,7 +127,7 @@ function tourToProduct(tour) {
     transportCategories,
     city: location.city || tour.city || "",
     country: location.country || tour.country || "",
-    region: location.region || tour.region || "",
+    region: location.region || "",
     latitude: tour.latitude,
     longitude: tour.longitude,
     metaTitle: tour.metaTitle || tour.title || "",
@@ -123,8 +140,6 @@ function tourToProduct(tour) {
     })),
     heroImage: (() => {
       if (!tour.coverPhoto) return null;
-      // Backend may apply different Cloudinary transformations to coverPhoto vs photos,
-      // so compare by public ID (the part after /v1/ or the last path segment).
       const extractId = (url) => {
         if (!url) return '';
         const m = url.match(/\/(?:v\d+\/)?([^/]+)$/);
@@ -160,6 +175,15 @@ function tourToProduct(tour) {
       capacityPerSlot: schedules.capacityPerSlot ?? 20,
       bookingCutoffHours: cancellation.cutoffHours ?? 24,
     },
+    introOffer: {
+      enabled: false,
+      discountPercentage: "",
+      discountType: "percentage",
+      startDate: "",
+      endDate: "",
+      bookableStartDate: "",
+      bookableEndDate: "",
+    },
     bookingRules: {
       confirmationType: booking.instantBooking ? "instant" : "manual",
       minAdvanceBookingHours: booking.minAdvanceBookingHours ?? 48,
@@ -175,6 +199,10 @@ function tourToProduct(tour) {
       pickupDetails: booking.pickupDetails || "",
       inclusions: content.included || [],
       exclusions: content.excluded || [],
+      travelerRequiredInfo: [],
+      ticketTypes: [],
+      redemptionInstructions: "",
+      redemptionVenueAddress: "",
     },
     content: {
       itinerary: normalizeItinerary(content.itinerary),
@@ -188,6 +216,11 @@ function tourToProduct(tour) {
       uniqueSellingPoints: content.uniqueSellingPoints || "",
       travelerRequirements: content.travelerRequirements || "",
       languages: content.languages || ["English"],
+      passportRequired: false,
+      flightInfoRequired: false,
+      shipInfoRequired: false,
+      trainInfoRequired: false,
+      hotelInfoRequired: false,
     },
     status: (tour.status || "draft").toLowerCase(),
     totalBookings: tour._count?.bookings ?? tour.totalBookings ?? 0,
@@ -202,52 +235,47 @@ function tourToProduct(tour) {
 }
 
 export default function ProductBuilderPage() {
-  const { id, step } = useParams();
+  const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { currentStep, setStep, reset, loadDraft, hasHydrated } = useProductBuilderStore();
+  const {
+    currentStep,
+    reset,
+    loadDraft,
+    hasHydrated,
+    currentSectionId,
+    currentStepId,
+    navigateTo,
+  } = useProductBuilderStore();
   const [loadingProduct, setLoadingProduct] = useState(false);
   const [productError, setProductError] = useState(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  // Read query params
+  const querySection = searchParams.get("section") || "basics";
+  const queryStep = searchParams.get("step") || "language-and-title";
 
-  // Map URL step param to step index
-  const foundIndex = STEPS.findIndex((s) => s.id === step);
-  const stepIndex = foundIndex !== -1 ? foundIndex : 0;
-
-  // Check for saved draft on initial hydration
+  // Sync store with query params on mount / param change
   useEffect(() => {
     if (!hasHydrated) return;
-
-    if (id && id !== "new") return;
-
-    const saved = localStorage.getItem("product-builder-draft");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const savedProduct = parsed.state?.product;
-        if (savedProduct && savedProduct.title && savedProduct.title.trim().length > 0) {
-          setShowRestoreBanner(true);
-        }
-      } catch {
-        // Invalid JSON, ignore
+    const section = SECTIONS.find((s) => s.id === querySection);
+    if (section) {
+      const step = section.steps.find((s) => s.id === queryStep);
+      if (step) {
+        navigateTo(querySection, queryStep);
       }
     }
-  }, [hasHydrated, id]);
+  }, [querySection, queryStep, hasHydrated]);
 
-  // Sync URL with store
+  // Update URL when store changes (via next/prev buttons)
   useEffect(() => {
-    if (step && stepIndex !== currentStep) {
-      setStep(stepIndex);
+    if (!hasHydrated) return;
+    const section = currentSectionId || "basics";
+    const step = currentStepId || "language-and-title";
+    if (section !== querySection || step !== queryStep) {
+      setSearchParams({ section, step }, { replace: true });
     }
-  }, [step, stepIndex]);
-
-  // Update URL when step changes
-  useEffect(() => {
-    const currentStepId = STEPS[currentStep]?.id;
-    if (currentStepId && currentStepId !== step) {
-      navigate(`/products/build/${id || "new"}/${currentStepId}`, { replace: true });
-    }
-  }, [currentStep]);
+  }, [currentSectionId, currentStepId, hasHydrated]);
 
   // Load existing product from API when editing
   useEffect(() => {
@@ -278,34 +306,6 @@ export default function ProductBuilderPage() {
 
     return () => { cancelled = true; };
   }, [id, hasHydrated]);
-
-  const handleRestoreDraft = () => {
-    const saved = localStorage.getItem("product-builder-draft");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const savedState = parsed.state;
-        if (savedState) {
-          loadDraft(savedState.product);
-          const savedStep = savedState.currentStep ?? 0;
-          setStep(savedStep);
-          const stepId = STEPS[savedStep]?.id;
-          if (stepId) {
-            navigate(`/products/build/new/${stepId}`, { replace: true });
-          }
-        }
-      } catch {
-        localStorage.removeItem("product-builder-draft");
-      }
-    }
-    setShowRestoreBanner(false);
-  };
-
-  const handleDismissBanner = () => {
-    localStorage.removeItem("product-builder-draft");
-    reset();
-    setShowRestoreBanner(false);
-  };
 
   if (loadingProduct) {
     return (
@@ -341,71 +341,60 @@ export default function ProductBuilderPage() {
   const CurrentStepComponent = STEPS[currentStep]?.component;
 
   return (
-    <div className="p-4 md:p-6">
-      {/* Draft Restore Banner */}
-      {showRestoreBanner && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-4 p-4 bg-amber-50 border border-amber-400 rounded-xl flex items-start gap-3 shadow-sm"
-        >
-          <RotateCcw size={18} className="text-amber-700 mt-0.5 shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-slate-800">
-              You have an unsaved draft
-            </p>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Would you like to continue where you left off? All your inputs are preserved.
-            </p>
-            <div className="flex items-center gap-2 mt-2">
-              <button
-                onClick={handleRestoreDraft}
-                className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors"
-              >
-                Continue Editing
-              </button>
-              <button
-                onClick={handleDismissBanner}
-                className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-50 transition-colors"
-              >
-                Start New
-              </button>
+    <div className="h-screen flex flex-col overflow-hidden">
+      {/* Fixed header */}
+      <div className="flex-shrink-0 p-4 md:p-6 pb-0">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-1 h-10 bg-linear-to-b from-emerald-500 to-emerald-300 rounded-full" />
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-slate-800">
+                {id && id !== "new" ? "Edit Product" : "Create New Product"}
+              </h1>
+              <p className="text-sm text-slate-500 mt-0.5">
+                Step {currentStep + 1} of {STEPS.length}: {STEPS[currentStep]?.label}
+              </p>
             </div>
           </div>
+          {/* Mobile sidebar toggle */}
           <button
-            onClick={() => setShowRestoreBanner(false)}
-            className="text-slate-400 hover:text-slate-500"
-            aria-label="Dismiss"
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            className="lg:hidden flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors"
           >
-            <X size={16} />
+            <Menu size={16} />
+            Sections
           </button>
-        </motion.div>
-      )}
-
-      {/* Page Header */}
-      <div className="flex items-start gap-3 mb-6 max-w-5xl mx-auto">
-        <div className="w-1 h-10 bg-linear-to-b from-emerald-500 to-emerald-300 rounded-full shrink-0" />
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-slate-800">
-            {id && id !== "new" ? "Edit Product" : "Create New Product"}
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Step {currentStep + 1} of {STEPS.length}: {STEPS[currentStep]?.label}
-          </p>
         </div>
       </div>
 
-      {/* Wizard */}
-      <motion.div
-        key={currentStep}
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, ease: "easeOut" }}
-      >
+      {/* Mobile sidebar overlay */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl overflow-y-auto">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <span className="text-sm font-semibold text-slate-800">Sections</span>
+              <button
+                onClick={() => setMobileSidebarOpen(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <WizardSidebar />
+          </div>
+        </div>
+      )}
+
+      {/* Wizard area — fills remaining height */}
+      <div className="flex-1 min-h-0 px-4 md:px-6 pb-4 md:pb-6">
         <WizardStepLayout title={STEPS[currentStep]?.label} description={STEPS[currentStep]?.description}>
           {CurrentStepComponent && <CurrentStepComponent />}
         </WizardStepLayout>
-      </motion.div>
+      </div>
     </div>
   );
 }

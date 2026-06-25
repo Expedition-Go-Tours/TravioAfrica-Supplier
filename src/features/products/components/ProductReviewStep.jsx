@@ -92,11 +92,10 @@ export default function ProductReviewStep() {
         }
         break;
       case 4:
-        if (!product.pricing.basePrice || Number(product.pricing.basePrice) <= 0) stepErrors.price = "Base price must be greater than 0";
-        if (!product.pricing.startDate) stepErrors.pricingStartDate = "Pricing start date required";
-        if (!product.pricing.endDate) stepErrors.pricingEndDate = "Pricing end date required";
-        if (!product.pricing.currency || product.pricing.currency.length !== 3) stepErrors.currency = "Valid 3-letter currency code required";
-        if (!product.pricing.tiers || product.pricing.tiers.length === 0) stepErrors.pricingSchedule = "At least one pricing schedule required";
+        if (!product.pricing.pricingModel) stepErrors.pricingModel = "Pricing model required";
+        if (!product.pricing.currency || product.pricing.currency.length !== 3) stepErrors.currency = "Valid currency required";
+        if (!product.pricing.ageGroups?.some((ag) => ag.enabled)) stepErrors.ageGroups = "At least one age group required";
+        if (!product.pricing.maxTravelersPerBooking || product.pricing.maxTravelersPerBooking < 1) stepErrors.maxTravelers = "Max travelers per booking required";
         break;
       case 5:
         if (!product.schedule.operatingDays?.length) stepErrors.days = "Operating days required";
@@ -247,16 +246,28 @@ export default function ProductReviewStep() {
           <div className="px-5 py-4">
             <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Pricing</h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-2.5 text-sm">
-              <PreviewRow label="Base Price" value={product.pricing.basePrice > 0 ? `$${product.pricing.basePrice}` : "—"} />
+              <PreviewRow label="Pricing Model" value={product.pricing.pricingModel === "perPerson" ? "Per Person" : "Per Vehicle/Group"} />
               <PreviewRow label="Currency" value={product.pricing.currency || "—"} />
-              <PreviewRow label="Pricing Dates" value={product.pricing.startDate && product.pricing.endDate ? `${product.pricing.startDate} to ${product.pricing.endDate}` : "—"} />
-              {product.pricing.tiers?.length > 0 && (
+              <PreviewRow label="Max Travelers" value={product.pricing.maxTravelersPerBooking ? `${product.pricing.maxTravelersPerBooking} per booking` : "—"} />
+              {product.pricing.ageGroups?.filter(ag => ag.enabled).length > 0 && (
                 <div className="sm:col-span-3">
-                  <span className="text-slate-500">Pricing Tiers: </span>
+                  <span className="text-slate-500">Age Groups: </span>
                   <div className="inline-flex flex-wrap gap-1.5 mt-0.5">
-                    {product.pricing.tiers.map((tier, i) => (
+                    {product.pricing.ageGroups.filter(ag => ag.enabled).map((ag, i) => (
                       <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-700 text-xs rounded-md">
-                        {tier.name}: ${tier.price}
+                        {ag.name} ({ag.minAge}-{ag.maxAge})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {product.pricing.schedules?.[0]?.prices?.length > 0 && (
+                <div className="sm:col-span-3">
+                  <span className="text-slate-500">Prices: </span>
+                  <div className="inline-flex flex-wrap gap-1.5 mt-0.5">
+                    {product.pricing.schedules[0].prices.map((p, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-700 text-xs rounded-md">
+                        {p.ageGroup}: ${p.retailPrice}
                       </span>
                     ))}
                   </div>
