@@ -1,38 +1,21 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter } from "react-router-dom";
-import ScrollToTop from "@/components/shared/ScrollToTop";
-import { Toaster } from "sonner";
-import { TeamRoleProvider } from "@/contexts/TeamRoleContext";
+import { RouterProvider } from "react-router-dom";
+import { router } from "./routes";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 5,
       refetchOnWindowFocus: false,
       retry: 1,
     },
   },
 });
 
-export default function Providers({ children }) {
+export default function Providers() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <ScrollToTop />
-        <TeamRoleProvider>
-          {children}
-        </TeamRoleProvider>
-        <Toaster
-          position="top-right"
-          richColors
-          closeButton
-          toastOptions={{
-            style: {
-              fontFamily: "'DM Sans', system-ui, sans-serif",
-            },
-          }}
-        />
-      </BrowserRouter>
+      <RouterProvider router={router} />
     </QueryClientProvider>
   );
 }

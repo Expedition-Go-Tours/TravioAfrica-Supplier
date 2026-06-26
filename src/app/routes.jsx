@@ -1,8 +1,12 @@
-import { Routes, Route, Navigate, useParams } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet, useParams } from "react-router-dom";
+import ScrollToTop from "@/components/shared/ScrollToTop";
+import { TeamRoleProvider } from "@/contexts/TeamRoleContext";
+import { Toaster } from "sonner";
 import AppShell from "@/components/layout/AppShell";
 import ProtectedRoute from "@/components/shared/ProtectedRoute";
+import AuthOnlyRoute from "@/components/shared/AuthOnlyRoute";
+import GuestRoute from "@/components/shared/GuestRoute";
 
-// Pages
 import DashboardPage from "@/features/dashboard/pages/DashboardPage";
 import BookingsPage from "@/features/bookings/pages/BookingsPage";
 import AvailabilityPage from "@/features/availability/pages/AvailabilityPage";
@@ -19,20 +23,13 @@ import CancellationRatePage from "@/features/cancellation/pages/CancellationRate
 import SpecialOffersListPage from "@/features/special-offers/pages/SpecialOffersListPage";
 import SpecialOfferBuilderPage from "@/features/special-offers/pages/SpecialOfferBuilderPage";
 
-import GuestRoute from "@/components/shared/GuestRoute";
-
-// Auth Pages (rendered outside AppShell)
 import AuthCallback from "@/features/auth/pages/AuthCallback";
 import LoginPage from "@/features/auth/pages/LoginPage";
 
-// Supplier Pages (rendered outside AppShell)
 import SupplierStatusPage from "@/features/supplier/pages/SupplierStatusPage";
 
-// Team Invite (auth-only, no supplier check)
 import TeamInvitePage from "@/pages/TeamInvitePage";
-import AuthOnlyRoute from "@/components/shared/AuthOnlyRoute";
 
-// Error Pages
 import NotFoundPage from "@/pages/errors/NotFoundPage";
 import ServerErrorPage from "@/pages/errors/ServerErrorPage";
 import ForbiddenPage from "@/pages/errors/ForbiddenPage";
@@ -64,60 +61,75 @@ function ProductBuilderRedirect() {
   return <Navigate to={target} replace />;
 }
 
-export default function AppRoutes() {
+function RootLayout() {
   return (
-    <Routes>
-      {/* Auth Pages (without AppShell) */}
-      <Route path="/auth/callback" element={<AuthCallback />} />
-      <Route
-        path="/login"
-        element={
-          <GuestRoute>
-            <LoginPage />
-          </GuestRoute>
-        }
+    <>
+      <ScrollToTop />
+      <TeamRoleProvider>
+        <Outlet />
+      </TeamRoleProvider>
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        toastOptions={{
+          style: {
+            fontFamily: "'DM Sans', system-ui, sans-serif",
+          },
+        }}
       />
-
-      {/* Supplier Status (without AppShell — full-screen status check) */}
-      <Route path="/supplier/status" element={<SupplierStatusPage />} />
-
-      {/* Error Pages (without AppShell) */}
-      <Route path="/error/404" element={<NotFoundPage />} />
-      <Route path="/error/500" element={<ServerErrorPage />} />
-      <Route path="/error/403" element={<ForbiddenPage />} />
-      <Route path="/error/network" element={<NetworkErrorPage />} />
-
-      {/* Auth-only routes (no supplier status check) */}
-      <Route element={<AuthOnlyRoute />}>
-        <Route path="/team/invite" element={<TeamInvitePage />} />
-      </Route>
-
-      {/* Protected layout — checks auth & supplier status */}
-      <Route element={<ProtectedRoute />}>
-        {/* Main App Layout (with AppShell) */}
-        <Route element={<AppShell />}>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/bookings" element={<BookingsPage />} />
-          <Route path="/availability" element={<AvailabilityPage />} />
-          <Route path="/products" element={<ProductsListPage />} />
-          <Route path="/products/:id" element={<ProductDetailPage />} />
-          <Route path="/products/build/:id/:step" element={<ProductBuilderRedirect />} />
-          <Route path="/products/build/:id?" element={<ProductBuilderPage />} />
-          <Route path="/reviews" element={<ReviewsPage />} />
-          <Route path="/finance" element={<FinancePage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/customers" element={<Navigate to="/chat" replace />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/cancellation-rate" element={<CancellationRatePage />} />
-          <Route path="/special-offers" element={<SpecialOffersListPage />} />
-          <Route path="/special-offers/build/:id?/:step?" element={<SpecialOfferBuilderPage />} />
-
-          {/* Catch-all route for 404 */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Route>
-      </Route>
-    </Routes>
+    </>
   );
 }
+
+export const router = createBrowserRouter([
+  {
+    element: <RootLayout />,
+    children: [
+      { path: "/auth/callback", element: <AuthCallback /> },
+      {
+        path: "/login",
+        element: <GuestRoute><LoginPage /></GuestRoute>,
+      },
+      { path: "/supplier/status", element: <SupplierStatusPage /> },
+      { path: "/error/404", element: <NotFoundPage /> },
+      { path: "/error/500", element: <ServerErrorPage /> },
+      { path: "/error/403", element: <ForbiddenPage /> },
+      { path: "/error/network", element: <NetworkErrorPage /> },
+      {
+        element: <AuthOnlyRoute />,
+        children: [
+          { path: "/team/invite", element: <TeamInvitePage /> },
+        ],
+      },
+      {
+        element: <ProtectedRoute />,
+        children: [
+          {
+            element: <AppShell />,
+            children: [
+              { index: true, element: <DashboardPage /> },
+              { path: "bookings", element: <BookingsPage /> },
+              { path: "availability", element: <AvailabilityPage /> },
+              { path: "products", element: <ProductsListPage /> },
+              { path: "products/:id", element: <ProductDetailPage /> },
+              { path: "products/build/:id/:step", element: <ProductBuilderRedirect /> },
+              { path: "products/build/:id?", element: <ProductBuilderPage /> },
+              { path: "reviews", element: <ReviewsPage /> },
+              { path: "finance", element: <FinancePage /> },
+              { path: "notifications", element: <NotificationsPage /> },
+              { path: "settings", element: <SettingsPage /> },
+              { path: "chat", element: <ChatPage /> },
+              { path: "customers", element: <Navigate to="/chat" replace /> },
+              { path: "analytics", element: <AnalyticsPage /> },
+              { path: "cancellation-rate", element: <CancellationRatePage /> },
+              { path: "special-offers", element: <SpecialOffersListPage /> },
+              { path: "special-offers/build/:id?/:step?", element: <SpecialOfferBuilderPage /> },
+              { path: "*", element: <NotFoundPage /> },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+]);

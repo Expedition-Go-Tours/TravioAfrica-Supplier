@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Layers, ScrollText, Image, DollarSign, CalendarDays, ClipboardList, CheckCircle, MapPin, Globe, Check, Sparkles, Info, Users, Clock, Shield, Ticket } from "lucide-react";
+import { Layers, ScrollText, Image, DollarSign, ClipboardList, MapPin, Globe, Check, Sparkles, Info, Users, Clock, Shield } from "lucide-react";
 import { normalizeHighlights } from "@/features/products/utils/normalizeHighlights";
 
 const STEPS = [
@@ -107,6 +107,7 @@ function getDefaultSectionStep() {
 
 const INITIAL_PRODUCT = {
   title: "",
+  referenceCode: "",
   description: "",
   shortSummary: "",
   category: "",
@@ -158,6 +159,7 @@ const INITIAL_PRODUCT = {
   },
   cancellationPolicy: "flexible",
   refundRules: "",
+  specialOffers: [],
   schedule: {
     operatingDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
     timeSlots: [{ startTime: "09:00", endTime: "12:00" }],
@@ -171,22 +173,15 @@ const INITIAL_PRODUCT = {
     minAdvanceBookingHours: 48,
     maxGroupSize: 20,
     minGroupSize: 1,
-    meetingPoint: "",
-    meetingPointAddress: "",
-    meetingPointLat: null,
-    meetingPointLng: null,
     instantBooking: false,
     refundPercentage: 100,
-    pickupAvailable: false,
-    pickupDetails: "",
-    inclusions: [],
-    exclusions: [],
     travelerRequiredInfo: [],
     ticketTypes: [],
     redemptionInstructions: "",
     redemptionVenueAddress: "",
   },
   content: {
+    shortSummary: "",
     itinerary: [],
     highlights: [],
     included: [],
@@ -212,7 +207,6 @@ const INITIAL_PRODUCT = {
     pickupType: "",
     pickupAppearance: "",
     pickupPhotoUrls: [],
-    pickupDescription: "",
     additionalInfo: "",
     uniqueSellingPoints: "",
     travelerRequirements: "",
@@ -266,8 +260,10 @@ export const useProductBuilderStore = create(
       completedSteps: [],
       isDirty: false,
       isSaving: false,
+      isSubmitting: false,
       lastSaved: null,
       errors: {},
+      submissionErrors: {},
       hasHydrated: false,
 
       currentSectionId: "basics",
@@ -286,7 +282,10 @@ export const useProductBuilderStore = create(
       },
 
       nextStep: () => {
-        const { currentStep, completedSteps, currentStepId, completedStepIds } = get();
+        const { currentStep, completedSteps, currentStepId, completedStepIds, submissionErrors } = get();
+        const remainingSubmissionErrors = Object.fromEntries(
+          Object.entries(submissionErrors).filter(([k]) => Number(k) !== currentStep)
+        );
         const newCompleted = [...new Set([...completedSteps, currentStep])];
         const newCompletedStepIds = [
           ...new Set([...completedStepIds, currentStepId]),
@@ -299,36 +298,51 @@ export const useProductBuilderStore = create(
           currentSectionId: mapping.sectionId,
           currentStepId: mapping.stepId,
           completedStepIds: newCompletedStepIds,
+          submissionErrors: remainingSubmissionErrors,
         });
       },
 
       prevStep: () => {
-        const { currentStep } = get();
+        const { currentStep, submissionErrors } = get();
+        const remainingSubmissionErrors = Object.fromEntries(
+          Object.entries(submissionErrors).filter(([k]) => Number(k) !== currentStep)
+        );
         const prevIndex = Math.max(currentStep - 1, 0);
         const mapping = STEP_INDEX_TO_SECTION_STEP[prevIndex] || getDefaultSectionStep();
         set({
           currentStep: prevIndex,
           currentSectionId: mapping.sectionId,
           currentStepId: mapping.stepId,
+          submissionErrors: remainingSubmissionErrors,
         });
       },
 
       goToStep: (step) => {
+        const { currentStep, submissionErrors } = get();
+        const remainingSubmissionErrors = Object.fromEntries(
+          Object.entries(submissionErrors).filter(([k]) => Number(k) !== currentStep)
+        );
         const mapping = STEP_INDEX_TO_SECTION_STEP[step] || getDefaultSectionStep();
         set({
           currentStep: step,
           currentSectionId: mapping.sectionId,
           currentStepId: mapping.stepId,
+          submissionErrors: remainingSubmissionErrors,
         });
       },
 
       navigateTo: (sectionId, stepId) => {
+        const { currentStep, submissionErrors } = get();
+        const remainingSubmissionErrors = Object.fromEntries(
+          Object.entries(submissionErrors).filter(([k]) => Number(k) !== currentStep)
+        );
         const step = findSectionStep(sectionId, stepId);
         if (!step) return;
         set({
           currentSectionId: sectionId,
           currentStepId: stepId,
           currentStep: step.stepIndex,
+          submissionErrors: remainingSubmissionErrors,
         });
       },
 
@@ -379,9 +393,23 @@ export const useProductBuilderStore = create(
 
       markSaved: () => set({ isDirty: false, lastSaved: new Date().toISOString() }),
 
+      setSubmitting: (val) => set({ isSubmitting: val }),
+
       setErrors: (errors) => set({ errors }),
 
       clearErrors: () => set({ errors: {} }),
+
+      setSubmissionErrors: (errors) => set({ submissionErrors: errors }),
+
+      clearSubmissionErrors: () => set({ submissionErrors: {} }),
+
+      clearStepSubmissionError: (stepIndex) => {
+        set((state) => ({
+          submissionErrors: Object.fromEntries(
+            Object.entries(state.submissionErrors).filter(([k]) => Number(k) !== stepIndex)
+          ),
+        }));
+      },
 
       validateStep: (stepIndex) => {
         const { product } = get();
@@ -467,9 +495,27 @@ export const useProductBuilderStore = create(
             break;
 
           case 9: // Information Travelers Need
+            if (!product.content.physicalDifficulty) {
+              errors.physicalDifficulty = "Please select a physical difficulty level";
+            }
+            if (!product.content.resellerType) {
+              errors.resellerType = "Please indicate if you are acting as a reseller";
+            }
+            if (!product.content.contactPhone?.number?.trim()) {
+              errors.contactPhone = "A contact phone number is required";
+            }
             break;
 
           case 10: // Traveler Details
+            if (
+              !product.content.passportRequired &&
+              !product.content.flightInfoRequired &&
+              !product.content.shipInfoRequired &&
+              !product.content.trainInfoRequired &&
+              !product.content.hotelInfoRequired
+            ) {
+              errors.travelerDetails = "Select at least one traveler detail to collect";
+            }
             break;
 
           case 11: // Pricing Schedules
@@ -497,15 +543,21 @@ export const useProductBuilderStore = create(
             break;
 
           case 13: // Cancellation Policy
+            if (!product.cancellationPolicy) {
+              errors.cancellationPolicy = "Please select a cancellation policy";
+            }
             break;
 
           case 14: // Traveler Required Info
+            if (!product.bookingRules.travelerRequiredInfo?.length) {
+              errors.travelerRequiredInfo = "Select at least one field to collect from travelers";
+            }
             break;
 
-          case 15: // Ticket Builder
-            break;
-
-          case 16: // Ticket Redemption
+          case 15: // Preview
+            if (!product.description?.trim()) {
+              errors.description = "Product description is required for preview";
+            }
             break;
 
           default:
@@ -524,8 +576,10 @@ export const useProductBuilderStore = create(
           completedSteps: [],
           isDirty: false,
           isSaving: false,
+          isSubmitting: false,
           lastSaved: null,
           errors: {},
+          submissionErrors: {},
           currentSectionId: "basics",
           currentStepId: "language-and-title",
           completedStepIds: [],

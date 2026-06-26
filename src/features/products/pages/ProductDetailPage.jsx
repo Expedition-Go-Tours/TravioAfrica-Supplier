@@ -9,7 +9,7 @@ import {
   Tag, Award, Percent, DollarSign, MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getMyProduct, deleteProduct } from "@/features/products/api";
+import { getMyProduct, updateProduct, deleteProduct } from "@/features/products/api";
 import { fetchTourAvailability } from "@/features/availability/api";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { PRODUCT_STATUSES } from "@/lib/constants";
@@ -303,6 +303,7 @@ export default function ProductDetailPage() {
   });
 
   const [deleting, setDeleting] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -335,6 +336,19 @@ export default function ProductDetailPage() {
       .catch(() => {})
       .finally(() => setAvailLoading(false));
   }, [id, availMonth]);
+
+  const handlePublish = async () => {
+    setPublishing(true);
+    try {
+      await updateProduct(id, { status: "ACTIVE" });
+      toast.success("Product is now live!");
+      setTour((prev) => ({ ...prev, status: "ACTIVE" }));
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || "Failed to publish product");
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   const handleDelete = () => {
     setMenuOpen(false);
@@ -436,6 +450,20 @@ export default function ProductDetailPage() {
               <h1 className="text-sm font-semibold text-slate-800 truncate">{tour.title}</h1>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              {tour.status !== "ACTIVE" ? (
+                <button
+                  onClick={handlePublish}
+                  disabled={publishing}
+                  className="flex items-center gap-1.5 px-3.5 h-8 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-200 disabled:opacity-50"
+                >
+                  {publishing ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                  <span>{publishing ? "Publishing..." : "Set Live"}</span>
+                </button>
+              ) : (
+                <span className="flex items-center gap-1.5 px-3.5 h-8 text-emerald-700 bg-emerald-50 rounded-lg text-xs font-medium border border-emerald-200">
+                  <Check size={13} /> Published
+                </span>
+              )}
               <button
                 onClick={() => navigate(`/products/build/${id}/type`)}
                 className="flex items-center gap-1.5 px-3.5 h-8 bg-emerald-700 text-white rounded-lg text-xs font-medium hover:bg-emerald-800 transition-all shadow-sm shadow-emerald-200"

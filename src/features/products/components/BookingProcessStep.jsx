@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Clock, Users, CalendarDays, Plus, X, Info } from "lucide-react";
+import { Clock, Users, Plus, X, Info } from "lucide-react";
 import { useProductBuilderStore } from "@/features/products/stores/productBuilderStore";
 
 const CONFIRMATION_TYPES = [

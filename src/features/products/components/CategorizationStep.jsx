@@ -194,7 +194,7 @@ function SubcategoryGroup({ name, items, selectedItems, onToggle }) {
   );
 }
 
-function DropdownPanel({ categories, selectedItems, onToggle, onRemove, searchPlaceholder, triggerRect, onClose }) {
+function DropdownPanel({ categories, selectedItems, onToggle, searchPlaceholder, triggerRect, onClose }) {
   const panelRef = useRef(null);
   const searchRef = useRef(null);
   const [search, setSearch] = useState("");

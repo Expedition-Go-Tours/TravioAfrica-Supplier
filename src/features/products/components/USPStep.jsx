@@ -8,10 +8,15 @@ function inputCls(error) {
 }
 
 export default function USPStep() {
-  const { product, errors, updateNested } = useProductBuilderStore();
+  const { product, errors, updateNested, updateProduct } = useProductBuilderStore();
   const { content } = product;
   const text = content.uniqueSellingPoints || "";
   const chars = text.trim().length;
+
+  const handleChange = (value) => {
+    updateNested("content.uniqueSellingPoints", value);
+    updateProduct({ description: value });
+  };
 
   return (
     <div className="space-y-8">
@@ -31,7 +36,7 @@ export default function USPStep() {
         </label>
         <textarea
           value={text}
-          onChange={(e) => updateNested("content.uniqueSellingPoints", e.target.value)}
+          onChange={(e) => handleChange(e.target.value)}
           rows={6}
           placeholder="Our tour is the only one that offers..."
           className={`${inputCls(errors.uniqueSellingPoints)} resize-none`}

@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 
 const mockNavigate = vi.fn();
 const mockReplaceState = vi.fn();
+const mockFetchCurrentUser = vi.fn();
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -15,12 +16,29 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+vi.mock('@/features/auth/api', () => ({
+  fetchCurrentUser: (...args) => mockFetchCurrentUser(...args),
+  loadSupplierProfile: vi.fn().mockResolvedValue(null),
+  getLoginErrorMessage: (err) => err?.message || 'Login failed',
+  showSupplierLoginToast: vi.fn(),
+}));
+
+vi.mock('@/features/auth/hooks/useSupplierLogin', () => ({
+  getPostLoginPath: () => '/',
+}));
+
 describe('AuthCallback', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useAuthStore.getState().setUnauthenticated();
     mockNavigate.mockClear();
     mockReplaceState.mockClear();
+    mockFetchCurrentUser.mockResolvedValue({
+      id: '1',
+      name: 'Test User',
+      email: 'test@example.com',
+      roles: ['supplier'],
+    });
   });
 
   function renderWithToken(token) {
@@ -74,13 +92,11 @@ describe('AuthCallback', () => {
   }, 15000);
 
   it('shows error state when token verification fails', async () => {
+    mockFetchCurrentUser.mockRejectedValue(new Error('Invalid token'));
     renderWithToken('invalid-token');
 
     await waitFor(() => {
-      const errorEl = screen.queryByText(/Authentication failed/i);
-      const successEl = screen.queryByText(/Authentication successful/i);
-      // We should see either error or success; error is more likely with invalid token
-      expect(errorEl || successEl).toBeTruthy();
+      expect(screen.getByText(/Authentication failed/i)).toBeInTheDocument();
     }, { timeout: 5000 });
   });
 });

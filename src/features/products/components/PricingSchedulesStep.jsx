@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DollarSign, ChevronDown, X, AlertTriangle, Info, Check } from "lucide-react";
+import { DollarSign, X, Info } from "lucide-react";
 import { useProductBuilderStore } from "@/features/products/stores/productBuilderStore";
 import {
   Select,
@@ -35,7 +35,7 @@ const AGE_GROUPS = [
 ];
 
 export default function PricingSchedulesStep() {
-  const { product, errors, updateNested } = useProductBuilderStore();
+  const { product, updateNested } = useProductBuilderStore();
   const { pricing } = product;
   const [modalStep, setModalStep] = useState(null);
   const [tempVehicleType, setTempVehicleType] = useState("");

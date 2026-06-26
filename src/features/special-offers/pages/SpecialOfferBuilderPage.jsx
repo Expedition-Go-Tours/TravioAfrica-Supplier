@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, ArrowLeft, Check, Package, CalendarRange, Percent } from "lucide-react";
@@ -15,9 +15,10 @@ const STEP_COMPONENTS = [Step1Products, Step2Details, Step3Discount];
 export default function SpecialOfferBuilderPage() {
   const { id, step } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const {
     currentStep, setStep, offer, editingId, isSaving,
-    nextStep, prevStep, validateStep, setSaving, markSaved, reset, loadOffer, hasHydrated,
+    nextStep, prevStep, validateStep, setSaving, markSaved, reset, loadOffer, hasHydrated, addTarget,
   } = useSpecialOfferBuilderStore();
   const [loadingProduct, setLoadingProduct] = useState(false);
   const [productError, setProductError] = useState(null);
@@ -61,6 +62,16 @@ export default function SpecialOfferBuilderPage() {
   useEffect(() => {
     if ((!id || id === "new") && hasHydrated) {
       reset();
+      const productId = searchParams.get("productId");
+      if (productId) {
+        addTarget({
+          tourId: productId,
+          tourTitle: "",
+          tourPhotos: [],
+          tourOptionKey: null,
+          tourOptionLabel: null,
+        });
+      }
     }
   }, [id, hasHydrated]);
 

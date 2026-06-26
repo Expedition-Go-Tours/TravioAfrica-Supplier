@@ -6,11 +6,6 @@ function EditableList({ label, items, onChange, error }) {
   const [editIndex, setEditIndex] = useState(null);
   const [editValue, setEditValue] = useState("");
 
-  const startEdit = (index) => {
-    setEditIndex(index);
-    setEditValue(items[index]);
-  };
-
   const saveEdit = (index) => {
     const trimmed = editValue.trim();
     if (!trimmed) return;

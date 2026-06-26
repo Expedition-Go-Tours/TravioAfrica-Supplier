@@ -73,16 +73,58 @@ function buildFormData(product) {
   formData.append("theme", JSON.stringify(theme));
 
   const productContent = {
+    writingLanguage: product.content?.writingLanguage || "English",
+    shortSummary: product.content?.shortSummary || "",
     highlights: normalizeHighlights(product.content?.highlights),
     included: product.content?.included || [],
     excluded: product.content?.excluded || [],
     whatToBring: product.content?.whatToBring || [],
-      itinerary: product.content?.itinerary || [],
+    itinerary: product.content?.itinerary || [],
     meetingInstructions: product.content?.meetingInstructions || "",
     additionalInfo: product.content?.additionalInfo || "",
     uniqueSellingPoints: product.content?.uniqueSellingPoints || "",
     travelerRequirements: product.content?.travelerRequirements || "",
     languages: product.content?.languages || ["English"],
+    hasGuideLead: product.content?.hasGuideLead ?? false,
+    guideType: product.content?.guideType || "",
+    inclusionsConfirmed: product.content?.inclusionsConfirmed ?? false,
+    isPrivateActivity: product.content?.isPrivateActivity ?? false,
+    maxTravelers: product.content?.maxTravelers ?? 20,
+    resellerType: product.content?.resellerType || "not_reseller",
+    accessibility: {
+      wheelchairAccessible: product.content?.accessibility?.wheelchairAccessible ?? true,
+      transportationWheelchairAccessible: product.content?.accessibility?.transportationWheelchairAccessible ?? true,
+      surfacesWheelchairAccessible: product.content?.accessibility?.surfacesWheelchairAccessible ?? true,
+      strollerAccessible: product.content?.accessibility?.strollerAccessible ?? true,
+      serviceAnimalsAllowed: product.content?.accessibility?.serviceAnimalsAllowed ?? true,
+      publicTransportation: product.content?.accessibility?.publicTransportation ?? true,
+      infantsOnLaps: product.content?.accessibility?.infantsOnLaps ?? true,
+      infantSeatsAvailable: product.content?.accessibility?.infantSeatsAvailable ?? true,
+      custom: product.content?.accessibility?.custom || [],
+    },
+    healthRestrictions: product.content?.healthRestrictions || [],
+    physicalDifficulty: product.content?.physicalDifficulty || "easy",
+    contactPhone: {
+      countryCode: product.content?.contactPhone?.countryCode || "+233",
+      number: product.content?.contactPhone?.number || "",
+    },
+    passportRequired: product.content?.passportRequired ?? false,
+    flightInfoRequired: product.content?.flightInfoRequired ?? false,
+    shipInfoRequired: product.content?.shipInfoRequired ?? false,
+    trainInfoRequired: product.content?.trainInfoRequired ?? false,
+    hotelInfoRequired: product.content?.hotelInfoRequired ?? false,
+    pickupAvailable: product.content?.pickupAvailable ?? false,
+    pickupAreas: product.content?.pickupAreas || [],
+    pickupLocations: product.content?.pickupLocations || [],
+    pickupCustomLocation: product.content?.pickupCustomLocation ?? false,
+    pickupLeadTime: product.content?.pickupLeadTime ?? 30,
+    pickupType: product.content?.pickupType || "",
+    pickupAppearance: product.content?.pickupAppearance || "",
+    pickupPhotoUrls: product.content?.pickupPhotoUrls || [],
+    pickupAdditionalDetails: product.content?.pickupAdditionalDetails || "",
+    dropoffAvailable: product.content?.dropoffAvailable ?? false,
+    dropoffSameAsPickup: product.content?.dropoffSameAsPickup ?? true,
+    dropoffTime: product.content?.dropoffTime ?? 0,
     location: {
       city: product.city || "",
       country: product.country || "",
@@ -116,30 +158,36 @@ function buildFormData(product) {
 
   const bookingAndTickets = {
     instantBooking: product.bookingRules?.instantBooking ?? false,
+    confirmationType: product.bookingRules?.confirmationType || "manual",
     minAdvanceBookingHours: product.bookingRules?.minAdvanceBookingHours ?? 48,
+    travelerRequiredInfo: product.bookingRules?.travelerRequiredInfo || [],
     cancellationPolicy: {
       type: product.cancellationPolicy || "flexible",
       cutoffHours: product.schedule?.bookingCutoffHours ?? 24,
       refundPercentage: product.bookingRules?.refundPercentage ?? 100,
     },
     meetingPoint: {
-      name: product.bookingRules?.meetingPoint || "",
-      address: product.bookingRules?.meetingPointAddress || "",
+      name: product.content?.meetingPoint || "",
+      address: product.content?.meetingPointAddress || "",
       coordinates: {
-        lat: product.bookingRules?.meetingPointLat || null,
-        lng: product.bookingRules?.meetingPointLng || null,
+        lat: product.content?.meetingPointLat || null,
+        lng: product.content?.meetingPointLng || null,
       },
     },
-    pickupAvailable: product.bookingRules?.pickupAvailable ?? false,
-    pickupDetails: product.bookingRules?.pickupDetails || "",
+    pickupAvailable: product.content?.pickupAvailable ?? false,
+    pickupDetails: product.content?.pickupAdditionalDetails || "",
     refundRules: product.refundRules || "",
   };
   formData.append("bookingAndTickets", JSON.stringify(bookingAndTickets));
 
   formData.append("title", product.title || "");
+  formData.append("referenceCode", product.referenceCode || "");
   formData.append("description", product.description || "");
   formData.append("metaTitle", product.metaTitle || product.title || "");
   formData.append("metaDescription", product.metaDescription || product.description?.substring(0, 160) || "");
+  if (product.specialOffers?.length > 0) {
+    formData.append("specialOffers", JSON.stringify(product.specialOffers));
+  }
   formData.append("status", (product.status || "draft").toUpperCase());
 
   if (product.latitude != null && product.latitude !== "") {
@@ -203,6 +251,8 @@ export default function WizardNavFooter() {
     lastSaved,
     nextStep,
     prevStep,
+    goToStep,
+    setSubmitting,
     validateStep,
     setSaving,
     currentSectionId,
@@ -220,13 +270,15 @@ export default function WizardNavFooter() {
 
   const handleNext = () => {
     setIsNavigating(true);
-    const isValid = validateStep(currentStep);
-    if (!isValid) {
+    setTimeout(() => {
+      const isValid = validateStep(currentStep);
+      if (!isValid) {
+        setIsNavigating(false);
+        return;
+      }
+      nextStep();
       setIsNavigating(false);
-      return;
-    }
-    nextStep();
-    setIsNavigating(false);
+    }, 500);
   };
 
   const handleSave = () => {
@@ -241,13 +293,28 @@ export default function WizardNavFooter() {
   };
 
   const handleSubmit = async () => {
-    const allStepsValid = steps.every((_, index) => validateStep(index));
-    if (!allStepsValid) {
-      toast.error("Please complete all required fields before submitting.");
+    const allErrors = {};
+    let firstFailing = -1;
+
+    steps.forEach((_, index) => {
+      const valid = validateStep(index);
+      if (!valid) {
+        allErrors[index] = { ...useProductBuilderStore.getState().errors };
+        if (firstFailing < 0) firstFailing = index;
+      }
+    });
+
+    if (firstFailing >= 0) {
+      goToStep(firstFailing);
+      useProductBuilderStore.getState().setSubmissionErrors(allErrors);
+      validateStep(firstFailing);
+      const count = Object.keys(allErrors).length;
+      toast.error(`${count} step${count > 1 ? "s" : ""} need${count === 1 ? "s" : ""} attention. Fix the highlighted fields and try again.`);
       return;
     }
 
     setSaving(true);
+    setSubmitting(true);
 
     try {
       const formData = buildFormData(product);
@@ -272,6 +339,7 @@ export default function WizardNavFooter() {
       toast.error(message);
     } finally {
       setSaving(false);
+      setSubmitting(false);
     }
   };
 

@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import Providers from "./providers";
-import AppRoutes from "./routes";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
 import { initAuthFromStorage, useAuthStore } from "@/stores/authStore";
 
@@ -28,9 +27,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <Providers>
-        <AppRoutes />
-      </Providers>
+      <Providers />
     </ErrorBoundary>
   );
 }

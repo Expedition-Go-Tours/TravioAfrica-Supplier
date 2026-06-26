@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useProductBuilderStore } from "@/features/products/stores/productBuilderStore";
-import { Info, Plus, X, ChevronDown } from "lucide-react";
+import { Info, X, ChevronDown } from "lucide-react";
 
 const RESELLER_TYPES = [
   { value: "official", label: "Official reseller" },
@@ -50,15 +50,11 @@ const COUNTRY_CODES = [
 ];
 
 export default function TravelerInfoStep() {
-  const { product, errors, updateNested } = useProductBuilderStore();
+  const { product, updateNested } = useProductBuilderStore();
   const { content } = product;
   const [newRestriction, setNewRestriction] = useState("");
   const [newAccessibility, setNewAccessibility] = useState("");
   const [showCodeDropdown, setShowCodeDropdown] = useState(false);
-
-  const toggleAccessibility = (key) => {
-    updateNested(`content.accessibility.${key}`, !content.accessibility[key]);
-  };
 
   const addCustomAccessibility = () => {
     if (newAccessibility.trim()) {
