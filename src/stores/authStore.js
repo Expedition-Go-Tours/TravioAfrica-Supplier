@@ -72,27 +72,29 @@ export const useAuthStore = create(
       name: "auth-storage",
       partialize: (state) => ({
         user: state.user,
-        token: state.token,
-        isAuthenticated: state.isAuthenticated,
         supplierProfile: state.supplierProfile,
       }),
       onRehydrateStorage: () => (state) => {
-        if (state?.isAuthenticated && !state?.token) {
-          useAuthStore.getState().setUnauthenticated();
-          useAuthStore.getState().setHasHydrated(true);
-          return;
+        const token = localStorage.getItem("auth_token");
+        const userJson = localStorage.getItem("auth_user");
+        let user = null;
+        try { user = userJson ? JSON.parse(userJson) : null; } catch { localStorage.removeItem("auth_user"); }
+
+        if (token && user) {
+          user = normalizeAvatar(user);
+          localStorage.setItem("auth_user", JSON.stringify(user));
+          useAuthStore.setState({ user, token, isAuthenticated: true, isLoading: false });
+        } else {
+          useAuthStore.setState({ user: null, token: null, isAuthenticated: false, isLoading: false });
         }
 
-        if (state?.token) {
-          localStorage.setItem("auth_token", state.token);
-        }
         if (state?.user) {
-          const normalizedUser = normalizeAvatar(state.user);
-          localStorage.setItem("auth_user", JSON.stringify(normalizedUser));
-          if (normalizedUser.avatar !== state.user.avatar) {
-            useAuthStore.setState({ user: normalizedUser });
+          const normalized = normalizeAvatar(state.user);
+          if (normalized.avatar !== state.user.avatar) {
+            localStorage.setItem("auth_user", JSON.stringify(normalized));
           }
         }
+
         useAuthStore.getState().setHasHydrated(true);
       },
     }
@@ -100,18 +102,7 @@ export const useAuthStore = create(
 );
 
 export function getAuthToken() {
-  const storageToken = localStorage.getItem("auth_token");
-  if (storageToken) {
-    return storageToken;
-  }
-
-  const storeToken = useAuthStore.getState().token;
-  if (storeToken) {
-    localStorage.setItem("auth_token", storeToken);
-    return storeToken;
-  }
-
-  return null;
+  return localStorage.getItem("auth_token") || null;
 }
 
 export function getStoredAuthUser() {
@@ -123,8 +114,7 @@ export function getStoredAuthUser() {
       localStorage.removeItem("auth_user");
     }
   }
-
-  return useAuthStore.getState().user || null;
+  return null;
 }
 
 function normalizeAvatar(user) {
@@ -138,8 +128,7 @@ function normalizeAvatar(user) {
 }
 
 export function hasValidAuthSession() {
-  const { isAuthenticated } = useAuthStore.getState();
-  return Boolean(isAuthenticated && getStoredAuthUser() && getAuthToken());
+  return Boolean(getAuthToken() && getStoredAuthUser());
 }
 
 export function initAuthFromStorage() {
@@ -153,13 +142,11 @@ export function initAuthFromStorage() {
 
   if (token && user) {
     useAuthStore.setState({ user, token, isAuthenticated: true, isLoading: false });
-  } else if (token || user) {
+  } else {
     useAuthStore.getState().setUnauthenticated();
   }
 
-  if (useAuthStore.persist.hasHydrated()) {
-    useAuthStore.getState().setHasHydrated(true);
-  }
+  useAuthStore.getState().setHasHydrated(true);
 }
 
 export function isAdminUser() {
@@ -184,5 +171,5 @@ export function canCreateTours(supplierProfile) {
 
 export function isVerifiedSupplier() {
   const { supplierProfile } = useAuthStore.getState();
-  return canCreateTours(supplierProfile);
+  return canAccessSupplierDashboard(supplierProfile);
 }
