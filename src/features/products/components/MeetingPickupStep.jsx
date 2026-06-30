@@ -1,5 +1,5 @@
-import { useRef } from "react";
-import { Plus, X, MapPin, Info } from "lucide-react";
+import { useRef, useState } from "react";
+import { Plus, X, MapPin, Info, Lightbulb, PenLine } from "lucide-react";
 import { useProductBuilderStore } from "@/features/products/stores/productBuilderStore";
 import LocationMapPicker from "@/components/shared/LocationMapPicker";
 import LocationAutocomplete from "@/components/shared/LocationAutocomplete";
@@ -118,11 +118,12 @@ export default function MeetingPickupStep() {
         <h2 className="text-xl font-medium tracking-tight text-slate-900">
           Tell us how and where you meet your travelers
         </h2>
-        <div className="mt-3 flex items-start gap-2.5 p-3.5 bg-blue-50/50 rounded-2xl">
-          <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
-          <p className="text-sm text-blue-700 leading-relaxed">
-            Travelers want to book products with accurate pickup locations so they can plan their day.
-            Adding specific meeting and pickup points will help them find your product.
+        <div className="mt-3 flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/40 rounded-2xl border border-blue-100/50">
+          <div className="p-1.5 bg-blue-100 rounded-lg shrink-0">
+            <Info size={14} className="text-blue-600" />
+          </div>
+          <p className="text-sm text-blue-700/80 leading-relaxed">
+            Accurate pickup locations help travelers plan their day. The more specific you are, the easier it is for travelers to find your product and arrive on time.
           </p>
         </div>
       </div>
@@ -459,22 +460,30 @@ export default function MeetingPickupStep() {
       {/* Meeting Point Section */}
       <SectionCard>
         <div className="space-y-5">
-          <h3 className="text-base font-medium text-slate-900">
-            Where will you meet travelers that don&apos;t require pickup?
-          </h3>
+          <div>
+            <h3 className="text-base font-medium text-slate-900">
+              Where will you meet travelers that don&apos;t require pickup?
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Use the map or search to pin your exact meeting location
+            </p>
+          </div>
 
-          <div className="rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
-            <LocationMapPicker
-              initialLat={content.meetingPointLat}
-              initialLng={content.meetingPointLng}
-              label="Set Meeting Point"
-              placeholder="Search for the meeting location..."
-              onSelect={handleMapSelect}
-            />
+          <LocationMapPicker
+            initialLat={content.meetingPointLat}
+            initialLng={content.meetingPointLng}
+            label="Set Meeting Point"
+            placeholder="Search for the meeting location..."
+            onSelect={handleMapSelect}
+          />
+
+          <div className="flex items-center gap-3 my-1">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">or enter manually</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
           </div>
 
           <div className="space-y-1.5">
-            <label className={labelCls()}>Or enter manually</label>
             <div className="relative">
               <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -494,18 +503,40 @@ export default function MeetingPickupStep() {
 
       {/* Meeting Instructions */}
       <SectionCard>
-        <div className="space-y-1.5">
-          <label className={labelCls()}>Meeting instructions</label>
-          <textarea
-            value={content.meetingInstructions}
-            onChange={(e) => updateNested("content.meetingInstructions", e.target.value)}
-            rows={4}
-            placeholder="Please only include information about how to find the meeting point (e.g. Go to the corner of Stockton and Post Street and look for a guide wearing a red hat)"
-            className={`${inputCls(errors.meetingInstructions)} resize-none`}
-          />
+        <div className="space-y-3">
+          <div>
+            <label className={labelCls()}>Meeting instructions</label>
+            <p className="text-xs text-slate-500 mt-1">
+              Help travelers find you at the meeting point
+            </p>
+          </div>
+
+          <div className="relative">
+            <PenLine size={14} className="absolute left-3.5 top-3.5 text-slate-400" />
+            <textarea
+              value={content.meetingInstructions}
+              onChange={(e) => updateNested("content.meetingInstructions", e.target.value)}
+              rows={4}
+              maxLength={500}
+              placeholder="Describe landmarks, visual cues, or specific directions..."
+              className={`${inputCls(errors.meetingInstructions)} resize-none pl-10 pr-16`}
+            />
+            <span className="absolute bottom-3 right-3 text-[10px] text-slate-400 font-mono">
+              {(content.meetingInstructions || "").length}/500
+            </span>
+          </div>
+
           {errors.meetingInstructions && (
             <p className="text-xs text-red-500">{errors.meetingInstructions}</p>
           )}
+
+          <div className="flex items-start gap-2.5 p-3 bg-amber-50/70 border border-amber-100 rounded-xl">
+            <Lightbulb size={14} className="text-amber-500 shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-700 leading-relaxed">
+              <span className="font-medium">Tip:</span> Be specific! Mention nearby landmarks, colors, signs, or anything that helps travelers spot the meeting point quickly.
+              <span className="block mt-1 text-amber-600/70 italic">"Look for the red umbrella near the fountain, next to the coffee shop"</span>
+            </div>
+          </div>
         </div>
       </SectionCard>
     </div>

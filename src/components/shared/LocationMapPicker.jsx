@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { Search, MapPin, Loader2, AlertTriangle, RefreshCw } from "lucide-react";
+import { Search, MapPin, Loader2, AlertTriangle, RefreshCw, CheckCircle2, X } from "lucide-react";
 import config from "@/config";
 
 const defaultCenter = { lng: -0.187, lat: 5.6037 };
@@ -18,6 +18,40 @@ function normalizeResult(raw) {
   };
 }
 
+function SelectedLocationCard({ result, onClear }) {
+  if (!result) return null;
+  const parts = result.formatted.split(",");
+  const name = parts[0]?.trim() || result.formatted;
+  const rest = parts.slice(1).join(",").trim();
+
+  return (
+    <div className="flex items-start gap-3 p-3.5 bg-emerald-50/70 border border-emerald-200/60 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
+      <div className="p-2 bg-emerald-100 rounded-lg shrink-0">
+        <CheckCircle2 size={18} className="text-emerald-600" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-emerald-900 truncate">{name}</p>
+        {rest && (
+          <p className="text-xs text-emerald-700/70 truncate mt-0.5">{rest}</p>
+        )}
+        <div className="flex items-center gap-3 mt-1.5">
+          <span className="text-[10px] font-mono text-emerald-600/60">
+            {result.latitude?.toFixed(5)}, {result.longitude?.toFixed(5)}
+          </span>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onClear}
+        className="p-1.5 text-emerald-400 hover:text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors shrink-0"
+        title="Clear selection"
+      >
+        <X size={14} />
+      </button>
+    </div>
+  );
+}
+
 export default function LocationMapPicker({ onSelect, initialLat, initialLng, label, placeholder }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
@@ -27,6 +61,8 @@ export default function LocationMapPicker({ onSelect, initialLat, initialLng, la
   const [searchError, setSearchError] = useState(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState(false);
+  const [selectedResult, setSelectedResult] = useState(null);
+  const [isFocused, setIsFocused] = useState(false);
   const timerRef = useRef(null);
   const abortRef = useRef(null);
   const mapContainerRef = useRef(null);
@@ -65,11 +101,15 @@ export default function LocationMapPicker({ onSelect, initialLat, initialLng, la
         const body = await res.json();
         const data = body?.data?.results?.[0];
         if (data) {
-          setQuery(data.formatted);
-          onSelectRef.current?.(normalizeResult(data));
+          const normalized = normalizeResult(data);
+          setQuery(normalized.formatted);
+          setSelectedResult(normalized);
+          onSelectRef.current?.(normalized);
         }
       } catch {
-        onSelectRef.current?.({ formatted: `${clickLat.toFixed(4)}, ${clickLng.toFixed(4)}`, city: "", country: "", region: "", latitude: clickLat, longitude: clickLng });
+        const fallback = { formatted: `${clickLat.toFixed(4)}, ${clickLng.toFixed(4)}`, city: "", country: "", region: "", latitude: clickLat, longitude: clickLng };
+        setSelectedResult(fallback);
+        onSelectRef.current?.(fallback);
       }
     });
 
@@ -89,7 +129,15 @@ export default function LocationMapPicker({ onSelect, initialLat, initialLng, la
     if (markerLat != null && markerLng != null) {
       const el = document.createElement("div");
       el.className = "maplibregl-marker";
-      el.innerHTML = `<svg width="28" height="36" viewBox="0 0 28 36" fill="none"><path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.27 21.73 0 14 0zm0 19a5 5 0 110-10 5 5 0 010 10z" fill="#044b3b"/><circle cx="14" cy="14" r="3" fill="#fff"/></svg>`;
+      el.innerHTML = `
+        <div class="relative">
+          <div class="absolute -inset-3 bg-emerald-400/20 rounded-full animate-ping" style="animation-duration: 2s;"></div>
+          <svg width="32" height="40" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 0C7.16 0 0 7.16 0 16c0 12 16 24 16 24s16-12 16-24C32 7.16 24.84 0 16 0z" fill="#047857"/>
+            <circle cx="16" cy="16" r="6" fill="white" stroke="#047857" stroke-width="2"/>
+          </svg>
+        </div>
+      `;
       el.style.cursor = "pointer";
       markerRef.current = new maplibregl.Marker({ element: el, anchor: "bottom" })
         .setLngLat([markerLng, markerLat])
@@ -124,6 +172,7 @@ export default function LocationMapPicker({ onSelect, initialLat, initialLng, la
     const value = e.target.value;
     setQuery(value);
     setSearchError(null);
+    setSelectedResult(null);
     if (abortRef.current) abortRef.current.abort();
     if (timerRef.current) clearTimeout(timerRef.current);
     if (!value.trim()) { setResults([]); return; }
@@ -167,41 +216,62 @@ export default function LocationMapPicker({ onSelect, initialLat, initialLng, la
     setLng(outLng);
     setQuery(result.formatted);
     setResults([]);
+    setSelectedResult(result);
     onSelect?.(result);
+  };
+
+  const handleClear = () => {
+    setQuery("");
+    setLat(null);
+    setLng(null);
+    setResults([]);
+    setSelectedResult(null);
+    onSelect?.(null);
   };
 
   return (
     <div className="space-y-3">
       <div>
-        <label className="block text-sm font-medium text-[#1e293b] mb-2">
+        <label className="block text-sm font-medium text-slate-700 mb-2">
           <span className="flex items-center gap-2">
-            <MapPin size={16} className="text-[#64748b]" />
+            <MapPin size={16} className="text-emerald-600" />
             {label || "Search Location"}
           </span>
         </label>
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9e9e9e]" />
+        <div className={`relative transition-all duration-200 ${isFocused ? 'ring-2 ring-emerald-500/20 rounded-xl' : ''}`}>
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={query}
             onChange={handleSearchChange}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setTimeout(() => setIsFocused(false), 200)}
             placeholder={placeholder || "Search for a location..."}
-            className="w-full pl-9 pr-10 py-2.5 border border-[#eaeaea] rounded-lg text-sm text-[#1e293b] placeholder:text-[#9e9e9e] focus:outline-none focus:ring-2 focus:ring-[#044b3b]/20 focus:border-[#044b3b]"
+            className="w-full pl-10 pr-10 py-3 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:border-emerald-500 transition-colors"
           />
           {loading && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <Loader2 size={16} className="animate-spin text-[#044b3b]" />
+              <Loader2 size={16} className="animate-spin text-emerald-600" />
             </div>
+          )}
+          {!loading && query && (
+            <button
+              type="button"
+              onClick={() => { setQuery(""); setResults([]); setSelectedResult(null); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <X size={14} />
+            </button>
           )}
         </div>
         {searchError && (
-          <div className="mt-1 flex items-center gap-2 px-3 py-2 bg-[#fef2f2] border border-[#fecaca] rounded-lg text-sm">
-            <AlertTriangle size={14} className="text-[#dc2626] shrink-0" />
-            <span className="text-[#dc2626] text-xs flex-1">Could not search locations. Backend may be offline.</span>
+          <div className="mt-2 flex items-center gap-2.5 px-3.5 py-2.5 bg-red-50 border border-red-100 rounded-xl">
+            <AlertTriangle size={14} className="text-red-500 shrink-0" />
+            <span className="text-xs text-red-600 flex-1">Could not search locations. Backend may be offline.</span>
             <button
               type="button"
               onClick={handleRetry}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-[#dc2626] hover:bg-[#fee2e2] rounded transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-100 rounded-lg transition-colors"
             >
               <RefreshCw size={12} />
               Retry
@@ -209,42 +279,48 @@ export default function LocationMapPicker({ onSelect, initialLat, initialLng, la
           </div>
         )}
         {results.length > 0 && (
-          <ul className="mt-1 bg-white border border-[#eaeaea] rounded-lg shadow-lg max-h-48 overflow-y-auto z-10 relative">
+          <ul className="mt-2 bg-white border border-slate-100 rounded-xl shadow-lg shadow-slate-200/50 max-h-52 overflow-y-auto z-10 relative divide-y divide-slate-50">
             {results.map((r, i) => (
               <li
                 key={i}
                 onClick={() => handleSelect(r)}
-                className="px-4 py-2.5 text-sm text-[#1e293b] hover:bg-[#f8fafc] cursor-pointer border-b border-[#eaeaea] last:border-0"
+                className="px-4 py-3 text-sm text-slate-700 hover:bg-emerald-50/50 cursor-pointer transition-colors group"
               >
-                {r.formatted}
+                <div className="flex items-start gap-2.5">
+                  <MapPin size={14} className="text-slate-400 group-hover:text-emerald-500 shrink-0 mt-0.5 transition-colors" />
+                  <span className="leading-snug">{r.formatted}</span>
+                </div>
               </li>
             ))}
           </ul>
         )}
       </div>
 
-      <div className="rounded-lg overflow-hidden border border-[#eaeaea] relative">
-        <div ref={mapContainerRef} className="w-full h-[280px]" />
+      <div className="rounded-xl overflow-hidden border border-slate-100 shadow-sm relative">
+        <div ref={mapContainerRef} className="w-full h-[300px]" />
         {!mapReady && !mapError && (
-          <div className="absolute inset-0 bg-[#f8fafc] flex items-center justify-center gap-2 text-sm text-[#64748b]">
-            <Loader2 size={16} className="animate-spin text-[#044b3b]" />
+          <div className="absolute inset-0 bg-slate-50 flex items-center justify-center gap-2.5 text-sm text-slate-500">
+            <Loader2 size={18} className="animate-spin text-emerald-600" />
             Loading map...
           </div>
         )}
         {mapError && (
-          <div className="absolute inset-0 bg-[#fef2f2] flex flex-col items-center justify-center gap-2 px-4 text-center">
-            <AlertTriangle size={24} className="text-[#dc2626]" />
-            <p className="text-sm font-medium text-[#dc2626]">Could not load map tiles</p>
-            <p className="text-xs text-[#b91c1c]">Check your internet connection and try again.</p>
+          <div className="absolute inset-0 bg-red-50 flex flex-col items-center justify-center gap-2.5 px-4 text-center">
+            <AlertTriangle size={28} className="text-red-400" />
+            <p className="text-sm font-medium text-red-600">Could not load map tiles</p>
+            <p className="text-xs text-red-400">Check your internet connection and try again.</p>
           </div>
         )}
-        <div className="px-3 py-2 text-xs text-[#64748b] bg-[#f8fafc] border-t border-[#eaeaea]">
+        <div className="px-4 py-2.5 text-xs text-slate-500 bg-slate-50/80 border-t border-slate-100 flex items-center gap-2">
+          <MapPin size={12} className="text-emerald-500" />
           Click on the map to set a location
         </div>
       </div>
 
-      {lat && lng && (
-        <div className="flex items-center gap-4 text-xs text-[#64748b]">
+      <SelectedLocationCard result={selectedResult} onClear={handleClear} />
+
+      {lat && lng && !selectedResult && (
+        <div className="flex items-center gap-4 text-xs text-slate-400 font-mono">
           <span>Lat: {lat.toFixed(6)}</span>
           <span>Lng: {lng.toFixed(6)}</span>
         </div>
