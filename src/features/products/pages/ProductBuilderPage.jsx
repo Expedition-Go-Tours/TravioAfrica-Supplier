@@ -346,13 +346,6 @@ export default function ProductBuilderPage() {
     }
   }, [currentSectionId, currentStepId, hasHydrated]);
 
-  // Reset store when starting a new product
-  useEffect(() => {
-    if (hasHydrated && (!id || id === "new")) {
-      useProductBuilderStore.getState().reset();
-    }
-  }, [id, hasHydrated]);
-
   // Load existing product from API when editing
   useEffect(() => {
     if (!id || id === "new" || !hasHydrated) return;

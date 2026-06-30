@@ -337,6 +337,7 @@ export default function WizardNavFooter() {
 
       useProductBuilderStore.getState().markSaved();
       localStorage.removeItem("product-builder-draft");
+      useProductBuilderStore.getState().reset();
       navigate("/products");
     } catch (err) {
       const status = err.response?.status;
