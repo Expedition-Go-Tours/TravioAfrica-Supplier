@@ -91,7 +91,7 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
-        className="flex w-full max-w-5xl xl:max-w-6xl min-h-[560px] bg-white rounded-2xl shadow-xl shadow-slate-900/10 overflow-hidden"
+        className="flex w-full max-w-5xl xl:max-w-6xl min-h-0 sm:min-h-[560px] bg-white sm:rounded-2xl sm:shadow-xl sm:shadow-slate-900/10 overflow-hidden"
       >
         {/* Image panel */}
         <div className="hidden lg:flex lg:w-[45%] xl:w-[42%] relative">
