@@ -193,7 +193,7 @@ export default function ProductsListPage() {
   return (
     <div className="p-5 md:p-6 max-w-7xl mx-auto space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-1 h-10 bg-linear-to-b from-emerald-500 to-emerald-300 rounded-full" />
           <div>
@@ -215,14 +215,15 @@ export default function ProductsListPage() {
             className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all disabled:opacity-40 shadow-sm"
           >
             <RefreshCw size={14} className={isRefetching ? "animate-spin" : ""} />
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
           </button>
           <button
             onClick={() => navigate("/products/build/new/type")}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-all "
+            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-all"
           >
             <Plus size={15} />
-            Create Product
+            <span className="hidden sm:inline">Create Product</span>
+            <span className="sm:hidden">New</span>
           </button>
         </div>
       </div>
@@ -262,8 +263,8 @@ export default function ProductsListPage() {
 
       {/* Filters + View Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1">
-          <div className="relative flex-1 w-full sm:max-w-xs">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 min-w-0">
+          <div className="relative flex-1 min-w-0">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               type="text"
@@ -279,10 +280,11 @@ export default function ProductsListPage() {
             )}
           </div>
 
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
+          <div className="flex items-center gap-2">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="flex-1 sm:flex-none sm:w-[160px]">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
             <SelectContent>
               {CATEGORIES.map((cat) => (
                 <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
@@ -290,10 +292,10 @@ export default function ProductsListPage() {
             </SelectContent>
           </Select>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="All Statuses" />
-            </SelectTrigger>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="flex-1 sm:flex-none sm:w-[160px]">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
               {["ACTIVE", "DRAFT", "PENDING_APPROVAL", "INACTIVE", "PAUSED", "ARCHIVED"].map((s) => (
@@ -301,6 +303,7 @@ export default function ProductsListPage() {
               ))}
             </SelectContent>
           </Select>
+          </div>
 
           {hasFilters && (
             <button

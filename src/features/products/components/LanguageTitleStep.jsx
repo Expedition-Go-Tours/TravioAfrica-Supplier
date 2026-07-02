@@ -102,7 +102,11 @@ export default function LanguageTitleStep() {
         </p>
         <textarea
           value={product.description || ""}
-          onChange={(e) => updateProduct({ description: e.target.value })}
+          onChange={(e) => {
+            if (e.target.value.length <= 2000) {
+              updateProduct({ description: e.target.value });
+            }
+          }}
           rows={4}
           placeholder="Tell travelers about your product..."
           className={cn(
@@ -113,7 +117,22 @@ export default function LanguageTitleStep() {
               : "border border-slate-200 hover:border-slate-300",
           )}
         />
-        {errors.description && <p className="text-xs text-red-500">{errors.description}</p>}
+        <div className="flex items-center justify-between">
+          {errors.description && <p className="text-xs text-red-500">{errors.description}</p>}
+          {(() => {
+            const len = product.description?.length || 0;
+            const minRequired = 50;
+            const maxLimit = 2000;
+            if (len < minRequired) {
+              return <p className="text-[11px] ml-auto text-amber-600 font-medium">{minRequired - len} characters needed</p>;
+            }
+            return (
+              <p className={`text-[11px] ml-auto ${len > 1800 ? (len >= maxLimit ? "text-red-500 font-medium" : "text-amber-500") : "text-slate-400"}`}>
+                {len}/{maxLimit}
+              </p>
+            );
+          })()}
+        </div>
       </div>
 
       <div className="space-y-2">

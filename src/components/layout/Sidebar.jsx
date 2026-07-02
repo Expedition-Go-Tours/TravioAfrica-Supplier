@@ -127,10 +127,10 @@ export default function Sidebar() {
     <>
       <button
         onClick={() => useSidebarStore.getState().toggleMobile()}
-        className="fixed top-3 left-3 z-[60] p-2.5 rounded-xl bg-[#065f46] text-white shadow-lg lg:hidden hover:bg-[#047857] transition-colors"
+        className={`fixed top-3 left-3 z-[60] p-2.5 rounded-xl bg-[#065f46] text-white shadow-lg hover:bg-[#047857] transition-colors ${isMobileOpen ? "hidden" : "lg:hidden"}`}
         aria-label="Toggle menu"
       >
-        {isMobileOpen ? <X size={18} /> : <Menu size={18} />}
+        <Menu size={18} />
       </button>
 
       <aside
@@ -148,11 +148,11 @@ export default function Sidebar() {
             </div>
           )}
           <button
-            onClick={toggle}
+            onClick={() => isMobileOpen ? closeMobile() : toggle()}
             className="flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 p-1.5"
             title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {isCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+            <ChevronLeft size={15} />
           </button>
         </div>
 

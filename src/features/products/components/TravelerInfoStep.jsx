@@ -344,8 +344,10 @@ export default function TravelerInfoStep() {
           {/* Phone Number Input */}
           <input
             type="tel"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={content.contactPhone?.number || ""}
-            onChange={(e) => updateNested("content.contactPhone.number", e.target.value)}
+            onChange={(e) => updateNested("content.contactPhone.number", e.target.value.replace(/[^0-9]/g, ""))}
             placeholder="025 667 4138"
             className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500"
           />

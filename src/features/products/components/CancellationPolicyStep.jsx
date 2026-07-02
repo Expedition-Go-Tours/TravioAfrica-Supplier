@@ -10,9 +10,9 @@ export default function CancellationPolicyStep() {
         <label className="block text-sm font-medium text-slate-800 mb-3">
           Cancellation Policy <span className="text-red-500">*</span>
         </label>
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <label
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer transition-all flex-1 ${
+            className={`flex items-center gap-3 px-4 py-3 sm:py-2.5 rounded-xl border cursor-pointer transition-all flex-1 ${
               isStandard
                 ? "border-emerald-600 bg-emerald-50 text-emerald-800"
                 : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
@@ -27,11 +27,11 @@ export default function CancellationPolicyStep() {
               className="sr-only"
             />
             <div
-              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+              className={`w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center ${
                 isStandard ? "border-emerald-600" : "border-slate-300"
               }`}
             >
-              {isStandard && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
+              {isStandard && <div className="w-2.5 h-2.5 rounded-full bg-emerald-600" />}
             </div>
             <div>
               <span className="text-sm font-medium">Standard</span>
@@ -39,7 +39,7 @@ export default function CancellationPolicyStep() {
             </div>
           </label>
           <label
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer transition-all flex-1 ${
+            className={`flex items-center gap-3 px-4 py-3 sm:py-2.5 rounded-xl border cursor-pointer transition-all flex-1 ${
               !isStandard
                 ? "border-emerald-600 bg-emerald-50 text-emerald-800"
                 : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
@@ -54,11 +54,11 @@ export default function CancellationPolicyStep() {
               className="sr-only"
             />
             <div
-              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+              className={`w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center ${
                 !isStandard ? "border-emerald-600" : "border-slate-300"
               }`}
             >
-              {!isStandard && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
+              {!isStandard && <div className="w-2.5 h-2.5 rounded-full bg-emerald-600" />}
             </div>
             <div>
               <span className="text-sm font-medium">All Sales Final</span>

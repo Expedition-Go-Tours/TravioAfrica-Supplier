@@ -45,6 +45,43 @@ export default function Step2Details() {
         {errors.name && <p className="mt-1.5 text-sm text-red-500">{errors.name}</p>}
       </div>
 
+      {/* Offer Type */}
+      <div>
+        <label className="block text-sm font-semibold text-slate-700 mb-3">Offer Type</label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {OFFER_TYPES.map((type) => {
+            const Icon = type.icon;
+            const selected = offer.offerType === type.value;
+            return (
+              <button
+                key={type.value}
+                type="button"
+                onClick={() => updateOffer({ offerType: type.value })}
+                className={cn(
+                  "relative text-left p-4 rounded-xl border-2 transition-all",
+                  selected
+                    ? "border-emerald-500 bg-emerald-50/80 ring-1 ring-emerald-500/20"
+                    : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
+                )}
+              >
+                {selected && (
+                  <div className="absolute top-2.5 right-2.5 w-5 h-5 bg-emerald-600 rounded-full flex items-center justify-center">
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                      <path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                )}
+                <Icon size={22} className={cn("mb-2.5", selected ? "text-emerald-600" : "text-slate-400")} />
+                <p className={cn("text-sm font-semibold", selected ? "text-emerald-800" : "text-slate-800")}>
+                  {type.label}
+                </p>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">{type.desc}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Date Range — only for LIMITED_TIME */}
       {offer.offerType === "LIMITED_TIME" && (
         <div>
@@ -111,43 +148,6 @@ export default function Step2Details() {
             <DollarSign size={16} />
             Fixed Amount
           </button>
-        </div>
-      </div>
-
-      {/* Offer Type */}
-      <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-3">Offer Type</label>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {OFFER_TYPES.map((type) => {
-            const Icon = type.icon;
-            const selected = offer.offerType === type.value;
-            return (
-              <button
-                key={type.value}
-                type="button"
-                onClick={() => updateOffer({ offerType: type.value })}
-                className={cn(
-                  "relative text-left p-4 rounded-xl border-2 transition-all",
-                  selected
-                    ? "border-emerald-500 bg-emerald-50/80 ring-1 ring-emerald-500/20"
-                    : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
-                )}
-              >
-                {selected && (
-                  <div className="absolute top-2.5 right-2.5 w-5 h-5 bg-emerald-600 rounded-full flex items-center justify-center">
-                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                      <path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                )}
-                <Icon size={22} className={cn("mb-2.5", selected ? "text-emerald-600" : "text-slate-400")} />
-                <p className={cn("text-sm font-semibold", selected ? "text-emerald-800" : "text-slate-800")}>
-                  {type.label}
-                </p>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed">{type.desc}</p>
-              </button>
-            );
-          })}
         </div>
       </div>
 

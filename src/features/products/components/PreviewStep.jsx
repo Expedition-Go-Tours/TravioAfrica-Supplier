@@ -93,7 +93,14 @@ export default function PreviewStep() {
     setOfferModal(null);
   };
 
-  const heroPhoto = product.photos?.find(p => p.id === product.heroImage) || product.photos?.[0] || null;
+  const heroPhoto = (() => {
+    const found = product.photos?.find(p => p.id === product.heroImage) || product.photos?.[0] || null;
+    if (!found) return null;
+    if (typeof found === 'string') return { url: found };
+    if (found.url) return found;
+    if (found.file instanceof File) return { url: URL.createObjectURL(found.file), isLocal: true };
+    return null;
+  })();
   const enabledAgeGroups = product.pricing?.ageGroups?.filter(ag => ag.enabled) || [];
   const highlights = (product.content?.highlights || []).filter(h => typeof h === 'string' && h.trim());
   const rawUSP = product.content?.uniqueSellingPoints || [];
@@ -115,8 +122,18 @@ export default function PreviewStep() {
 
   // Merge product + pickup photos for gallery display, dedup by URL
   const allGalleryPhotos = (() => {
-    const productUrls = (product.photos || []).map(p => (typeof p === 'string' ? p : p.url)).filter(Boolean);
-    const pickupUrls = (product.content?.pickupPhotoUrls || []).map(p => (typeof p === 'string' ? p : p.url)).filter(Boolean);
+    const productUrls = (product.photos || []).map(p => {
+      if (typeof p === 'string') return p;
+      if (p.url) return p.url;
+      if (p.file instanceof File) return URL.createObjectURL(p.file);
+      return null;
+    }).filter(Boolean);
+    const pickupUrls = (product.content?.pickupPhotoUrls || []).map(p => {
+      if (typeof p === 'string') return p;
+      if (p.url) return p.url;
+      if (p.file instanceof File) return URL.createObjectURL(p.file);
+      return null;
+    }).filter(Boolean);
     return [...new Set([...productUrls, ...pickupUrls])];
   })();
 
@@ -142,10 +159,13 @@ export default function PreviewStep() {
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex items-center justify-center h-full bg-gradient-to-br from-slate-50 to-slate-100">
               <div className="text-center text-slate-400">
-                <MapPin size={24} className="mx-auto mb-2" />
-                <p className="text-sm font-medium">{product.city || "Location"}{product.country ? `, ${product.country}` : ""}</p>
+                <div className="w-14 h-14 rounded-2xl bg-slate-200/60 flex items-center justify-center mx-auto mb-3">
+                  <ImageIcon size={24} className="text-slate-300" />
+                </div>
+                <p className="text-sm font-medium text-slate-500">No cover photo</p>
+                <p className="text-xs text-slate-400 mt-1">Add a photo in the Photos step</p>
               </div>
             </div>
           )}

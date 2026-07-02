@@ -41,7 +41,7 @@ const AGE_GROUPS = [
 ];
 
 export default function PricingSchedulesStep() {
-  const { product, updateNested } = useProductBuilderStore();
+  const { product, errors, updateNested } = useProductBuilderStore();
   const { pricing } = product;
   const [modalStep, setModalStep] = useState(null);
   const [tempVehicleType, setTempVehicleType] = useState("");
@@ -283,23 +283,41 @@ export default function PricingSchedulesStep() {
         </div>
 
         {(pricing.schedules[0]?.prices || []).length === 0 ? (
-          <div className="p-6 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl text-center">
-            <DollarSign size={28} className="mx-auto text-slate-300 mb-2" />
-            <p className="text-sm font-medium text-slate-600">No prices added yet</p>
-            <p className="text-xs text-slate-400 mt-1">Click "Add Price" to set up your pricing</p>
+          <div className={`p-6 border-2 rounded-2xl text-center ${errors.prices ? "bg-red-50 border-red-300" : "bg-slate-50 border-dashed border-slate-200"}`}>
+            <DollarSign size={28} className={`mx-auto mb-2 ${errors.prices ? "text-red-300" : "text-slate-300"}`} />
+            <p className={`text-sm font-medium ${errors.prices ? "text-red-700" : "text-slate-600"}`}>
+              {errors.prices || "No prices added yet"}
+            </p>
+            <p className={`text-xs mt-1 ${errors.prices ? "text-red-500" : "text-slate-400"}`}>
+              {errors.prices ? "Add at least one price entry before continuing" : 'Click "Add Price" to set up your pricing'}
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
             {(pricing.schedules[0]?.prices || []).map((price, index) => (
               <div
                 key={index}
-                className="group flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:shadow-sm transition-all"
+                className="group bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:shadow-sm transition-all p-4"
               >
-                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <span className="text-xs font-semibold text-emerald-700">{index + 1}</span>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <span className="text-xs font-semibold text-emerald-700">{index + 1}</span>
+                    </div>
+                    <span className="text-sm font-medium text-slate-700">
+                      {price.ageGroup || "New price"}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removePriceEntry(index)}
+                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
 
-                <div className="flex-1 grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-slate-400 mb-1">Age Group</label>
                     <Select
@@ -378,14 +396,6 @@ export default function PricingSchedulesStep() {
                     </div>
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => removePriceEntry(index)}
-                  className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  <X size={14} />
-                </button>
               </div>
             ))}
           </div>

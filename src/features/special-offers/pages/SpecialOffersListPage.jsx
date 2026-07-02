@@ -124,18 +124,18 @@ export default function SpecialOffersListPage() {
       </motion.div>
 
       {/* Stats */}
-      <motion.div {...FADE_UP} transition={{ ...FADE_UP.transition, delay: 0.05 }} className="grid grid-cols-3 gap-3 mb-6">
+      <motion.div {...FADE_UP} transition={{ ...FADE_UP.transition, delay: 0.05 }} className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         {stats.map((s) => {
           const Icon = s.icon;
           return (
-            <div key={s.label} className={cn("bg-white border border-emerald-100/60 rounded-xl p-4 hover:shadow-md hover:shadow-emerald-900/5 hover:border-emerald-200 transition-all border-l-4", s.accent)}>
+            <div key={s.label} className={cn("bg-white border border-emerald-100/60 rounded-xl p-3 sm:p-4 hover:shadow-md hover:shadow-emerald-900/5 hover:border-emerald-200 transition-all border-l-4", s.accent)}>
               <div className="flex items-center justify-between mb-2.5">
-                <div className={cn("w-9 h-9 rounded-lg border flex items-center justify-center", s.iconBg, s.iconBorder)}>
-                  <Icon size={16} className={s.iconColor} />
+                <div className={cn("w-8 h-8 sm:w-9 sm:h-9 rounded-lg border flex items-center justify-center", s.iconBg, s.iconBorder)}>
+                  <Icon size={14} className={s.iconColor} />
                 </div>
               </div>
-              <p className="text-lg font-bold text-slate-800">{s.value}</p>
-              <p className="text-xs font-medium text-slate-500 mt-0.5">{s.label}</p>
+              <p className="text-base sm:text-lg font-bold text-slate-800">{s.value}</p>
+              <p className="text-[10px] sm:text-xs font-medium text-slate-500 mt-0.5">{s.label}</p>
             </div>
           );
         })}

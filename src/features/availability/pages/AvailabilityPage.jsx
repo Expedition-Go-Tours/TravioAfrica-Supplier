@@ -246,7 +246,7 @@ export default function AvailabilityPage() {
       </div>
 
       {/* ====== CONTROLS ====== */}
-      <div className="bg-white rounded-xl border border-slate-200 px-5 py-3 mb-6 flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-xl border border-slate-200 p-3 sm:px-5 sm:py-3 mb-6 space-y-3 sm:space-y-0 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <CalendarIcon size={16} className="text-slate-400 shrink-0" />
           <Select value={tourId || ""} onValueChange={handleTourChange}>
@@ -261,67 +261,69 @@ export default function AvailabilityPage() {
           </Select>
         </div>
 
-        <div className="flex items-center bg-slate-100 rounded-lg p-0.5 gap-0">
-          {[
-            { key: "month", label: "Month" },
-            { key: "30days", label: "30 Days" },
-            { key: "all", label: "All" },
-          ].map((m) => (
-            <button
-              key={m.key}
-              onClick={() => setDateMode(m.key)}
-              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
-                dateMode === m.key
-                  ? "bg-white text-slate-800 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center bg-slate-100 rounded-lg p-0.5 gap-0">
+            {[
+              { key: "month", label: "Month" },
+              { key: "30days", label: "30 Days" },
+              { key: "all", label: "All" },
+            ].map((m) => (
+              <button
+                key={m.key}
+                onClick={() => setDateMode(m.key)}
+                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+                  dateMode === m.key
+                    ? "bg-white text-slate-800 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+
+          {dateMode === "month" && (
+            <>
+              <div className="flex items-center gap-0.5">
+                <button onClick={() => goMonth("prev")} className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><ChevronLeft size={15} /></button>
+                <span className="text-sm font-semibold text-slate-800 w-24 text-center select-none">{format(currentDate, "MMMM yyyy")}</span>
+                <button onClick={() => goMonth("next")} className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><ChevronRight size={15} /></button>
+              </div>
+              <button onClick={() => { const d = new Date(); setCurrentDate(d); syncUrl(selectedTour, d); }} className="text-xs font-medium text-[#044b3b] hover:text-[#033629] transition-colors px-1.5 py-1 rounded-md hover:bg-emerald-50">
+                Today
+              </button>
+            </>
+          )}
+
+          {dateMode !== "month" && (
+            <span className="text-xs text-slate-400 select-none">
+              {dateMode === "30days" ? format(new Date(), "MMM d") + " – " + format(addDays(new Date(), 29), "MMM d, yyyy") : format(subMonths(new Date(), 3), "MMM d") + " – " + format(addMonths(new Date(), 3), "MMM d, yyyy")}
+            </span>
+          )}
+
+          {availLoading && <RefreshCw size={13} className="animate-spin text-slate-400 shrink-0" />}
+          {availError && !availLoading && (
+            <button onClick={() => refetchAvail()} className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700"><RefreshCw size={12} /> Retry</button>
+          )}
         </div>
-
-        {dateMode === "month" && (
-          <>
-            <div className="flex items-center gap-0.5">
-              <button onClick={() => goMonth("prev")} className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><ChevronLeft size={15} /></button>
-              <span className="text-sm font-semibold text-slate-800 w-24 text-center select-none">{format(currentDate, "MMMM yyyy")}</span>
-              <button onClick={() => goMonth("next")} className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><ChevronRight size={15} /></button>
-            </div>
-            <button onClick={() => { const d = new Date(); setCurrentDate(d); syncUrl(selectedTour, d); }} className="text-xs font-medium text-[#044b3b] hover:text-[#033629] transition-colors px-1.5 py-1 rounded-md hover:bg-emerald-50">
-              Today
-            </button>
-          </>
-        )}
-
-        {dateMode !== "month" && (
-          <span className="text-xs text-slate-400 select-none">
-            {dateMode === "30days" ? format(new Date(), "MMM d") + " – " + format(addDays(new Date(), 29), "MMM d, yyyy") : format(subMonths(new Date(), 3), "MMM d") + " – " + format(addMonths(new Date(), 3), "MMM d, yyyy")}
-          </span>
-        )}
-
-        {availLoading && <RefreshCw size={13} className="animate-spin text-slate-400 shrink-0" />}
-        {availError && !availLoading && (
-          <button onClick={() => refetchAvail()} className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700"><RefreshCw size={12} /> Retry</button>
-        )}
       </div>
 
       {/* ====== STATS ====== */}
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         {[
           { label: "Available", value: stats.available, icon: CheckCircle2, bg: "bg-emerald-50", border: "border-emerald-200/60", color: "text-emerald-600", bar: "from-emerald-400 to-emerald-300", },
           { label: "Limited", value: stats.limited, icon: AlertTriangle, bg: "bg-amber-50", border: "border-amber-200/60", color: "text-amber-600", bar: "from-amber-400 to-amber-300", },
           { label: "Full", value: stats.full, icon: XCircle, bg: "bg-red-50", border: "border-red-200/60", color: "text-red-600", bar: "from-red-400 to-red-300", },
           { label: "Blocked", value: stats.blocked, icon: Ban, bg: "bg-slate-50", border: "border-slate-200/60", color: "text-slate-500", bar: "from-slate-400 to-slate-300", },
         ].map((s) => (
-          <div key={s.label} className="relative bg-white rounded-xl border border-slate-200 p-4 group hover:shadow-md hover:border-slate-300 transition-all overflow-hidden">
-            <div className="flex items-start gap-3.5">
-              <div className={`w-11 h-11 rounded-xl ${s.bg} ${s.border} border flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
-                <s.icon size={18} className={s.color} />
+          <div key={s.label} className="relative bg-white rounded-xl border border-slate-200 p-3 sm:p-4 group hover:shadow-md hover:border-slate-300 transition-all overflow-hidden">
+            <div className="flex items-start gap-2.5 sm:gap-3.5">
+              <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl ${s.bg} ${s.border} border flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
+                <s.icon size={16} className={s.color} />
               </div>
               <div className="min-w-0">
-                <p className={`text-2xl font-bold tracking-tight ${s.color}`}>{s.value}</p>
-                <p className="text-xs text-slate-400 leading-tight mt-0.5">{s.label}</p>
+                <p className={`text-xl sm:text-2xl font-bold tracking-tight ${s.color}`}>{s.value}</p>
+                <p className="text-[10px] sm:text-xs text-slate-400 leading-tight mt-0.5">{s.label}</p>
               </div>
             </div>
             <div className={`absolute bottom-0 left-0 h-1 bg-linear-to-r ${s.bar} transition-all duration-500 ease-out rounded-full`}
@@ -332,7 +334,7 @@ export default function AvailabilityPage() {
       </div>
 
       {/* ====== STATUS FILTER + LEGEND ====== */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
+      <div className="flex items-center gap-1.5 sm:gap-2 mb-4 flex-wrap">
         {STATUS_ORDER.map((s) => {
           const c = STATUS_CONFIG[s];
           const active = statusFilter[s];
@@ -340,19 +342,19 @@ export default function AvailabilityPage() {
             <button
               key={s}
               onClick={() => setStatusFilter((prev) => ({ ...prev, [s]: !prev[s] }))}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg border text-[11px] sm:text-xs font-medium transition-all ${
                 active
                   ? `${s === "available" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : s === "limited" ? "border-amber-200 bg-amber-50 text-amber-700" : s === "full" ? "border-red-200 bg-red-50 text-red-700" : "border-slate-200 bg-slate-50 text-slate-600"}`
                   : "border-transparent text-slate-300 hover:text-slate-400"
               }`}
             >
-              <c.icon size={12} />
+              <c.icon size={11} />
               {c.label}
             </button>
           );
         })}
-        <span className="text-[11px] text-slate-300 mx-1">|</span>
-        <div className="flex items-center gap-1.5">
+        <span className="text-[11px] text-slate-300 mx-0.5 sm:mx-1 hidden sm:inline">|</span>
+        <div className="hidden sm:flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-[#044b3b]" />
           <span className="text-[11px] text-slate-400">Override</span>
         </div>
@@ -362,7 +364,7 @@ export default function AvailabilityPage() {
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
         <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-            <div key={d} className="py-2 text-center text-[11px] font-semibold text-slate-400 uppercase tracking-widest">{d}</div>
+            <div key={d} className="py-1.5 sm:py-2 text-center text-[9px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-widest">{d}</div>
           ))}
         </div>
 
@@ -393,7 +395,7 @@ export default function AvailabilityPage() {
                   key={format(date, "yyyy-MM-dd")}
                   onClick={() => !filteredOut && openPanel(date)}
                   disabled={filteredOut}
-                   className={`relative flex flex-col items-center py-3 px-1 border-b border-r border-slate-100 transition-colors min-h-[80px] ${
+                   className={`relative flex flex-col items-center py-2 sm:py-3 px-0.5 sm:px-1 border-b border-r border-slate-100 transition-colors min-h-[60px] sm:min-h-[80px] ${
                     filteredOut
                       ? "opacity-20 cursor-default bg-white"
                       : isBlocked
@@ -403,35 +405,35 @@ export default function AvailabilityPage() {
                           : "hover:bg-slate-50 active:bg-slate-100 cursor-pointer bg-white"
                   } ${today && !isBlocked && day.status !== "full" ? "bg-emerald-50/40" : ""}`}
                 >
-                  <span className={`text-sm font-semibold leading-none mb-1.5 ${today && !isBlocked && day.status !== "full" ? "text-[#044b3b]" : isBlocked || day.status === "full" ? "text-slate-400" : "text-slate-700"}`}>
+                  <span className={`text-xs sm:text-sm font-semibold leading-none mb-1 sm:mb-1.5 ${today && !isBlocked && day.status !== "full" ? "text-[#044b3b]" : isBlocked || day.status === "full" ? "text-slate-400" : "text-slate-700"}`}>
                     {format(date, "d")}
                   </span>
 
                   {!isBlocked && (
-                    <span className="flex items-center gap-1 mb-1">
-                      {day.status === "available" && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                    <span className="flex items-center gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
+                      {day.status === "available" && <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-400" />}
                       {day.status === "limited" && (
                         <>
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                          <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-400" />
+                          <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-amber-400" />
                         </>
                       )}
-                      {day.status === "full" && <span className="w-1.5 h-1.5 rounded-full bg-red-400" />}
+                      {day.status === "full" && <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-red-400" />}
                     </span>
                   )}
 
                   {isBlocked ? (
-                    <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider leading-none mt-0.5">Blocked</span>
+                    <span className="text-[8px] sm:text-[9px] font-medium text-slate-400 uppercase tracking-wider leading-none mt-0.5">Blocked</span>
                   ) : (
                     <>
-                      <div className="w-8 h-1 rounded-full bg-slate-100 overflow-hidden mb-1">
+                      <div className="hidden sm:block w-8 h-1 rounded-full bg-slate-100 overflow-hidden mb-1">
                         <div className={`h-full rounded-full transition-all ${s.bar}`} style={{ width: `${Math.min(usage, 100)}%` }} />
                       </div>
-                      <span className="text-[10px] text-slate-400 leading-none">{day.booked}/{day.capacity}</span>
+                      <span className="text-[9px] sm:text-[10px] text-slate-400 leading-none">{day.booked}/{day.capacity}</span>
                     </>
                   )}
 
-                  {day.hasOverride && <span className="absolute top-1.5 right-2 w-1 h-1 rounded-full bg-[#044b3b]" />}
+                  {day.hasOverride && <span className="absolute top-1.5 right-1.5 sm:right-2 w-1 h-1 rounded-full bg-[#044b3b]" />}
                 </button>
               );
             })}
@@ -442,8 +444,8 @@ export default function AvailabilityPage() {
       {/* ========== SIDE PANEL ========== */}
       {panelOpen && selectedDate && selectedDay && (
         <>
-          <div className={`fixed inset-0 bg-black/20 z-40 transition-opacity duration-250 ${panelVisible ? "opacity-100" : "opacity-0"}`} onClick={closePanel} />
-          <div className={`fixed inset-y-0 right-0 w-full max-w-sm bg-white shadow-2xl z-50 flex flex-col transition-all duration-250 ease-out ${panelVisible ? "translate-x-0" : "translate-x-full"}`}>
+          <div className={`fixed inset-0 bg-black/20 z-[70] transition-opacity duration-250 ${panelVisible ? "opacity-100" : "opacity-0"}`} onClick={closePanel} />
+          <div className={`fixed inset-y-0 right-0 w-full max-w-sm bg-white shadow-2xl z-[71] flex flex-col transition-all duration-250 ease-out ${panelVisible ? "translate-x-0" : "translate-x-full"}`}>
 
             {/* === ACCENT BAR at top based on current status === */}
             <div className={`h-1.5 shrink-0 transition-colors duration-300 ${editStatus === "blocked" ? "bg-slate-400" : editStatus === "limited" ? "bg-amber-400" : editStatus === "full" ? "bg-red-400" : "bg-emerald-400"}`} />

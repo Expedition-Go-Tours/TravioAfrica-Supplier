@@ -189,21 +189,21 @@ export default function BookingsPage() {
       </div>
 
       {/* ====== STATS ====== */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
         {[
           { label: "Total Bookings", value: stats.total, icon: ShoppingCart, color: "text-slate-900", bar: "bg-slate-200" },
           { label: "Pending", value: stats.pending, icon: Clock, color: "text-amber-600", bar: "bg-amber-400" },
           { label: "Confirmed", value: stats.confirmed, icon: CheckCircle2, color: "text-emerald-600", bar: "bg-emerald-400" },
           { label: "Revenue", value: formatCurrency(stats.revenue), icon: TrendingUp, color: "text-[#044b3b]", bar: "bg-[#044b3b]" },
         ].map((s) => (
-          <div key={s.label} className="bg-white rounded-xl border border-emerald-100/60 p-4 hover:shadow-md transition-shadow">
+          <div key={s.label} className="bg-white rounded-xl border border-emerald-100/60 p-3 sm:p-4 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-2">
-              <div className="w-9 h-9 rounded-lg bg-emerald-50/40 border border-emerald-100/60 flex items-center justify-center">
-                <s.icon size={15} className={s.color} />
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-emerald-50/40 border border-emerald-100/60 flex items-center justify-center">
+                <s.icon size={14} className={s.color} />
               </div>
-              <span className={`text-lg font-bold ${s.color}`}>{typeof s.value === "number" ? s.value : s.value}</span>
+              <span className={`text-base sm:text-lg font-bold ${s.color} text-right`}>{s.value}</span>
             </div>
-            <p className="text-[11px] text-slate-500">{s.label}</p>
+            <p className="text-[10px] sm:text-[11px] text-slate-500">{s.label}</p>
             <div className={`mt-2 h-0.5 w-full rounded-full ${s.bar} opacity-30`} />
           </div>
         ))}
@@ -212,7 +212,7 @@ export default function BookingsPage() {
       {/* ====== TOOLBAR ====== */}
       <div className="bg-white rounded-xl border border-emerald-100/60 shadow-sm">
         {/* Quick filters */}
-        <div className="flex items-center gap-1 px-4 pt-3 pb-2 overflow-x-auto">
+        <div className="flex items-center gap-1 px-4 pt-3 pb-2 overflow-x-auto scrollbar-none">
           {QUICK_FILTERS.map((tab) => (
             <button key={tab.key} onClick={() => handleTabClick(tab.key)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${

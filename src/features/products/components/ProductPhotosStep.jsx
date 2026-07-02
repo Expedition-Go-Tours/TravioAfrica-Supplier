@@ -52,34 +52,37 @@ export default function ProductPhotosStep() {
   }, [product.photos]);
 
   const processFiles = useCallback(async (files) => {
-    const currentPhotos = useProductBuilderStore.getState().product.photos;
+    const fileArray = Array.from(files);
     const errors = [];
     const validFiles = [];
 
-    for (const file of files) {
-      if (!ACCEPTED_TYPES.includes(file.type)) {
-        errors.push(VALIDATION_ERRORS.type(file.name));
-        continue;
-      }
-      if (file.size > MAX_SIZE) {
-        errors.push(VALIDATION_ERRORS.size(file.name));
-        continue;
-      }
-      const dims = await getImageDimensions(file);
-      if (!dims) {
-        errors.push(`${file.name}: could not read image.`);
-        continue;
-      }
-      if (
-        dims.width < MIN_DIMENSIONS.width ||
-        dims.height < MIN_DIMENSIONS.height ||
-        dims.width > MAX_DIMENSIONS.width ||
-        dims.height > MAX_DIMENSIONS.height
-      ) {
-        errors.push(VALIDATION_ERRORS.dimensions(file.name));
-        continue;
-      }
-      validFiles.push(file);
+    const results = await Promise.all(
+      fileArray.map(async (file) => {
+        if (!ACCEPTED_TYPES.includes(file.type)) {
+          return { file, valid: false, error: VALIDATION_ERRORS.type(file.name) };
+        }
+        if (file.size > MAX_SIZE) {
+          return { file, valid: false, error: VALIDATION_ERRORS.size(file.name) };
+        }
+        const dims = await getImageDimensions(file);
+        if (!dims) {
+          return { file, valid: false, error: `${file.name}: could not read image.` };
+        }
+        if (
+          dims.width < MIN_DIMENSIONS.width ||
+          dims.height < MIN_DIMENSIONS.height ||
+          dims.width > MAX_DIMENSIONS.width ||
+          dims.height > MAX_DIMENSIONS.height
+        ) {
+          return { file, valid: false, error: VALIDATION_ERRORS.dimensions(file.name) };
+        }
+        return { file, valid: true };
+      })
+    );
+
+    for (const r of results) {
+      if (r.valid) validFiles.push(r.file);
+      else errors.push(r.error);
     }
 
     setValidationErrors(errors);
@@ -92,7 +95,8 @@ export default function ProductPhotosStep() {
         file,
         alt: "",
       }));
-      updateProduct({ photos: [...currentPhotos, ...newPhotos] });
+      const latestPhotos = useProductBuilderStore.getState().product.photos;
+      updateProduct({ photos: [...latestPhotos, ...newPhotos] });
     }
   }, [updateProduct]);
 

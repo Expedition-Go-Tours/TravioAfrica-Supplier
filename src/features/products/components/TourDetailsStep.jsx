@@ -104,10 +104,14 @@ function ItineraryBuilder({ items, onChange, error }) {
       )}
 
       {items.length === 0 && (
-        <div className="p-8 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl text-center">
-          <Clock size={32} className="mx-auto text-slate-300 mb-3" />
-          <p className="text-sm font-medium text-slate-600">No itinerary stops added yet</p>
-          <p className="text-xs text-slate-400 mt-1">Add your first stop below to build your itinerary</p>
+        <div className={`p-8 border-2 rounded-2xl text-center ${error ? "bg-red-50 border-red-300" : "bg-slate-50 border-dashed border-slate-200"}`}>
+          <Clock size={32} className={`mx-auto mb-3 ${error ? "text-red-300" : "text-slate-300"}`} />
+          <p className={`text-sm font-medium ${error ? "text-red-700" : "text-slate-600"}`}>
+            {error || "No itinerary stops added yet"}
+          </p>
+          <p className={`text-xs mt-1 ${error ? "text-red-500" : "text-slate-400"}`}>
+            {error ? "Add at least one stop before continuing" : "Add your first stop below to build your itinerary"}
+          </p>
         </div>
       )}
 
@@ -442,9 +446,13 @@ function HighlightsBuilder({ highlights, onChange, error }) {
       )}
 
       {highlights.length === 0 && (
-        <div className="p-6 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl text-center">
-          <p className="text-sm font-medium text-slate-600">No highlights added yet</p>
-          <p className="text-xs text-slate-400 mt-1">Add highlights to showcase what makes your tour special</p>
+        <div className={`p-6 border-2 rounded-2xl text-center ${error ? "bg-red-50 border-red-300" : "bg-slate-50 border-dashed border-slate-200"}`}>
+          <p className={`text-sm font-medium ${error ? "text-red-700" : "text-slate-600"}`}>
+            {error || "No highlights added yet"}
+          </p>
+          <p className={`text-xs mt-1 ${error ? "text-red-500" : "text-slate-400"}`}>
+            {error ? "Add at least one highlight before continuing" : "Add highlights to showcase what makes your tour special"}
+          </p>
         </div>
       )}
 

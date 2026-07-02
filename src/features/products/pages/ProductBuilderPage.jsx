@@ -1,10 +1,9 @@
 import { useParams, useSearchParams, useNavigate, useBlocker } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
-import { X, Loader2, AlertCircle, Menu } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { useProductBuilderStore, SECTIONS } from "@/features/products/stores/productBuilderStore";
 import { getMyProduct } from "@/features/products/api";
 import WizardStepLayout from "@/features/products/components/WizardStepLayout";
-import WizardSidebar from "@/features/products/components/WizardSidebar";
 import LanguageTitleStep from "@/features/products/components/LanguageTitleStep";
 import CategorizationStep from "@/features/products/components/CategorizationStep";
 import ThemeStep from "@/features/products/components/ThemeStep";
@@ -274,13 +273,13 @@ export default function ProductBuilderPage() {
     hasHydrated,
     currentSectionId,
     currentStepId,
+    completedStepIds,
     navigateTo,
     isDirty,
     isSubmitting,
   } = useProductBuilderStore();
   const [loadingProduct, setLoadingProduct] = useState(false);
   const [productError, setProductError] = useState(null);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showExitWarning, setShowExitWarning] = useState(false);
 
   // Block in-app navigation when dirty
@@ -414,50 +413,96 @@ export default function ProductBuilderPage() {
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Fixed header */}
       <div className="flex-shrink-0 p-4 md:p-6 pb-0">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4 md:mb-6">
           <div className="flex items-center gap-4">
             <div className="w-1 h-10 bg-linear-to-b from-emerald-500 to-emerald-300 rounded-full" />
             <div>
               <h1 className="text-xl md:text-2xl font-bold text-slate-800">
                 {id && id !== "new" ? "Edit Product" : "Create New Product"}
               </h1>
-              <p className="text-sm text-slate-500 mt-0.5">
+              <p className="text-sm text-slate-500 mt-0.5 hidden md:block">
                 Step {currentStep + 1} of {STEPS.length}: {STEPS[currentStep]?.label}
               </p>
             </div>
           </div>
-          {/* Mobile sidebar toggle */}
-          <button
-            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-            className="lg:hidden flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors"
-          >
-            <Menu size={16} />
-            Sections
-          </button>
+        </div>
+
+        {/* Mobile step navigator */}
+        <div className="lg:hidden mb-4">
+          {(() => {
+            const currentSection = SECTIONS.find((s) => s.id === currentSectionId);
+            if (!currentSection) return null;
+            const sectionIndex = SECTIONS.indexOf(currentSection);
+            return (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                    {currentSection.label}
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    {sectionIndex + 1}/{SECTIONS.length}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
+                  {SECTIONS.map((section, sIdx) => {
+                    const isCurrentSection = section.id === currentSectionId;
+                    const hasCompleted = section.steps.some((st) => completedStepIds.includes(st.id));
+                    const allDone = section.steps.every((st) => completedStepIds.includes(st.id));
+                    return (
+                      <button
+                        key={section.id}
+                        onClick={() => {
+                          const target = allDone
+                            ? section.steps[0]
+                            : section.steps.find((st) => !completedStepIds.includes(st.id)) || section.steps[0];
+                          navigateTo(section.id, target.id);
+                        }}
+                        className={`shrink-0 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all border ${
+                          isCurrentSection
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                            : allDone
+                              ? "bg-emerald-50/50 border-emerald-100 text-emerald-600"
+                              : hasCompleted
+                                ? "bg-amber-50/50 border-amber-100 text-amber-600"
+                                : "bg-slate-50 border-slate-200 text-slate-400"
+                        }`}
+                      >
+                        {allDone ? "✓" : ""} {section.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-1 mt-2 overflow-x-auto scrollbar-none">
+                  {currentSection.steps.map((step) => {
+                    const isDone = completedStepIds.includes(step.id);
+                    const isCurrent = step.id === currentStepId;
+                    return (
+                      <button
+                        key={step.id}
+                        onClick={() => navigateTo(currentSection.id, step.id)}
+                        className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
+                          isCurrent
+                            ? "bg-emerald-600 text-white shadow-sm"
+                            : isDone
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        }`}
+                      >
+                        <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold ${
+                          isCurrent ? "bg-white/20" : isDone ? "bg-emerald-200" : "bg-slate-200"
+                        }`}>
+                          {isDone ? "✓" : step.stepIndex + 1}
+                        </span>
+                        <span className="max-w-[80px] truncate">{step.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
-
-      {/* Mobile sidebar overlay */}
-      {mobileSidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/30"
-            onClick={() => setMobileSidebarOpen(false)}
-          />
-          <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl overflow-y-auto">
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-              <span className="text-sm font-semibold text-slate-800">Sections</span>
-              <button
-                onClick={() => setMobileSidebarOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <WizardSidebar />
-          </div>
-        </div>
-      )}
 
       {/* Wizard area — fills remaining height */}
       <div className="flex-1 min-h-0 px-4 md:px-6 pb-4 md:pb-6">

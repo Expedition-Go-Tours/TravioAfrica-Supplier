@@ -549,10 +549,10 @@ export const useProductBuilderStore = create(
             }
 
             const schedule = product.pricing.schedules?.[0];
-            if (schedule) {
-              if (!schedule.startDate) {
-                errors.startDate = "Schedule start date is required";
-              } else if (schedule.endDate && new Date(schedule.endDate) < new Date(schedule.startDate)) {
+            if (!schedule || !schedule.prices?.length) {
+              errors.prices = "Add at least one price entry for your enabled age groups";
+            } else if (schedule) {
+              if (schedule.startDate && schedule.endDate && new Date(schedule.endDate) < new Date(schedule.startDate)) {
                 errors.endDate = "End date must be on or after start date";
               }
 
