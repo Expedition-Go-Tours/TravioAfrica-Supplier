@@ -4,7 +4,6 @@ import {
   loginWithEmail,
   fetchCurrentUser,
   getLoginErrorMessage,
-  showSupplierLoginToast,
 } from "@/features/auth/api";
 import { useAuthStore, canAccessSupplierDashboard } from "@/stores/authStore";
 import api from "@/lib/axios";
@@ -55,7 +54,6 @@ export function useSupplierLogin() {
   const finalizeLogin = useCallback(
     async (user, token, supplierProfile) => {
       login(user, token, supplierProfile);
-      showSupplierLoginToast(supplierProfile, user);
 
       const isTeamMember = await checkIsTeamMember();
       const path = getPostLoginPath(supplierProfile, isTeamMember);

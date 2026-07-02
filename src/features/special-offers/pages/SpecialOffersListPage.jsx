@@ -243,12 +243,13 @@ export default function SpecialOffersListPage() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, delay: i * 0.03, ease: "easeOut" }}
-                className="group relative bg-white rounded-xl border border-emerald-100/60 shadow-sm hover:shadow-md hover:shadow-emerald-900/5 hover:border-emerald-200 transition-all"
+                className="group bg-white rounded-xl border border-emerald-100/60 shadow-sm hover:shadow-md hover:shadow-emerald-900/5 hover:border-emerald-200 transition-all overflow-hidden"
               >
+                {/* Top row: image + content + discount */}
                 <div className="flex items-stretch">
-                  {/* Product image panel (left) */}
+                  {/* Product image */}
                   {firstTarget && (
-                    <div className="relative w-28 shrink-0 rounded-l-xl overflow-hidden border-r border-emerald-100/60">
+                    <div className="relative w-20 sm:w-28 shrink-0 overflow-hidden">
                       <button
                         onClick={() => navigate(`/products/${tour?.id || firstTarget.tourId}`)}
                         className="absolute inset-0 z-10"
@@ -261,11 +262,59 @@ export default function SpecialOffersListPage() {
                           <Package size={20} className="text-slate-400" />
                         </div>
                       )}
-                      <div className="absolute top-2 right-2 z-20">
+                    </div>
+                  )}
+
+                  {/* Content */}
+                  <div
+                    className="flex-1 min-w-0 px-3 sm:px-4 py-3 cursor-pointer"
+                    onClick={() => setSelectedOffer(offer)}
+                  >
+                    {/* Title row with status + menu */}
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const t = offer.targets?.[0]?.tour || offer.targets?.[0];
+                              if (t) navigate(`/products/${t.id || t.tourId}`);
+                            }}
+                            className="text-sm font-semibold text-slate-800 hover:text-emerald-600 transition-colors text-left leading-tight"
+                          >
+                            {firstTarget
+                              ? (tour?.title || firstTarget.tourTitle || "Tour")
+                              : offer.name}
+                          </button>
+                          <span className={cn(
+                            "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold border shrink-0",
+                            statusCfg.bg, statusCfg.text, statusCfg.border
+                          )}>
+                            <span className={cn("w-1.5 h-1.5 rounded-full", statusCfg.dot)} />
+                            {statusCfg.label}
+                          </span>
+                        </div>
+                        {/* Meta row */}
+                        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-slate-500 mt-1">
+                          <span>{formatDate(offer.startDate)} – {formatDate(offer.endDate)}</span>
+                          <span className="text-slate-300">·</span>
+                          <span>{typeLabel}</span>
+                          <span className="text-slate-300">·</span>
+                          <span>{offer.targets?.length || 0} product{(offer.targets?.length || 0) !== 1 ? "s" : ""}</span>
+                          {capped && (
+                            <>
+                              <span className="text-slate-300">·</span>
+                              <span className="text-amber-600 font-medium">{offer.maxSpots - offer.spotsSold} left</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      {/* Menu button */}
+                      <div className="shrink-0">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <button className="w-7 h-7 rounded-lg bg-white/90 backdrop-blur-sm border border-white/60 flex items-center justify-center hover:bg-white transition-all shadow-sm">
-                              <MoreVerticalIcon size={14} className="text-slate-600" />
+                            <button className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors opacity-50 group-hover:opacity-100 focus:opacity-100">
+                              <MoreVerticalIcon size={15} className="text-slate-400" />
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-44">
@@ -283,145 +332,79 @@ export default function SpecialOffersListPage() {
                         </DropdownMenu>
                       </div>
                     </div>
-                  )}
-                  {!firstTarget && (
-                    <div className="flex items-start pt-3 pl-3 shrink-0">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
-                            <MoreVerticalIcon size={15} className="text-slate-400" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44">
-                          <DropdownMenuItem onClick={() => navigate(`/special-offers/build/${offer.id}`)}>
-                            <Edit size={15} /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggle(offer.id)}>
-                            <Power size={15} /> {offer.isActive ? "Deactivate" : "Activate"}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleDelete(offer.id)} className="text-red-600 focus:text-red-600 focus:bg-red-50">
-                            <Trash2 size={15} /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  )}
 
-                  <div
-                    className="flex items-center gap-3 flex-1 min-w-0 px-3 py-3 cursor-pointer"
-                    onClick={() => setSelectedOffer(offer)}
-                  >
-                  <div className="flex-1 min-w-0 space-y-1">
-                    {/* Tour title + Status */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const t = offer.targets?.[0]?.tour || offer.targets?.[0];
-                          if (t) navigate(`/products/${t.id || t.tourId}`);
-                        }}
-                        className="text-sm font-semibold text-slate-800 hover:text-emerald-600 transition-colors text-left"
-                      >
-                        {firstTarget
-                          ? (tour?.title || firstTarget.tourTitle || "Tour")
-                          : offer.name}
-                      </button>
-                      <span className={cn(
-                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border shrink-0",
-                        statusCfg.bg, statusCfg.text, statusCfg.border
-                      )}>
-                        <span className={cn("w-1.5 h-1.5 rounded-full", statusCfg.dot)} />
-                        {statusCfg.label}
+                    {/* Offer name + countdown */}
+                    <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-50 border border-emerald-200 rounded-md">
+                        <Tag size={10} className="text-emerald-500" />
+                        <span className="text-[11px] font-semibold text-emerald-700">{offer.name}</span>
                       </span>
-                    </div>
-                    {/* Meta row */}
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
-                      <span>{formatDate(offer.startDate)} – {formatDate(offer.endDate)}</span>
-                      <span className="text-slate-300">|</span>
-                      <span>{typeLabel}</span>
-                      <span className="text-slate-300">|</span>
-                      <span>{offer.targets?.length || 0} product{(offer.targets?.length || 0) !== 1 ? "s" : ""}</span>
-                      {capped && (
-                        <>
-                          <span className="text-slate-300">|</span>
-                          <span>{offer.maxSpots - offer.spotsSold} left</span>
-                        </>
+                      {offer.status === "scheduled" && offer.startDate && (
+                        <CountdownBadge targetDate={offer.startDate} label="Starts in" variant="start" />
+                      )}
+                      {offer.status === "active" && offer.startDate && offer.endDate && (
+                        <CountdownBadge targetDate={offer.endDate} label="Ends in" variant="end" />
                       )}
                     </div>
-                    {/* Product section */}
+
+                    {/* Product chips */}
                     {offer.targets?.length > 0 && (
-                      <div className="space-y-1.5 pt-0.5">
-                        <div className="inline-flex items-center gap-1.5 flex-wrap">
-                          <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-emerald-50 border border-emerald-200 rounded-md">
-                            <Tag size={11} className="text-emerald-500" />
-                            <span className="text-xs font-semibold text-emerald-700">{offer.name}</span>
-                          </span>
-                          {offer.status === "scheduled" && offer.startDate && (
-                            <CountdownBadge targetDate={offer.startDate} label="Starts in" variant="start" />
-                          )}
-                          {offer.status === "active" && offer.startDate && offer.endDate && (
-                            <CountdownBadge targetDate={offer.endDate} label="Ends in" variant="end" />
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {offer.targets.slice(0, 3).map((t) => {
-                            const tData = t.tour || t;
-                            const price = getTourPrice(t.tour);
-                            return (
-                              <button
-                                key={t.id || t.tourId}
-                                onClick={(e) => { e.stopPropagation(); navigate(`/products/${tData.id || t.tourId}`); }}
-                                className="inline-flex items-center gap-1.5 px-2 py-1 bg-white border border-slate-200 rounded-md text-[11px] text-slate-600 hover:border-emerald-300 hover:bg-emerald-50/30 transition-all cursor-pointer"
-                              >
-                                <div className="w-4 h-4 rounded bg-slate-200 overflow-hidden shrink-0">
-                                  {tData.photos?.[0] || t.tourPhoto ? (
-                                    <img src={tData.photos?.[0] || t.tourPhoto} alt="" className="w-full h-full object-cover" />
-                                  ) : (
-                                    <Package size={9} className="text-slate-400 m-auto" />
-                                  )}
-                                </div>
-                                <span className="truncate max-w-[120px]">{tData.title || t.tourTitle || "Tour"}</span>
-                                {price && (
-                                  <span className="text-emerald-600 font-semibold shrink-0">
-                                    ${Math.round(price * (1 - offer.discountPercentage / 100))}
-                                  </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {offer.targets.slice(0, 3).map((t) => {
+                          const tData = t.tour || t;
+                          const price = getTourPrice(t.tour);
+                          return (
+                            <button
+                              key={t.id || t.tourId}
+                              onClick={(e) => { e.stopPropagation(); navigate(`/products/${tData.id || t.tourId}`); }}
+                              className="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-600 hover:border-emerald-300 hover:bg-emerald-50/30 transition-all cursor-pointer"
+                            >
+                              <div className="w-4 h-4 rounded bg-slate-200 overflow-hidden shrink-0">
+                                {tData.photos?.[0] || t.tourPhoto ? (
+                                  <img src={tData.photos?.[0] || t.tourPhoto} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <Package size={9} className="text-slate-400 m-auto" />
                                 )}
-                              </button>
-                            );
-                          })}
-                          {offer.targets.length > 3 && (
-                            <span className="px-2 py-1 bg-slate-50 border border-slate-200/80 rounded-md text-[11px] text-slate-400">
-                              +{offer.targets.length - 3} more
-                            </span>
-                          )}
-                        </div>
+                              </div>
+                              <span className="truncate max-w-[100px] sm:max-w-[140px]">{tData.title || t.tourTitle || "Tour"}</span>
+                              {price && (
+                                <span className="text-emerald-600 font-semibold shrink-0">
+                                  ${Math.round(price * (1 - offer.discountPercentage / 100))}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                        {offer.targets.length > 3 && (
+                          <span className="px-2 py-1 bg-slate-50 border border-slate-200/80 rounded-lg text-[11px] text-slate-400">
+                            +{offer.targets.length - 3} more
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
-                </div>
 
-                  {/* Discount panel (right) */}
-                  <div className="w-[52px] flex flex-col items-center justify-center bg-emerald-50/80 rounded-r-xl border-l border-emerald-100/60 gap-0.5 shrink-0">
-                    <Percent size={13} className="text-emerald-500" />
-                    <span className="text-lg font-bold text-emerald-700 leading-none">{offer.discountPercentage}</span>
-                    <span className="text-[9px] font-medium text-emerald-500 uppercase tracking-wide">Off</span>
+                  {/* Discount badge (right side) */}
+                  <div className="flex flex-col items-center justify-center px-2 sm:px-3 bg-emerald-50/60 border-l border-emerald-100/60 shrink-0">
+                    <Percent size={11} className="text-emerald-500 mb-0.5" />
+                    <span className="text-base sm:text-lg font-bold text-emerald-700 leading-none">{offer.discountPercentage}</span>
+                    <span className="text-[8px] sm:text-[9px] font-semibold text-emerald-500 uppercase tracking-wide">Off</span>
                   </div>
-              </div>
-
-              {/* Capacity progress bar */}
-              {capped && offer.maxSpots > 0 && (
-                <div className="h-1 bg-slate-100 rounded-b-xl overflow-hidden">
-                  <div
-                    className={cn(
-                      "h-full rounded-b-xl transition-all duration-500",
-                      spotsUsed >= 90 ? "bg-red-500" : spotsUsed >= 70 ? "bg-amber-500" : "bg-emerald-500"
-                    )}
-                    style={{ width: `${Math.min(Number(spotsUsed), 100)}%` }}
-                  />
                 </div>
-              )}
-            </motion.div>
+
+                {/* Capacity progress bar */}
+                {capped && offer.maxSpots > 0 && (
+                  <div className="h-1 bg-slate-100 overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full transition-all duration-500",
+                        spotsUsed >= 90 ? "bg-red-500" : spotsUsed >= 70 ? "bg-amber-500" : "bg-emerald-500"
+                      )}
+                      style={{ width: `${Math.min(Number(spotsUsed), 100)}%` }}
+                    />
+                  </div>
+                )}
+              </motion.div>
             );
           })}
         </div>

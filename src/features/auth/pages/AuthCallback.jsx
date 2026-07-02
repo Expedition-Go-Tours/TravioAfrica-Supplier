@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, CheckCircle2, AlertCircle, ArrowRight, Shield } from "lucide-react";
 import { toast } from "sonner";
-import { getLoginErrorMessage, showSupplierLoginToast } from "@/features/auth/api";
+import { getLoginErrorMessage } from "@/features/auth/api";
 import { useAuthStore } from "@/stores/authStore";
 import { getPostLoginPath } from "@/features/auth/hooks/useSupplierLogin";
 import { fetchCurrentUser } from "@/features/auth/api";
@@ -53,7 +53,6 @@ export default function AuthCallback() {
         login(user, accessToken, null);
 
         setStatus("success");
-        showSupplierLoginToast(null, user);
 
         const returnUrl = localStorage.getItem("auth_return_url");
         const redirectTo = returnUrl || getPostLoginPath(null);
