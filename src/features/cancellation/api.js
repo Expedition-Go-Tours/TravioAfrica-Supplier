@@ -1,7 +1,8 @@
-﻿import api from "@/lib/axios";
+import api from "@/lib/axios";
 
-export async function fetchCancellationSummary(productId) {
-  const params = productId ? { productId } : {};
+export async function fetchCancellationSummary(productId, days = 90) {
+  const params = { days };
+  if (productId) params.productId = productId;
   const response = await api.get("/suppliers/cancellation/summary", {
     params,
     skipGlobalErrorHandler: true,
@@ -9,8 +10,8 @@ export async function fetchCancellationSummary(productId) {
   return response.data?.data || null;
 }
 
-export async function fetchCancellationRecords({ productId, page = 1, limit = 25 } = {}) {
-  const params = { page, limit };
+export async function fetchCancellationRecords({ productId, page = 1, limit = 25, days = 90 } = {}) {
+  const params = { page, limit, days };
   if (productId) params.productId = productId;
   const response = await api.get("/suppliers/cancellation/records", {
     params,
@@ -29,6 +30,6 @@ export async function fetchCancellationProducts() {
   });
   return (response.data?.data?.products || []).map((p) => ({
     id: p.id,
-    name: p.title,
+    name: p.title || p.name,
   }));
 }

@@ -1,4 +1,4 @@
-﻿export default function CancellationGauge({ value, label, className = "" }) {
+export default function CancellationGauge({ value, label, className = "" }) {
   // Configurable gauge geometry
   const CX = 130;
   const CY = 142;
@@ -32,12 +32,14 @@
   const x0   = getX(0);   // Right base (5+%)
   const y0   = getY(0);
 
-  // Indicator dot coordinates
+  // Indicator dot coordinates and color
   const nx = getX(finalAngle);
   const ny = getY(finalAngle);
+  const dotColor = clamped <= 2 ? '#115E59' : clamped <= 5 ? '#0D9488' : '#F43F5E';
 
   return (
-    <svg viewBox="0 0 260 200" className={"w-full " + className}>
+    <svg viewBox="0 0 260 200" className={"w-full " + className} role="img" aria-label={`Cancellation rate: ${pct}%, status: ${label}`}>
+      <title>{`Cancellation rate: ${pct}% — ${label}`}</title>
       <style>{`.nd { transition: cx 0.45s ease, cy 0.45s ease; }`}</style>
 
       {/* Ghost background track */}
@@ -61,7 +63,7 @@
       />
       
       {/* Indicator Dot */}
-      <circle className="nd" cx={nx} cy={ny} r="5" fill="#115E59" stroke="white" strokeWidth="2" />
+      <circle className="nd" cx={nx} cy={ny} r="5" fill={dotColor} stroke="white" strokeWidth="2" />
       
       {/* Central Value & Status Label */}
       <text x="130" y="118" textAnchor="middle" fontSize="44" fontWeight="700" fill="#1e293b" fontFamily="DM Sans, sans-serif">
