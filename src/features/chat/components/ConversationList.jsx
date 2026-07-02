@@ -1,4 +1,4 @@
-﻿import { Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { optimizeImage } from "@/lib/image";
 
 function timeAgo(dateStr) {
@@ -72,7 +72,7 @@ export default function ConversationList({ conversations, selectedId, onSelect, 
           <div key={conv.id} className="group relative">
             <button
               onClick={() => onSelect(conv)}
-              className={`flex w-full items-start gap-3 px-3 py-2.5 text-left rounded-xl transition-all duration-200 focus-visible:outline-none ${
+              className={`flex w-full items-start gap-3 px-2.5 py-2 sm:px-3 sm:py-2.5 text-left rounded-xl transition-all duration-200 focus-visible:outline-none ${
                 isSelected ? "bg-emerald-50 ring-1 ring-emerald-200" : "hover:bg-slate-50"
               }`}
             >

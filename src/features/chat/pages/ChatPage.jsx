@@ -276,7 +276,7 @@ export default function ChatPage() {
 
   const convListPanel = (
     <>
-      <div className="px-4 pt-4 pb-3">
+      <div className="px-3 pt-3 pb-2 sm:px-4 sm:pt-4 sm:pb-3">
         <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.key;
@@ -332,8 +332,8 @@ export default function ChatPage() {
   );
 
   return (
-    <div className="px-6 py-4 h-[calc(100vh-120px)] mx-auto">
-      <div className="relative flex h-full rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-900/5 overflow-hidden">
+    <div className="px-2 py-2 sm:px-6 sm:py-4 h-[calc(100vh-80px)] sm:h-[calc(100vh-120px)] mx-auto">
+      <div className="relative flex h-full sm:rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-900/5 overflow-hidden">
         {/* Desktop: 3-column layout */}
         <div className="hidden lg:flex h-full w-full">
           <div className="flex w-[340px] shrink-0 flex-col border-r border-slate-200 bg-white">

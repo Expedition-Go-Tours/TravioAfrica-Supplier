@@ -1,5 +1,5 @@
-﻿import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, ChevronDown, ChevronLeft, ChevronRight, Paperclip } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Send, ChevronDown, ChevronLeft, ChevronRight, Paperclip, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import MessageBubble from "./MessageBubble";
@@ -224,7 +224,7 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
 
   if (!conversation) {
     return (
-      <div className="flex h-full flex-col items-center justify-center bg-slate-50/50 text-center">
+      <div className="flex h-full flex-col items-center justify-center bg-slate-50/50 text-center px-4">
         <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-white shadow-sm shadow-slate-900/5 ring-1 ring-slate-200/50">
           <Send className="h-6 w-6 text-emerald-600" />
         </div>
@@ -235,9 +235,9 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full w-full flex-col">
       <style>{`@keyframes chatSlideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-      <div className="flex items-center gap-3 border-b border-slate-200 bg-white px-5 py-3">
+      <div className="flex items-center gap-2 sm:gap-3 border-b border-slate-200 bg-white px-3 py-2.5 sm:px-5 sm:py-3">
         {showBackButton && (
           <button
             onClick={onBack}
@@ -266,7 +266,6 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
             onClick={onOpenDetails}
             className="shrink-0 flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all"
           >
-            {showDetails ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
             Details
           </button>
         )}
@@ -355,17 +354,17 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
       {showScrollBtn && (
         <button
           onClick={() => scrollToBottom(true)}
-          className="absolute bottom-4 right-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+          className="absolute bottom-20 right-3 sm:bottom-4 sm:right-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-lg border border-slate-200 hover:bg-slate-50 transition-colors"
         >
           <ChevronDown className="h-4 w-4 text-slate-500" />
         </button>
       )}
 
-      <div className="border-t border-slate-200 bg-white px-4 py-3">
+      <div className="border-t border-slate-200 bg-white px-3 py-2 sm:px-4 sm:py-3">
         <div className="flex items-end gap-2">
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+            className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
           >
             <Paperclip className="h-[18px] w-[18px]" />
           </button>
@@ -386,7 +385,7 @@ export default function ChatWindow({ conversation, messages, messageStatuses, on
           <button
             onClick={handleSend}
             disabled={!input.trim() || loading || sending}
-            className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white transition-all hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white transition-all hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Send className="h-[18px] w-[18px]" />
           </button>
