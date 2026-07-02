@@ -153,7 +153,7 @@ export default function LoginPage() {
               transition={{ delay: 0.1, duration: 0.35 }}
               className="lg:hidden text-center mb-8"
             >
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-linear-to-br from-emerald-500 to-emerald-700 shadow-lg shadow-emerald-950/20 mb-3">
+              <div className="hidden sm:inline-flex items-center justify-center w-12 h-12 rounded-xl bg-linear-to-br from-emerald-500 to-emerald-700 shadow-lg shadow-emerald-950/20 mb-3">
                 <Compass size={20} className="text-white" />
               </div>
               <h1 className="text-2xl font-bold text-slate-800">Supplier Login</h1>

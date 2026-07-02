@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
@@ -411,7 +411,7 @@ export default function ChatPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/20 lg:hidden"
+              className="fixed inset-0 z-[70] bg-black/20 lg:hidden"
               onClick={() => setMobileView('chat')}
             >
               <motion.div
