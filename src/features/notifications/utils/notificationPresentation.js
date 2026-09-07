@@ -2,6 +2,7 @@ const BACKEND_TYPE_TO_UI = {
   BOOKING_CONFIRMED: "booking",
   BOOKING_CANCELLED: "booking",
   BOOKING_STATUS_UPDATED: "booking",
+  BOOKING_MODIFIED: "booking",
   BOOKING_AWAITING_CONFIRMATION: "booking",
   BOOKING_PAYMENT_FAILED: "payment",
   PICKUP_UPDATED: "booking",
@@ -63,6 +64,7 @@ function getNotificationRoute(type, data = {}) {
     case "BOOKING_CONFIRMED":
     case "BOOKING_CANCELLED":
     case "BOOKING_STATUS_UPDATED":
+    case "BOOKING_MODIFIED":
     case "BOOKING_PAYMENT_FAILED":
     case "PICKUP_UPDATED":
       return { path: "/bookings", label: "View Bookings" };
