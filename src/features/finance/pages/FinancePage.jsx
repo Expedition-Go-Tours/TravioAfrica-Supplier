@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import RefundClaimsPage from "@/features/refund-claims/pages/RefundClaimsPage";
 import { useSearchParams } from "react-router-dom";
 import {
   DollarSign, Wallet, CreditCard, Loader2, RefreshCw, Plus, Trash2,
@@ -23,6 +24,7 @@ const TABS = [
   { key: "earnings", label: "Earnings", icon: DollarSign },
   { key: "payouts", label: "Payouts", icon: Banknote },
   { key: "refunds", label: "Refunds", icon: Undo2 },
+  { key: "claims", label: "Refund Requests", icon: Undo2 },
   { key: "methods", label: "Payout Methods", icon: CreditCard },
 ];
 
@@ -285,10 +287,11 @@ export default function FinancePage() {
         });
         setDisputes(result.disputes || []);
         setDisputesPagination(result.pagination || null);
-      } else {
+      } else if (activeTab === "methods") {
         const result = await fetchPayoutMethods();
         setMethods(result);
       }
+      // 'claims' tab loads its own data (RefundClaimsPage) — nothing to fetch here.
     } catch (err) {
       if (err.code === "AUTH_REQUIRED") return;
       setError(err.response?.data?.message || err.message || "Failed to load finance data");
@@ -1171,6 +1174,11 @@ export default function FinancePage() {
               </div>
             )}
           </motion.div>
+        )}
+
+        {/* REFUND REQUESTS TAB — customer claims on completed trips */}
+        {activeTab === "claims" && (
+          <RefundClaimsPage />
         )}
 
         {/* PAYOUT METHODS TAB */}
