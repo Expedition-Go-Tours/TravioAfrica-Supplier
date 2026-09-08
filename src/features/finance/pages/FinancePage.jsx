@@ -454,7 +454,7 @@ export default function FinancePage() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-4">
           <div className="w-1 h-9 bg-emerald-500 rounded-full" />
           <div>
@@ -471,13 +471,13 @@ export default function FinancePage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Available for payout */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5 relative overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 relative overflow-hidden">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm text-gray-500">Available for payout</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.available)}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.available)}</p>
               {summary?.availableBalance?.bookingCount > 0 && (
                 <p className="text-xs text-gray-400 mt-0.5">{summary.availableBalance.bookingCount} booking(s)</p>
               )}
@@ -490,11 +490,11 @@ export default function FinancePage() {
         </div>
 
         {/* Pending clearance */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5 relative overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 relative overflow-hidden">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm text-gray-500">Pending clearance</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.pending)}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.pending)}</p>
               {summary?.pendingClearance?.clearanceBufferDays > 0 && (
                 <p className="text-xs text-gray-400 mt-0.5">+{summary.pendingClearance.clearanceBufferDays}d buffer</p>
               )}
@@ -507,11 +507,11 @@ export default function FinancePage() {
         </div>
 
         {/* In review */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5 relative overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 relative overflow-hidden">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm text-gray-500">In review</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.inReview)}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.inReview)}</p>
               {summary?.inReview?.requestCount > 0 && (
                 <p className="text-xs text-gray-400 mt-0.5">{summary.inReview.requestCount} request(s)</p>
               )}
@@ -524,11 +524,11 @@ export default function FinancePage() {
         </div>
 
         {/* Paid out */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5 relative overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 relative overflow-hidden">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm text-gray-500">Paid out</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.paidOut)}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.paidOut)}</p>
             </div>
             <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
               <CheckCircle2 size={20} className="text-emerald-500" />
@@ -541,15 +541,15 @@ export default function FinancePage() {
       {/* Payout Cycle Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Current Payout Cycle */}
-        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full border-2 border-emerald-500 flex items-center justify-center bg-white">
+        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
+            <div className="w-12 h-12 rounded-full border-2 border-emerald-500 flex items-center justify-center bg-white shrink-0">
               <Calendar size={24} className="text-emerald-500" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-gray-700">Current payout cycle</p>
               <p className="text-xl font-bold text-gray-900">{cycleInfo.current || "—"}</p>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex flex-wrap items-center gap-2 mt-1">
                 {windowOpen ? (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700">
                     Withdrawal window open until {formatDate(windowInfo.closesAt)}
@@ -568,7 +568,7 @@ export default function FinancePage() {
             disabled={!canRequestPayout}
             title={!windowOpen ? "The withdrawal window is currently closed" : stats.available <= 0 ? "No eligible earnings yet" : ""}
             className={cn(
-              "flex items-center gap-2 px-6 py-3.5 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap",
+              "flex items-center justify-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap",
               canRequestPayout
                 ? "bg-emerald-500 text-white hover:bg-emerald-600"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
@@ -580,14 +580,14 @@ export default function FinancePage() {
         </div>
 
         {/* Next Cycle */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4">
           <div className="w-12 h-12 rounded-full border-2 border-emerald-500 flex items-center justify-center bg-white shrink-0">
             <div className="relative">
               <Calendar size={24} className="text-emerald-500" />
               <ChevronRight size={14} className="text-emerald-500 absolute -right-1 -bottom-0.5" />
             </div>
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-base font-semibold text-gray-900">Accumulating</p>
             <p className="text-sm text-gray-500 mt-0.5">
               <span>{summary?.pendingClearance?.bookingCount || 0} booking(s) clearing · </span>
@@ -776,7 +776,7 @@ export default function FinancePage() {
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-6 border-b border-gray-200">
+      <div className="flex items-center gap-5 sm:gap-6 border-b border-gray-200 overflow-x-auto scrollbar-none">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
@@ -785,7 +785,7 @@ export default function FinancePage() {
               key={tab.key}
               onClick={() => setSearchParams((prev) => ({ ...Object.fromEntries(prev), tab: tab.key }))}
               className={cn(
-                "flex items-center gap-2 pb-3 text-sm font-medium border-b-2 transition-colors",
+                "flex items-center gap-2 pb-3 pt-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0",
                 isActive
                   ? "border-emerald-500 text-emerald-600"
                   : "border-transparent text-gray-500 hover:text-gray-700"
@@ -821,7 +821,7 @@ export default function FinancePage() {
         {activeTab === "earnings" && (
           <motion.div key="earnings" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }} className="space-y-4">
             {/* Filter Pills */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {FILTER_PILLS.map((pill) => (
                   <button
                     key={pill.key}
@@ -1214,8 +1214,8 @@ export default function FinancePage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        {METHOD_TYPES.map((t) => {
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {METHOD_TYPES.map((t) => {
                           const Icon = t.icon;
                           return (
                             <button
@@ -1247,8 +1247,8 @@ export default function FinancePage() {
                         })}
                       </div>
 
-                      {methodForm.type === "BANK_TRANSFER" ? (
-                        <div className="grid grid-cols-2 gap-3">
+                  {methodForm.type === "BANK_TRANSFER" ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">Account Name</label>
                             <input placeholder="e.g. John Doe" value={methodForm.accountName} onChange={(e) => { setMethodForm((p) => ({ ...p, accountName: e.target.value })); clearError("accountName"); }}
@@ -1343,8 +1343,8 @@ export default function FinancePage() {
                         )}
                       >
                         <div className="p-5" onClick={() => setExpandedMethod(isExpanded ? null : method.id)}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                               <div className={cn(
                                 "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-colors",
                                 isExpanded ? "bg-emerald-100" : "bg-emerald-50"
@@ -1353,21 +1353,21 @@ export default function FinancePage() {
                                   ? <Landmark size={20} className={isExpanded ? "text-emerald-700" : "text-emerald-600"} />
                                   : <Wallet size={20} className={isExpanded ? "text-emerald-700" : "text-emerald-600"} />}
                               </div>
-                              <div>
-                                <div className="flex items-center gap-2.5">
-                                  <p className="text-sm font-semibold text-gray-900">{method.type?.replace(/_/g, " ")}</p>
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="text-sm font-semibold text-gray-900 truncate">{method.type?.replace(/_/g, " ")}</p>
                                   {method.isDefault && (
                                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                                       Default
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-sm text-gray-500 mt-0.5">
+                                <p className="text-sm text-gray-500 mt-0.5 truncate">
                                   {method.accountName || method.paypalEmail || method.mobileProvider || "—"}
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 shrink-0 ml-auto">
                               <div className={cn(
                                 "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium",
                                 method.verified ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"

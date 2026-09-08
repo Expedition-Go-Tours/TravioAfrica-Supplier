@@ -203,7 +203,7 @@ export default function BookingCard({
           </p>
 
           {/* Tour date + booking date */}
-          <p className="flex items-center gap-1.5 text-xs text-slate-400">
+          <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-slate-400">
             <CalendarDays size={12} className="shrink-0" />
             <span className="whitespace-nowrap">
               {formatDate(booking.travelDate)}
@@ -216,17 +216,17 @@ export default function BookingCard({
           </p>
 
           {/* Booking reference + participants */}
-          <p className="flex items-center gap-1.5 text-xs text-slate-400">
+          <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-slate-400">
             <span className="font-mono text-[11px] text-slate-500">
               {booking.bookingNumber}
             </span>
             <span className="text-slate-300">·</span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 whitespace-nowrap">
               <Users size={12} className="shrink-0" />
               {guestCount} traveler{guestCount !== 1 ? "s" : ""}
             </span>
             <span className="text-slate-300">·</span>
-            <span className={`flex items-center gap-1 ${booking.instantConfirmation ? "text-emerald-600" : "text-amber-600"}`}>
+            <span className={`flex items-center gap-1 whitespace-nowrap ${booking.instantConfirmation ? "text-emerald-600" : "text-amber-600"}`}>
               {booking.instantConfirmation ? <Zap size={12} className="shrink-0" /> : <Clock size={12} className="shrink-0" />}
               {booking.instantConfirmation ? "Instant confirmation" : "Manual confirmation"}
             </span>

@@ -418,7 +418,7 @@ export default function BookingsPage() {
         {/* Expandable date filters */}
         {showFilters && (
           <div className="px-4 pb-4 border-t border-emerald-100/40 pt-3 flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-slate-500">
               <ShoppingCart size={12} />
               <span>Purchased</span>
               <DatePicker
@@ -439,7 +439,7 @@ export default function BookingsPage() {
                 minDate={locPurchaseFrom || undefined}
               />
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-slate-500">
               <Calendar size={12} />
               <span>Activity</span>
               <DatePicker
@@ -541,7 +541,7 @@ export default function BookingsPage() {
       {/* ====== PAGINATION ====== */}
       {totalPages > 1 && !loading && (
         <div className="flex items-center justify-between pt-4 border-t border-emerald-100/60">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-slate-500">
             <span>Show</span>
             <select
               value={pageSize}

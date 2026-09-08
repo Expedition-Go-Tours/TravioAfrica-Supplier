@@ -172,7 +172,7 @@ export default function Step10Photos() {
   const emptySlots = Math.max(0, MIN_PHOTOS - photos.length)
 
   return (
-    <div className="flex gap-6">
+    <div className="flex flex-col xl:flex-row gap-6">
       {/* Main content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-5">
@@ -182,7 +182,7 @@ export default function Step10Photos() {
 
         {/* Selection toolbar */}
         {hasSelection && (
-          <div className="flex items-center justify-between p-3 mb-4 bg-white border border-slate-200 rounded-xl">
+          <div className="flex flex-wrap items-center justify-between gap-2 p-3 mb-4 bg-white border border-slate-200 rounded-xl">
             <button
               type="button"
               onClick={deselectAll}
@@ -248,7 +248,7 @@ export default function Step10Photos() {
           data-field="photos"
         >
           <input {...getInputProps()} />
-          <div className="flex items-center justify-center gap-3 mb-2">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-2">
             <button
               type="button"
               className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
@@ -394,8 +394,8 @@ export default function Step10Photos() {
       </div>
 
       {/* Sidebar */}
-      <div className="w-[280px] shrink-0">
-        <div className="sticky top-4 space-y-5">
+      <div className="w-full xl:w-[280px] shrink-0">
+        <div className="xl:sticky xl:top-4 space-y-5">
           {/* Tips & requirements */}
           <div>
             <button
