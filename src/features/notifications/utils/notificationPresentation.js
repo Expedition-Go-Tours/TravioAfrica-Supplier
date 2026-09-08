@@ -13,6 +13,7 @@ const BACKEND_TYPE_TO_UI = {
   REFUND_ISSUED: "payment",
   DISPUTE_OPENED: "booking",
   DISPUTE_RESOLVED: "booking",
+  REFUND_CLAIM: "payment",
   REVIEW_RECEIVED: "review",
   SUPPLIER_APPROVED: "system",
   SUPPLIER_REJECTED: "alert",
@@ -34,6 +35,9 @@ const BACKEND_TYPE_TO_UI = {
 };
 
 function getNotificationRoute(type, data = {}) {
+  if (type === "REFUND_CLAIM" && data.claimId) {
+    return { path: `/finance?tab=claims&claimId=${data.claimId}`, label: "View Refund Request" };
+  }
   if (data.bookingId) {
     return { path: `/bookings?bookingId=${data.bookingId}`, label: "View Booking" };
   }
