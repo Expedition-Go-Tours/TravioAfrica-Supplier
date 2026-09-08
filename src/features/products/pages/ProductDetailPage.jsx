@@ -549,11 +549,11 @@ export default function ProductDetailPage() {
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="relative mb-10"
           >
-            <div className="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-1 rounded-xl overflow-hidden shadow-sm shadow-slate-900/5">
+            <div className="grid grid-cols-2 md:grid-cols-4 md:grid-rows-2 gap-1 rounded-xl overflow-hidden shadow-sm shadow-slate-900/5">
               {displayPhotos.slice(0, 5).map((photo, i) => {
                 const hasMore = displayPhotos.length > 5 && i === 4
                 return (
-                  <button key={i} onClick={hasMore ? () => setGalleryOpen(true) : () => setLightboxIndex(i)} className={cn("relative overflow-hidden bg-slate-100 group cursor-pointer", i === 0 ? "md:col-span-2 md:row-span-2 min-h-[260px] md:min-h-[440px]" : "min-h-[130px] md:min-h-[219px]")}>
+                  <button key={i} onClick={hasMore ? () => setGalleryOpen(true) : () => setLightboxIndex(i)} className={cn("relative overflow-hidden bg-slate-100 group cursor-pointer", i === 0 ? "col-span-2 aspect-[16/9] min-h-[220px] md:col-span-2 md:row-span-2 md:aspect-auto md:min-h-[440px]" : "aspect-[4/3] sm:aspect-[16/9] min-h-[120px] md:aspect-auto md:min-h-[219px]")}>
                     <OptimizedImage src={photo} width={i === 0 ? 2400 : 600} alt={`${tour.title} - Photo ${i + 1}`} className="absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-105" />
                     <div className="absolute inset-0 bg-linear-to-t from-black/30 via-transparent to-transparent opacity-100 transition-all duration-300" />
                     {i === 0 && (
