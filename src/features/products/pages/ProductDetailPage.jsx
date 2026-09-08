@@ -487,7 +487,7 @@ export default function ProductDetailPage() {
       {/* ===== STICKY HEADER ===== */}
       <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
         <div className="max-w-5xl mx-auto px-4 md:px-6">
-          <div className="flex items-center justify-between h-14">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between lg:h-14 py-2 lg:py-0 gap-y-2">
             <div className="flex items-center gap-2 min-w-0">
               <button onClick={() => navigate("/products")} className="flex items-center gap-1.5 h-8 px-2.5 text-xs font-medium text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all shrink-0">
                 <ArrowLeft size={14} />
@@ -496,14 +496,14 @@ export default function ProductDetailPage() {
               <span className="text-xs text-slate-300 shrink-0">/</span>
               <h1 className="text-sm font-semibold text-slate-800 truncate">{tour.title}</h1>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0 [&>*]:shrink-0 lg:justify-end">
               <StatusBadge status={tour.status} size="sm" />
               <PreviewMenu product={tour} label="Preview" />
               {(tour.status === "ACTIVE" || tour.status === "PAUSED") && (
                 <button
                   onClick={() => navigate(`/special-offers/build/new/products?productId=${id}`)}
                   title="Create special offer"
-                  className="flex items-center gap-1.5 px-3.5 h-8 border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-all"
+                  className="flex items-center gap-1.5 px-3.5 h-8 border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-all whitespace-nowrap"
                 >
                   <Percent size={13} />
                   <span>Create special offer</span>
@@ -511,7 +511,7 @@ export default function ProductDetailPage() {
               )}
               <button
                 onClick={() => navigate(`/products/build/${id}/type`)}
-                className="flex items-center gap-1.5 px-3.5 h-8 bg-emerald-700 text-white rounded-lg text-xs font-medium hover:bg-emerald-800 transition-all shadow-sm shadow-emerald-200"
+                className="flex items-center gap-1.5 px-3.5 h-8 bg-emerald-700 text-white rounded-lg text-xs font-medium hover:bg-emerald-800 transition-all shadow-sm shadow-emerald-200 whitespace-nowrap"
               >
                 <Edit size={13} />
                 <span>Edit</span>
@@ -623,19 +623,21 @@ export default function ProductDetailPage() {
           transition={{ delay: 0.08, duration: 0.35 }}
           className="mb-8"
         >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-1 h-10 bg-linear-to-b from-emerald-500 to-emerald-300 rounded-full shrink-0" />
-            <div>
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <StatusBadge status={tour.status} label={PRODUCT_STATUSES[tour.status]?.label} size="sm" />
-                <span className="text-xs text-slate-400">Created {formatDate(tour.createdAt)}</span>
-                <span className="text-xs text-slate-300">&middot;</span>
-                <span className="text-xs text-slate-400">Updated {formatDate(tour.updatedAt)}</span>
+          <div className="mb-3">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <StatusBadge status={tour.status} label={PRODUCT_STATUSES[tour.status]?.label} size="sm" />
+              <span className="text-xs text-slate-400">Created {formatDate(tour.createdAt)}</span>
+              <span className="text-xs text-slate-300">&middot;</span>
+              <span className="text-xs text-slate-400">Updated {formatDate(tour.updatedAt)}</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-1 h-10 bg-linear-to-b from-emerald-500 to-emerald-300 rounded-full shrink-0 mt-1" />
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">{tour.title}</h1>
+                {content.shortSummary && (
+                  <p className="text-sm text-slate-500 mt-1.5 max-w-2xl leading-relaxed">{content.shortSummary}</p>
+                )}
               </div>
-              <h1 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">{tour.title}</h1>
-              {content.shortSummary && (
-                <p className="text-sm text-slate-500 mt-1.5 max-w-2xl leading-relaxed">{content.shortSummary}</p>
-              )}
             </div>
           </div>
 
