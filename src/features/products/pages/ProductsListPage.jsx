@@ -234,8 +234,7 @@ export default function ProductsListPage() {
             className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-all"
           >
             <Plus size={15} />
-            <span className="hidden sm:inline">Create Product</span>
-            <span className="sm:hidden">New</span>
+            <span>Create Product</span>
           </button>
         </div>
       </div>
