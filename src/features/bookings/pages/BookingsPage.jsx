@@ -202,8 +202,13 @@ export default function BookingsPage() {
   );
 
   const handleMessageCustomer = useCallback(
-    (customerId) => {
-      navigate(`/chat?customerId=${customerId}`);
+    (booking) => {
+      const params = new URLSearchParams();
+      if (booking?.customerId) params.set("customerId", booking.customerId);
+      if (booking?.id) params.set("bookingId", booking.id);
+      if (booking?.bookingNumber) params.set("bookingNumber", booking.bookingNumber);
+      if (booking?.tourName) params.set("tourTitle", booking.tourName);
+      navigate(`/chat?${params.toString()}`);
     },
     [navigate]
   );

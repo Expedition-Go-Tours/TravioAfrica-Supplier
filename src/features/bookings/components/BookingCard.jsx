@@ -548,7 +548,7 @@ export default function BookingCard({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onMessageCustomer(booking.customerId);
+                    onMessageCustomer(booking);
                   }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-slate-500 hover:text-[#044b3b] hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-all"
                 >

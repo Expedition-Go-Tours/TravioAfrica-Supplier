@@ -26,6 +26,9 @@ export default function ChatPage() {
 
   const tabParam = searchParams.get("tab") === "unread" ? "unread" : "all";
   const customerIdParam = searchParams.get("customerId");
+  const bookingIdParam = searchParams.get("bookingId");
+  const bookingNumberParam = searchParams.get("bookingNumber");
+  const tourTitleParam = searchParams.get("tourTitle");
 
   const [activeTab, setActiveTab] = useState(tabParam);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -157,7 +160,17 @@ export default function ChatPage() {
       return;
     }
 
-    getOrCreateConversation(customerIdParam, 'SUPPLIER_CUSTOMER')
+    getOrCreateConversation(
+      customerIdParam,
+      'SUPPLIER_CUSTOMER',
+      bookingIdParam || bookingNumberParam || tourTitleParam
+        ? {
+            bookingId: bookingIdParam || undefined,
+            bookingNumber: bookingNumberParam || undefined,
+            tourTitle: tourTitleParam || undefined,
+          }
+        : undefined,
+    )
       .then((conv) => {
         appendConversation(conv);
         Promise.resolve().then(() => handleSelectConversation(conv));
@@ -167,7 +180,7 @@ export default function ChatPage() {
       .catch(() => {
         toast.error("Failed to open conversation");
       });
-  }, [customerIdParam, currentUserId, conversations, handleSelectConversation, appendConversation, loadConversations]);
+  }, [customerIdParam, bookingIdParam, bookingNumberParam, tourTitleParam, currentUserId, conversations, handleSelectConversation, appendConversation, loadConversations]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);

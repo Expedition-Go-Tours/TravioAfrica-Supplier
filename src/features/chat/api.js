@@ -5,9 +5,14 @@ export async function getConversations() {
   return res.data.data?.conversations || [];
 }
 
-export async function getOrCreateConversation(recipientId, type) {
+export async function getOrCreateConversation(recipientId, type, context) {
   const body = { recipientId };
   if (type) body.type = type;
+  if (context) {
+    if (context.bookingId) body.bookingId = context.bookingId;
+    if (context.bookingNumber) body.bookingNumber = context.bookingNumber;
+    if (context.tourTitle) body.tourTitle = context.tourTitle;
+  }
   const res = await api.post("/chat/conversations", body);
   return res.data.data.conversation;
 }
