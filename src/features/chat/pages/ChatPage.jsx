@@ -10,6 +10,7 @@ import ChatWindow from "../components/ChatWindow";
 import CustomerDetailsPanel from "../components/CustomerDetailsPanel";
 import { getConversations, getOrCreateConversation, getMessages, sendMessage, markConversationAsRead, deleteConversation } from "../api";
 import { useChatSocket } from "../hooks/useChatSocket";
+import { getChatSocket } from "../chatSocket";
 
 const PAGE_SIZE = 50;
 const TABS = [
@@ -75,6 +76,22 @@ export default function ChatPage() {
   useEffect(() => {
     if (!currentUserId) return;
     loadConversations();
+  }, [currentUserId, loadConversations]);
+
+  // Live refresh: when a new chat message or notification arrives for this
+  // user (e.g. an email reply routed back into a conversation they haven't
+  // opened), re-fetch the conversation list so it appears without a manual
+  // browser refresh.
+  useEffect(() => {
+    if (!currentUserId) return;
+    const socket = getChatSocket(currentUserId);
+    const refresh = () => loadConversations();
+    socket.on("chat:message", refresh);
+    socket.on("notification", refresh);
+    return () => {
+      socket.off("chat:message", refresh);
+      socket.off("notification", refresh);
+    };
   }, [currentUserId, loadConversations]);
 
   const loadMessages = useCallback(async (convId, conv) => {
