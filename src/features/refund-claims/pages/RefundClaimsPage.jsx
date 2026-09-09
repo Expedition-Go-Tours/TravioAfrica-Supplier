@@ -5,16 +5,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { fetchSupplierClaims, approveClaim, declineClaim, formatCurrency } from "../api";
-
-const REASON_LABELS = {
-  NOT_AS_DESCRIBED: "Didn't match the description",
-  SERVICE_NOT_PROVIDED: "Service wasn't provided",
-  GUIDE_ISSUE: "Guide or host issue",
-  TRANSPORT_ISSUE: "Transport problem",
-  SCHEDULE_CHANGE: "Last-minute schedule change",
-  HEALTH_SAFETY: "Health or safety concern",
-  OTHER: "Other",
-};
+import RefundClaimDecisionModal from "../components/RefundClaimDecisionModal";
+import { REASON_LABELS } from "../constants";
 
 const STATUS_FILTERS = [
   { key: "ALL", label: "All" },
@@ -30,6 +22,8 @@ function statusPill(status) {
       return { label: "Awaiting your review", cls: "bg-amber-50 text-amber-700 border-amber-200", icon: Clock };
     case "SUPPLIER_APPROVED":
       return { label: "Approved · awaiting release", cls: "bg-sky-50 text-sky-700 border-sky-200", icon: CheckCircle2 };
+    case "PROCESSING":
+      return { label: "Releasing", cls: "bg-sky-50 text-sky-700 border-sky-200", icon: Clock };
     case "SUPPLIER_DECLINED":
     case "ADMIN_DECLINED":
       return { label: "Declined", cls: "bg-red-50 text-red-700 border-red-200", icon: XCircle };
@@ -50,9 +44,8 @@ export default function RefundClaimsPage() {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("ALL");
   const [busyId, setBusyId] = useState(null);
-  const [declineTarget, setDeclineTarget] = useState(null);
-  const [declineNote, setDeclineNote] = useState("");
-  const [declining, setDeclining] = useState(false);
+  const [decision, setDecision] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const [searchParams] = useSearchParams();
   const focusClaimId = searchParams.get("claimId");
 
@@ -88,37 +81,39 @@ export default function RefundClaimsPage() {
     }
   }, [focusClaimId, claims, loading]);
 
-  const handleApprove = async (claim) => {
-    if (!window.confirm(`Approve ${claim.booking.customerName}'s ${claim.type.toLowerCase()} refund request (${claim.claimNumber})? This forwards it to our team to release the money.`)) return;
+  const openDecision = (claim, mode) => {
+    setDecision({ claim, mode });
+  };
+
+  const closeDecision = () => {
+    if (!submitting) setDecision(null);
+  };
+
+  const handleConfirmDecision = async (note) => {
+    if (!decision || submitting) return;
+    const { claim, mode } = decision;
+    if (mode === "decline" && !(note || "").trim()) return;
+    setSubmitting(true);
     setBusyId(claim.id);
     try {
-      const updated = await approveClaim(claim.id);
-      setClaims((prev) => prev.map((c) => (c.id === claim.id ? { ...c, ...updated, status: "SUPPLIER_APPROVED" } : c)));
-      toast.success("Approved — forwarded to our team to release the refund");
+      if (mode === "approve") {
+        const updated = await approveClaim(claim.id);
+        setClaims((prev) => prev.map((c) => (c.id === claim.id ? { ...c, ...updated, status: "SUPPLIER_APPROVED" } : c)));
+        toast.success("Approved — forwarded to our team to release the refund");
+      } else {
+        const updated = await declineClaim(claim.id, note.trim());
+        setClaims((prev) => prev.map((c) => (c.id === claim.id ? { ...c, ...updated, status: "SUPPLIER_DECLINED" } : c)));
+        toast.success("Request declined");
+      }
+      setDecision(null);
     } catch (err) {
-      toast.error(err.response?.data?.message || "Could not approve the request");
+      toast.error(
+        err.response?.data?.message
+          || (mode === "approve" ? "Could not approve the request" : "Could not decline the request")
+      );
     } finally {
+      setSubmitting(false);
       setBusyId(null);
-    }
-  };
-
-  const openDecline = (claim) => {
-    setDeclineTarget(claim);
-    setDeclineNote("");
-  };
-
-  const handleDecline = async () => {
-    if (!declineTarget || !declineNote.trim()) return;
-    setDeclining(true);
-    try {
-      const updated = await declineClaim(declineTarget.id, declineNote.trim());
-      setClaims((prev) => prev.map((c) => (c.id === declineTarget.id ? { ...c, ...updated, status: "SUPPLIER_DECLINED" } : c)));
-      setDeclineTarget(null);
-      toast.success("Request declined");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Could not decline the request");
-    } finally {
-      setDeclining(false);
     }
   };
 
@@ -252,7 +247,7 @@ export default function RefundClaimsPage() {
                         <>
                           <button
                             type="button"
-                            onClick={() => openDecline(claim)}
+                            onClick={() => openDecision(claim, "decline")}
                             disabled={busyId === claim.id}
                             className="px-3.5 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
                           >
@@ -260,7 +255,7 @@ export default function RefundClaimsPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleApprove(claim)}
+                            onClick={() => openDecision(claim, "approve")}
                             disabled={busyId === claim.id}
                             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                           >
@@ -278,46 +273,14 @@ export default function RefundClaimsPage() {
         </div>
       )}
 
-      {declineTarget && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !declining && setDeclineTarget(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-base font-bold text-slate-900 mb-1">Decline refund request</h2>
-            <p className="text-sm text-slate-500">
-              {declineTarget.booking.customerName} requested a {declineTarget.type.toLowerCase()} refund for{" "}
-              <strong>{declineTarget.booking.tourTitle || "the tour"}</strong>.
-            </p>
-            <label className="block mt-4">
-              <span className="text-sm font-semibold text-slate-700">Reason for declining</span>
-              <textarea
-                rows={3}
-                value={declineNote}
-                onChange={(e) => setDeclineNote(e.target.value)}
-                placeholder="Explain the decision — the customer will see this note"
-                className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"
-              />
-            </label>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setDeclineTarget(null)}
-                disabled={declining}
-                className="px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDecline}
-                disabled={declining || !declineNote.trim()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50"
-              >
-                {declining && <Loader2 size={13} className="animate-spin" />}
-                Decline request
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <RefundClaimDecisionModal
+        key={decision?.claim?.id || "closed"}
+        claim={decision?.claim}
+        mode={decision?.mode}
+        submitting={submitting}
+        onClose={closeDecision}
+        onConfirm={handleConfirmDecision}
+      />
     </div>
   );
 }
