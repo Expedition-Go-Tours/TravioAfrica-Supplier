@@ -576,6 +576,9 @@ export default function ProductBuilderPage() {
         submittedAt: new Date().toISOString(),
         signature,
       })
+      // Prevent the unmount cleanup from deleting these media assets — they
+      // are now referenced by the submitted draft on the server.
+      storeAfter.clearUploadedUrls()
       await queryClient.invalidateQueries({ queryKey: ['products', 'list'] })
       navigate('/products')
     } finally {
