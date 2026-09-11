@@ -491,10 +491,16 @@ export default function ProductBuilderPage() {
 
   useEffect(() => {
     return () => {
-      const urls = useProductBuilderStore.getState()._uploadedUrls
-      if (urls.length > 0) {
-        cleanupMediaUrls(urls)
-        useProductBuilderStore.getState().clearUploadedUrls()
+      const state = useProductBuilderStore.getState()
+      // If the tour was saved (has an ID), the backend has already marked
+      // uploaded media as ATTACHED — do NOT delete them. Only clean up
+      // truly unsaved uploads (new tour never persisted).
+      if (!state.savedProductId) {
+        const urls = state._uploadedUrls
+        if (urls.length > 0) {
+          cleanupMediaUrls(urls)
+          state.clearUploadedUrls()
+        }
       }
     }
   }, [])
