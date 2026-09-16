@@ -424,14 +424,12 @@ export default function BookingCard({
                         <thead>
                           <tr className="bg-slate-50 border-b border-slate-200">
                             <th className="text-left px-3 py-2 text-xs font-medium text-slate-500">Name</th>
-                            <th className="text-left px-3 py-2 text-xs font-medium text-slate-500 w-16">Age</th>
                           </tr>
                         </thead>
                         <tbody>
                           {travelerDetails.map((d, i) => (
                             <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
                               <td className="px-3 py-2 text-slate-700">{d.name || `Traveler ${i + 1}`}</td>
-                              <td className="px-3 py-2 text-slate-500">{d.age ?? "—"}</td>
                             </tr>
                           ))}
                         </tbody>
