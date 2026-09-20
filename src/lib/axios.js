@@ -20,6 +20,39 @@ const api = axios.create({
   timeout: config.api.timeout,
 });
 
+// Rewrite supplier paths to Africa namespace
+// /suppliers/dashboard → /travioafrica/supplier/dashboard
+// /tours/supplier/* → /travioafrica/supplier/tours/*
+// /bookings/supplier/* → /travioafrica/supplier/bookings/*
+// Auth endpoints stay on shared backend
+const AFRICA_SUPPLIER_REWRITES = [
+  [/^\/suppliers\/dashboard/, '/travioafrica/supplier/dashboard'],
+  [/^\/suppliers\/monthly-revenue/, '/travioafrica/supplier/monthly-revenue'],
+  [/^\/tours\/supplier\/my-tours/, '/travioafrica/supplier/tours'],
+  [/^\/bookings\/supplier\/bookings/, '/travioafrica/supplier/bookings'],
+  [/^\/bookings\/supplier\/pickup-planner/, '/travioafrica/supplier/pickup-planner'],
+  [/^\/reviews\/supplier\/reviews/, '/travioafrica/supplier/reviews'],
+  [/^\/suppliers\/settings/, '/travioafrica/supplier/settings'],
+  [/^\/suppliers\/special-offers/, '/travioafrica/supplier/special-offers'],
+  [/^\/suppliers\/cancellation/, '/travioafrica/supplier/cancellation'],
+  [/^\/suppliers\/products\/list/, '/travioafrica/supplier/products/list'],
+  [/^\/finance\//, '/travioafrica/supplier/finance/'],
+  [/^\/payouts\/me/, '/travioafrica/supplier/payouts'],
+  [/^\/payout-methods\/me/, '/travioafrica/supplier/payout-methods'],
+  [/^\/notifications/, '/travioafrica/supplier/notifications'],
+];
+
+api.interceptors.request.use((config) => {
+  const url = config.url || '';
+  for (const [pattern, replacement] of AFRICA_SUPPLIER_REWRITES) {
+    if (pattern.test(url)) {
+      config.url = url.replace(pattern, replacement);
+      break;
+    }
+  }
+  return config;
+});
+
 function getRequestAuthorization(headers) {
   if (!headers) return null;
   if (typeof headers.get === "function") {
