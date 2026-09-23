@@ -115,9 +115,11 @@ export default function BookingCard({
   isUpdating,
   isHighlighted,
   onMessageCustomer,
+  onWithdrawCancellation,
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const isPayLater = booking.paymentTiming === 'later';
+  const pendingCancellation = booking.pendingCancellation || null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const travelDatePassed = new Date(booking.travelDate) < today;
@@ -231,6 +233,32 @@ export default function BookingCard({
               {booking.instantConfirmation ? "Instant confirmation" : "Manual confirmation"}
             </span>
           </p>
+
+          {/* Admin-approval gate: open cancellation request chip + Withdraw */}
+          {pendingCancellation && (
+            <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-1 px-2 py-1 rounded-full bg-amber-50 border border-amber-200/70 text-[11px] font-semibold text-amber-700">
+              <Clock size={11} className="shrink-0" />
+              Pending approval
+              {pendingCancellation.createdAt && (
+                <span className="font-normal text-amber-600">
+                  · requested {formatDate(pendingCancellation.createdAt)}
+                </span>
+              )}
+              {onWithdrawCancellation && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onWithdrawCancellation(booking);
+                  }}
+                  disabled={isUpdating}
+                  className="ml-1 font-semibold text-amber-800 underline hover:text-amber-900 disabled:opacity-50"
+                >
+                  Withdraw
+                </button>
+              )}
+            </span>
+          )}
         </div>
 
         {/* Right column: status + price + chevron */}

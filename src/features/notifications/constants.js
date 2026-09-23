@@ -1,6 +1,7 @@
 ﻿import {
   Package,
   CalendarCheck,
+  CalendarX2,
   Star,
   AlertTriangle,
   Info,
@@ -16,6 +17,8 @@ export const NOTIFICATION_TYPES = {
   alert: { icon: AlertTriangle, color: "bg-[#ffebeb] text-[#b91c1c]", label: "Alert" },
   system: { icon: Info, color: "bg-[#f0fdf4] text-[#047857]", label: "System" },
   message: { icon: MessageSquare, color: "bg-[#ebfcf5] text-[#044b3b]", label: "Message" },
+  cancellationApproved: { icon: CalendarCheck, color: "bg-[#ebfcf5] text-[#047857]", label: "Cancellation approved" },
+  cancellationRejected: { icon: CalendarX2, color: "bg-[#ffebeb] text-[#b91c1c]", label: "Cancellation rejected" },
 };
 
 export const NOTIFICATIONS_QUERY_KEY = "notifications";

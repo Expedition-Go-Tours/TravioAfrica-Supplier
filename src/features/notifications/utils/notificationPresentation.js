@@ -32,6 +32,9 @@ const BACKEND_TYPE_TO_UI = {
   DOCUMENT_REJECTED: "alert",
   DOCUMENT_EXPIRY_REMINDER: "alert",
   DOCUMENT_EXPIRED: "alert",
+  // Supplier cancellation approval gate (Phase 3)
+  CANCELLATION_REQUEST_APPROVED: "cancellationApproved",
+  CANCELLATION_REQUEST_REJECTED: "cancellationRejected",
 };
 
 function getNotificationRoute(type, data = {}) {
@@ -71,6 +74,8 @@ function getNotificationRoute(type, data = {}) {
     case "BOOKING_MODIFIED":
     case "BOOKING_PAYMENT_FAILED":
     case "PICKUP_UPDATED":
+    case "CANCELLATION_REQUEST_APPROVED":
+    case "CANCELLATION_REQUEST_REJECTED":
       return { path: "/bookings", label: "View Bookings" };
     case "BOOKING_AWAITING_CONFIRMATION":
     case "PAYMENT_FAILED":

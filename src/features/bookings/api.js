@@ -51,6 +51,9 @@ export function mapBookingRow(booking) {
     offerDiscountType: booking.offerDiscountType || booking.appliedOffer?.discountType || null,
     offerDiscountPct: booking.offerDiscountPct ?? booking.appliedOffer?.discountPercentage ?? null,
     offerDiscountFix: booking.offerDiscountFix ?? booking.appliedOffer?.fixedDiscountValue ?? null,
+    // Admin-approval gate: an open cancellation request riding along as a chip
+    // ({ id, status, createdAt }) — null in flag-OFF mode / when none is open.
+    pendingCancellation: booking.pendingCancellation || null,
   };
 }
 
@@ -119,6 +122,46 @@ export function cancelBookingsBatch(payload) {
   return api.post("/bookings/supplier/cancel-batch", payload, {
     skipGlobalErrorHandler: true,
   });
+}
+
+// ── Admin-approval gate: supplier cancellation requests ──
+
+/**
+ * GET /bookings/supplier/cancellation-requests — the supplier's own requests
+ * (pending + decided), newest first. `status` accepts PENDING_APPROVAL |
+ * APPROVED | REJECTED | WITHDRAWN | SUPERSEDED | ALL. Resolves to
+ * { requests, pagination } from response.data.data.
+ */
+export async function fetchSupplierCancellationRequests({
+  status,
+  page = 1,
+  limit = 20,
+} = {}) {
+  const params = { page, limit };
+  if (status && status !== "ALL") params.status = status;
+  const response = await api.get("/bookings/supplier/cancellation-requests", {
+    params,
+    skipGlobalErrorHandler: true,
+  });
+  const payload = response.data?.data || {};
+  return {
+    requests: payload.requests || [],
+    pagination: payload.pagination || null,
+  };
+}
+
+/**
+ * POST /bookings/supplier/cancellation-requests/:id/withdraw — withdraw one of
+ * the supplier's own PENDING_APPROVAL requests. The booking is unchanged and
+ * any dates the request blocked are re-opened. Resolves to
+ * { request, revertedDates }; 404 when it is not yours or no longer pending.
+ */
+export function withdrawCancellationRequest(id) {
+  return api.post(
+    `/bookings/supplier/cancellation-requests/${id}/withdraw`,
+    null,
+    { skipGlobalErrorHandler: true }
+  );
 }
 
 export async function fetchCustomerBookings(customerId) {

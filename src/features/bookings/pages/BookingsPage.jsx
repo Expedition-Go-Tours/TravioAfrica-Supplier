@@ -25,11 +25,13 @@ import {
   fetchSupplierBookings,
   updateBookingStatus,
   cancelBookingStructured,
+  withdrawCancellationRequest,
 } from "../api";
 import { getAuthToken } from "@/stores/authStore";
 import BookingCard from "../components/BookingCard";
 import CancelBookingModal from "../components/CancelBookingModal";
 import BulkCancelWizard from "../components/BulkCancelWizard";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const QUICK_FILTERS = [
   { key: "ALL", label: "All bookings" },
@@ -51,6 +53,8 @@ export default function BookingsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [cancelBooking, setCancelBooking] = useState(null);
   const [showBulkCancel, setShowBulkCancel] = useState(false);
+  const [withdrawTarget, setWithdrawTarget] = useState(null);
+  const [withdrawing, setWithdrawing] = useState(false);
   const [highlightedBookingId, setHighlightedBookingId] = useState(
     searchParams.get("bookingId") || null
   );
@@ -196,9 +200,16 @@ export default function BookingsPage() {
       setUpdatingId(cancelBooking.id);
       try {
         const response = await cancelBookingStructured(cancelBooking.id, payload);
-        toast.success("Booking cancelled");
+        const data = response.data?.data || null;
+        // Admin-approval gate: `data.request` means parked for review — the
+        // booking is unchanged and the customer has NOT been notified.
+        if (data?.request) {
+          toast.success("Cancellation request submitted for review");
+        } else {
+          toast.success("Booking cancelled");
+        }
         await loadBookings();
-        return response.data?.data || null;
+        return data;
       } catch (err) {
         if (err.code !== "AUTH_REQUIRED") {
           toast.error(
@@ -212,6 +223,35 @@ export default function BookingsPage() {
     },
     [cancelBooking, loadBookings]
   );
+
+  /** Open the withdraw confirmation for a booking's pending request. */
+  const handleWithdrawCancellation = useCallback((booking) => {
+    if (booking?.pendingCancellation?.id) setWithdrawTarget(booking);
+  }, []);
+
+  const confirmWithdraw = useCallback(async () => {
+    const requestId = withdrawTarget?.pendingCancellation?.id;
+    if (!requestId) return;
+    setWithdrawing(true);
+    try {
+      await withdrawCancellationRequest(requestId);
+      toast.success("Cancellation request withdrawn");
+      setWithdrawTarget(null);
+      await loadBookings();
+    } catch (err) {
+      if (err.response?.status === 404) {
+        toast.error("This request was already decided and can no longer be withdrawn");
+        setWithdrawTarget(null);
+        await loadBookings();
+      } else if (err.code !== "AUTH_REQUIRED") {
+        toast.error(
+          err.response?.data?.message || "Failed to withdraw the request"
+        );
+      }
+    } finally {
+      setWithdrawing(false);
+    }
+  }, [withdrawTarget, loadBookings]);
 
   const handleMessageCustomer = useCallback(
     (booking) => {
@@ -556,6 +596,7 @@ export default function BookingsPage() {
                 isUpdating={updatingId === booking.id}
                 isHighlighted={highlightedBookingId === booking.id}
                 onMessageCustomer={handleMessageCustomer}
+                onWithdrawCancellation={handleWithdrawCancellation}
               />
             ))}
           </div>
@@ -629,6 +670,18 @@ export default function BookingsPage() {
         isOpen={showBulkCancel}
         onClose={() => setShowBulkCancel(false)}
         onCompleted={() => loadBookings()}
+      />
+      <ConfirmDialog
+        isOpen={!!withdrawTarget}
+        title="Withdraw cancellation request?"
+        description={`#${withdrawTarget?.bookingNumber || ""} will stay exactly as it is — no refund, no fee and no customer notification. Any dates we blocked for this request will be re-opened for new bookings.`}
+        confirmLabel="Withdraw request"
+        cancelLabel="Keep request"
+        isLoading={withdrawing}
+        onConfirm={confirmWithdraw}
+        onClose={() => {
+          if (!withdrawing) setWithdrawTarget(null);
+        }}
       />
     </div>
   );
