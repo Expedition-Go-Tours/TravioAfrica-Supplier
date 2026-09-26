@@ -515,7 +515,9 @@ export const handlers = [
   ),
 
   // Products/Tours endpoints
-  http.get(`${API_BASE_URL}/tours/supplier/my-tours`, ({ request }) => {
+  // The axios interceptor rewrites /tours/supplier/my-tours → /travioafrica/supplier/tours,
+  // so the mock has to sit on the rewritten path or msw never intercepts it.
+  http.get(`${API_BASE_URL}/travioafrica/supplier/tours`, ({ request }) => {
     const url = new URL(request.url);
     const page = parseInt(url.searchParams.get('page') || '1', 10);
     const MY_TOURS_PAGE_SIZE = 10;
