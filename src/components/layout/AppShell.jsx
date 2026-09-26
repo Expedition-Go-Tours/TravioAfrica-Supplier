@@ -11,11 +11,11 @@ import { useRealtimeNotifications } from "@/features/notifications/hooks/useReal
 export default function AppShell() {
   const { isCollapsed, isMobileOpen } = useSidebarStore();
   const location = useLocation();
+  const matches = useMatches();
   const isProductBuilder = location.pathname.includes('/products/build');
   const isChatPage = location.pathname.startsWith('/chat');
   // Routes that own their full-viewport layout opt out of the shared container
   // with `handle.bleed` in router.jsx (they import SHELL_GUTTER themselves).
-  const matches = useMatches();
   const isBleed = matches.some((match) => match.handle?.bleed);
   useRealtimeNotifications();
   // The floating support bubble is chat, and it polls the unread count on every
