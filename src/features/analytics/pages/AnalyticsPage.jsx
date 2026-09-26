@@ -3,8 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { DollarSign, ShoppingCart, Star, TrendingUp, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { getAuthToken } from "@/stores/authStore";
-import { fetchSupplierAnalytics, fetchMonthlyRevenue } from "../api";
-import { fetchSupplierBookings } from "@/features/bookings/api";
+import { fetchSupplierAnalytics, fetchMonthlyRevenue, fetchProductAnalytics } from "../api";
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload?.length) {
@@ -22,7 +21,7 @@ const PIE_COLORS = ["#044b3b", "#0f766e", "#0891b2", "#ca8a04", "#94a3b8"];
 
 export default function AnalyticsPage() {
   const [data, setData] = useState(null);
-  const [bookings, setBookings] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [monthlyRevenueData, setMonthlyRevenueData] = useState([]);
@@ -32,10 +31,10 @@ export default function AnalyticsPage() {
     setLoading(true); setError(null);
     Promise.all([
       fetchSupplierAnalytics(),
-      fetchSupplierBookings({ page: 1, limit: 50 }).then(r => r.bookings).catch(() => []),
+      fetchProductAnalytics().catch(() => []),
       fetchMonthlyRevenue(12).catch(() => []),
     ])
-      .then(([d, b, monthly]) => { setData(d); setBookings(b); setMonthlyRevenueData(monthly); })
+      .then(([d, p, monthly]) => { setData(d); setProducts(p); setMonthlyRevenueData(monthly); })
       .catch((err) => {
         if (err.code === "AUTH_REQUIRED") return;
         setError(err.response?.data?.message || err.message || "Failed to load analytics");
@@ -68,30 +67,33 @@ export default function AnalyticsPage() {
 
   const productBookings = useMemo(() => {
     const map = {};
-    bookings.forEach(b => {
-      const name = b.tourName || "Unknown";
-      map[name] = (map[name] || 0) + 1;
+    products.forEach(p => {
+      const name = p.name || "Unknown";
+      map[name] = (map[name] || 0) + (p.bookings || 0);
     });
     return Object.entries(map)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([name, value], i) => ({ name: name.length > 12 ? name.slice(0, 12) + "…" : name, value, color: PIE_COLORS[i] }));
-  }, [bookings]);
+  }, [products]);
 
   const productRevenue = useMemo(() => {
+    // Grouped by name so a name shared by two tours reads as one product, and
+    // ranked by revenue: the best sellers, over every booking rather than only
+    // the 50 most recent this page used to walk. The count comes out of the same
+    // pass, instead of re-filtering the whole list once per product.
     const map = {};
-    bookings.forEach(b => {
-      const name = b.tourName || "Unknown";
-      map[name] = (map[name] || 0) + (b.total || 0);
+    products.forEach(p => {
+      const name = p.name || "Unknown";
+      if (!map[name]) map[name] = { revenue: 0, bookings: 0 };
+      map[name].revenue += (p.revenue || 0);
+      map[name].bookings += p.bookings || 0;
     });
     return Object.entries(map)
-      .sort((a, b) => b[1] - a[1])
+      .sort((a, b) => b[1].revenue - a[1].revenue)
       .slice(0, 4)
-      .map(([name, revenue]) => {
-        const bookingCount = bookings.filter(b => (b.tourName || "Unknown") === name).length;
-        return { name, revenue, bookings: bookingCount, rating: avgRating };
-      });
-  }, [bookings, avgRating]);
+      .map(([name, agg]) => ({ name, revenue: agg.revenue, bookings: agg.bookings, rating: avgRating }));
+  }, [products, avgRating]);
 
   return (
     <div className="space-y-5">
