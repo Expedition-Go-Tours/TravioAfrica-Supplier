@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, Loader2, CheckCircle2, Clock, X } from "lucide-react";
+import { AlertTriangle, Loader2, CheckCircle2, X } from "lucide-react";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { getCancellationTaxonomy } from "../api";
 import {
   cancellationPayload,
+  cancellationRequestStatusLabel,
   refundStatusLabel,
   reasonLabel,
   validateCancellationForm,
@@ -14,36 +15,10 @@ import CancellationReasonWizard, {
 } from "./CancellationReasonWizard";
 
 /**
- * Human copy for a cancellation-request status (admin-approval gate).
- */
-function requestStatusLabel(status) {
-  switch (status) {
-    case "PENDING_APPROVAL":
-      return "Pending approval";
-    case "APPROVING":
-      return "Being reviewed";
-    case "APPROVED":
-      return "Approved";
-    case "REJECTED":
-      return "Rejected";
-    case "WITHDRAWN":
-      return "Withdrawn";
-    case "SUPERSEDED":
-      return "Superseded";
-    default:
-      return status ? String(status).replace(/_/g, " ").toLowerCase() : "Pending approval";
-  }
-}
-
-/**
  * GYG-style structured cancellation:
  *   reason wizard (category → reason → fields + T&C) → pre-confirm info panel
  *   → PATCH /bookings/:id/status → success summary (refund, fee, rate impact,
  *   customer's choice window).
- *
- * With the admin-approval gate ON the API returns `data.request` instead of
- * `data.cancellation`: nothing has been executed, so the success screen must
- * say "submitted for review" — not "cancelled".
  *
  * The API call itself lives in the parent (BookingsPage) which owns toasts and
  * the list refresh; onConfirm resolves to { booking, cancellation } on success
@@ -153,9 +128,9 @@ export default function CancelBookingModal({
   const tourTitle = booking?.tour?.title || booking?.tourName || "this booking";
   const currency = booking?.currency || "USD";
   const cancellation = result?.cancellation || null;
-  // Admin-approval gate: `request` present → parked for review, not executed.
+  // Flag ON: the backend parks the cancel as a request instead of executing it.
   const request = result?.request || null;
-  const fee = Number(cancellation?.fee) || 0;
+  const isRequest = Boolean(request);
   const feePct = taxonomy?.feePct ?? 25;
   const choiceWindowHours = taxonomy?.choiceWindowHours ?? 48;
 
@@ -188,22 +163,18 @@ export default function CancelBookingModal({
               <div className="flex items-start gap-3 min-w-0">
                 <div className="shrink-0 w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
                   {view === "success" ? (
-                    request ? (
-                      <Clock size={18} className="text-amber-600" />
-                    ) : (
-                      <CheckCircle2 size={18} className="text-emerald-600" />
-                    )
+                    <CheckCircle2 size={18} className="text-emerald-600" />
                   ) : (
                     <AlertTriangle size={18} className="text-red-500" />
                   )}
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-lg font-bold text-slate-900">
-                    {view === "success"
-                      ? request
-                        ? "Cancellation submitted"
-                        : "Booking cancelled"
-                      : "Cancel booking"}
+                    {view !== "success"
+                      ? "Cancel booking"
+                      : isRequest
+                        ? "Cancellation requested"
+                        : "Booking cancelled"}
                   </h3>
                   <p className="text-sm text-slate-500 mt-0.5 truncate">
                     {view === "success"
@@ -313,128 +284,16 @@ export default function CancelBookingModal({
               </div>
             )}
 
-            {/* ── Success (admin-approval gate): parked for review ── */}
-            {view === "success" && request && (
+            {/* ── Success summary (executed vs parked request) ── */}
+            {view === "success" && (
               <div>
-                <div className="rounded-xl border border-amber-200/70 bg-amber-50 p-4 space-y-2.5 text-sm text-amber-900">
-                  <p className="font-semibold">Submitted for review</p>
-                  <p className="leading-relaxed">
-                    Your cancellation request has been submitted for review. It
-                    is <strong>not effective yet</strong> — the booking is
-                    unchanged and the customer has <strong>not</strong> been
-                    notified.
-                  </p>
-                  <p className="flex items-start justify-between gap-3">
-                    <span className="text-amber-800">Request status</span>
-                    <span className="font-semibold text-right">
-                      {requestStatusLabel(request.status)}
-                    </span>
-                  </p>
-                  {request.preview && (
-                    <>
-                      <p className="flex items-start justify-between gap-3">
-                        <span className="text-amber-800">
-                          If approved · customer refund
-                        </span>
-                        <span className="font-semibold text-right">
-                          {formatCurrency(
-                            Number(request.preview.refund?.amount) || 0,
-                            currency
-                          )}
-                        </span>
-                      </p>
-                      <p className="flex items-start justify-between gap-3">
-                        <span className="text-amber-800">
-                          If approved · cancellation fee
-                        </span>
-                        <span className="font-semibold text-right">
-                          {Number(request.preview.fee) > 0
-                            ? formatCurrency(Number(request.preview.fee), currency)
-                            : "No fee applies"}
-                        </span>
-                      </p>
-                    </>
-                  )}
-                </div>
-
-                <p className="mt-3 text-xs text-slate-500 leading-relaxed">
-                  An admin will review this request. You’ll be notified when
-                  it’s approved or rejected, and you can withdraw it from the
-                  bookings list while it’s pending.
-                </p>
-
-                <div className="flex justify-end mt-5">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-5 py-2.5 bg-[#044b3b] text-white rounded-lg text-sm font-medium hover:bg-[#033629] transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ── Success summary (executed cancellation) ── */}
-            {view === "success" && !request && (
-              <div>
-                <div className="rounded-xl border border-emerald-200/70 bg-emerald-50 p-4 space-y-2.5 text-sm text-emerald-900">
-                  {cancellation ? (
-                    <>
-                      <p className="flex items-start justify-between gap-3">
-                        <span className="text-emerald-800">
-                          Customer refund
-                        </span>
-                        <span className="font-semibold text-right">
-                          {refundStatusLabel(cancellation.refundStatus)}
-                          {Number(cancellation.refundAmount) > 0 &&
-                            ` · ${formatCurrency(
-                              Number(cancellation.refundAmount),
-                              currency
-                            )}`}
-                        </span>
-                      </p>
-                      <p className="flex items-start justify-between gap-3">
-                        <span className="text-emerald-800">
-                          Cancellation fee
-                        </span>
-                        <span className="font-semibold text-right">
-                          {fee > 0
-                            ? `${formatCurrency(fee, currency)} — deducted from your future payouts`
-                            : "No fee applies"}
-                        </span>
-                      </p>
-                      <p className="flex items-start justify-between gap-3">
-                        <span className="text-emerald-800">
-                          Cancellation rate
-                        </span>
-                        <span className="font-semibold text-right">
-                          {cancellation.countsTowardRate
-                            ? "Counts toward your rate"
-                            : "Not counted toward your rate"}
-                        </span>
-                      </p>
-                    </>
-                  ) : (
-                    <p>
-                      The booking has been cancelled and the customer has been
-                      notified.
-                    </p>
-                  )}
-                  <p className="pt-1 border-t border-emerald-200/70 leading-relaxed">
-                    The customer has {choiceWindowHours} hours to pick a new
-                    date or a refund
-                    {cancellation?.choiceDeadline
-                      ? ` (until ${formatDateTime(cancellation.choiceDeadline)})`
-                      : ""}
-                    .
-                  </p>
-                </div>
-
-                <p className="mt-3 text-xs text-slate-500 leading-relaxed">
-                  {feePct}% cancellation fees are deducted automatically from
-                  your next payout request.
-                </p>
+                <CancelSuccessSummary
+                  cancellation={cancellation}
+                  request={request}
+                  currency={currency}
+                  feePct={feePct}
+                  choiceWindowHours={choiceWindowHours}
+                />
 
                 <div className="flex justify-end mt-5">
                   <button
@@ -451,5 +310,102 @@ export default function CancelBookingModal({
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+/**
+ * Success screen for the single-cancel modal. Branches on the payload:
+ *  - `request` present  → the cancel was parked for admin approval (flag ON);
+ *    emphatically nothing has changed yet and the customer has not been told.
+ *  - `cancellation` present → executed immediately (flag OFF): refund, fee and
+ *    rate impact, plus the customer's choice window.
+ * Exported for focused tests of both branches.
+ */
+export function CancelSuccessSummary({
+  cancellation = null,
+  request = null,
+  currency = "USD",
+  feePct = 25,
+  choiceWindowHours = 48,
+}) {
+  if (request) {
+    return (
+      <div className="rounded-xl border border-amber-200/70 bg-amber-50 p-4 space-y-2.5 text-sm text-amber-900">
+        <p className="font-semibold">
+          Cancellation request submitted for review.
+        </p>
+        <p className="leading-relaxed">
+          Nothing has been cancelled yet; the customer has not been told. Our
+          team will review it.
+        </p>
+        <p className="flex items-start justify-between gap-3">
+          <span className="text-amber-800">Request status</span>
+          <span className="font-semibold text-right">
+            {cancellationRequestStatusLabel(request.status)}
+          </span>
+        </p>
+        <p className="pt-1 border-t border-amber-200/70 leading-relaxed">
+          You can withdraw this request from the booking or the Cancellation
+          requests page while it is still pending.
+        </p>
+      </div>
+    );
+  }
+
+  const fee = Number(cancellation?.fee) || 0;
+
+  return (
+    <>
+      <div className="rounded-xl border border-emerald-200/70 bg-emerald-50 p-4 space-y-2.5 text-sm text-emerald-900">
+        {cancellation ? (
+          <>
+            <p className="flex items-start justify-between gap-3">
+              <span className="text-emerald-800">Customer refund</span>
+              <span className="font-semibold text-right">
+                {refundStatusLabel(cancellation.refundStatus)}
+                {Number(cancellation.refundAmount) > 0 &&
+                  ` · ${formatCurrency(
+                    Number(cancellation.refundAmount),
+                    currency
+                  )}`}
+              </span>
+            </p>
+            <p className="flex items-start justify-between gap-3">
+              <span className="text-emerald-800">Cancellation fee</span>
+              <span className="font-semibold text-right">
+                {fee > 0
+                  ? `${formatCurrency(fee, currency)} — deducted from your future payouts`
+                  : "No fee applies"}
+              </span>
+            </p>
+            <p className="flex items-start justify-between gap-3">
+              <span className="text-emerald-800">Cancellation rate</span>
+              <span className="font-semibold text-right">
+                {cancellation.countsTowardRate
+                  ? "Counts toward your rate"
+                  : "Not counted toward your rate"}
+              </span>
+            </p>
+          </>
+        ) : (
+          <p>
+            The booking has been cancelled and the customer has been notified.
+          </p>
+        )}
+        <p className="pt-1 border-t border-emerald-200/70 leading-relaxed">
+          The customer has {choiceWindowHours} hours to pick a new date or a
+          refund
+          {cancellation?.choiceDeadline
+            ? ` (until ${formatDateTime(cancellation.choiceDeadline)})`
+            : ""}
+          .
+        </p>
+      </div>
+
+      <p className="mt-3 text-xs text-slate-500 leading-relaxed">
+        {feePct}% cancellation fees are deducted automatically from your next
+        payout request.
+      </p>
+    </>
   );
 }

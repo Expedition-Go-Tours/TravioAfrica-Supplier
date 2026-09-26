@@ -86,91 +86,51 @@ const REASON_LABELS = {
   CUSTOMER_REQUESTED_CANCEL: 'Customer asked to cancel this booking',
 };
 
-// ── Supplier cancellation approval gate (test toggle) ────────────────────
-// Default OFF so every existing test keeps today's executed-immediately
-// behaviour. Flip with setApprovalGate(true) to exercise the parked-request
-// shapes (`data.request`, `data.requested`, ...). Reset in afterEach.
-let approvalGateEnabled = false;
-let mockRequestSeq = 0;
-const mockCancellationRequests = [];
+// ── Admin-approval cancellation requests (SUPPLIER_CANCEL_REQUIRES_APPROVAL) ──
+// Flag defaults OFF so all existing handlers keep returning executed shapes.
+let cancellationApprovalMode = false;
 
-export function setApprovalGate(enabled) {
-  approvalGateEnabled = !!enabled;
+/** Toggle the backend approval flag for tests. Returns the previous value. */
+export function setCancellationApprovalMode(enabled) {
+  const previous = cancellationApprovalMode;
+  cancellationApprovalMode = Boolean(enabled);
+  return previous;
 }
 
-export function isApprovalGateEnabled() {
-  return approvalGateEnabled;
-}
-
-export function resetCancellationRequests() {
-  approvalGateEnabled = false;
-  mockRequestSeq = 0;
-  mockCancellationRequests.length = 0;
-}
-
-function requestBooking(booking) {
-  return {
-    id: booking.id,
-    bookingNumber: booking.bookingNumber,
-    status: booking.status,
-    paymentStatus: booking.paymentStatus,
-    refundStatus: null,
-    refundAmount: null,
-    grossAmount: booking.total,
-    currency: booking.currency,
-    travelDate: booking.travelDate,
-    selectedTime: null,
-    cancellationCode: null,
-    cancellationCategory: null,
-    cancellationOrigin: null,
-    countsTowardRate: null,
-    cancellationFee: null,
-    cancellationReason: null,
-    cancelledAt: null,
-    cancellationChoiceDeadline: null,
-    customerChoice: null,
-    customer: {
-      id: 'cust-1',
-      name: booking.customerName,
-      email: booking.customerEmail,
+const mockCancellationRequests = [
+  {
+    id: 'req-001',
+    status: 'PENDING_APPROVAL',
+    bookingId: 'BK-2026-0001',
+    booking: {
+      id: 'BK-2026-0001',
+      bookingNumber: 'TGA-78234',
+      status: 'CONFIRMED',
+      paymentStatus: 'SUCCEEDED',
+      currency: 'USD',
+      travelDate: '2026-06-15',
+      selectedTime: '09:00',
+      grossAmount: 2400,
+      cancellationCode: 'GUIDE_UNAVAILABLE',
+      cancellationCategory: 'OPERATIONAL',
+      customer: { id: 'cust-1', name: 'John Smith', email: 'john@example.com' },
     },
-  };
-}
-
-// Mirrors serializeCancellationRequest in cancellationRequestService.js.
-function createMockRequest(booking, payload = {}, status = 'PENDING_APPROVAL') {
-  const code = typeof payload.cancellationCode === 'string' ? payload.cancellationCode.trim() : '';
-  const category = REASON_CATEGORIES[code] || null;
-  const countsTowardRate = category ? category === 'OPERATIONAL' : true;
-  const feeApplies = category ? category === 'OPERATIONAL' : false;
-  const gross = Number(booking.total) || 0;
-  const fee = feeApplies ? Math.round(gross * 0.25 * 100) / 100 : 0;
-  const now = new Date().toISOString();
-  const request = {
-    id: `cr-${++mockRequestSeq}`,
-    status,
-    bookingId: booking.id,
-    booking: requestBooking(booking),
     tour: {
       id: 'tour-1',
-      title: booking.tourName,
-      supplier: { id: 'sup-1', name: 'Mock Supplier' },
+      title: 'Serengeti Safari Adventure',
+      supplier: { id: 'sp-001', name: 'Test Supplier' },
     },
-    supplier: null,
+    supplier: 'sp-001',
     payload: {
-      cancellationCode: code,
-      cancellationCategory: category,
-      explanation: payload.explanation || '',
-      evidenceUrl: payload.evidenceUrl || null,
-      customerRefundAgreed:
-        typeof payload.customerRefundAgreed === 'boolean' ? payload.customerRefundAgreed : null,
-      agreedToTerms: payload.agreedToTerms === true,
-      supplierNotes: payload.supplierNotes || null,
+      cancellationCode: 'GUIDE_UNAVAILABLE',
+      cancellationCategory: 'OPERATIONAL',
+      explanation: 'Our guide fell ill and no replacement was available.',
+      agreedToTerms: true,
     },
     preview: {
-      refund: { amount: gross, note: 'Full refund (supplier-caused cancellation)' },
-      fee,
-      countsTowardRate,
+      refund: { amount: 2400, note: 'Full refund to the customer' },
+      fee: 600,
+      countsTowardRate: true,
     },
     stopSellingApplied: false,
     batchId: null,
@@ -178,14 +138,30 @@ function createMockRequest(booking, payload = {}, status = 'PENDING_APPROVAL') {
     decidedAt: null,
     decisionNote: null,
     reminderCount: 0,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: '2026-05-20T10:00:00.000Z',
+    updatedAt: '2026-05-20T10:00:00.000Z',
+  },
+];
+
+function pendingCancellationFor(bookingId) {
+  if (!cancellationApprovalMode) return null;
+  const request = mockCancellationRequests.find(
+    (r) => r.bookingId === bookingId && r.status === 'PENDING_APPROVAL'
+  );
+  if (!request) return null;
+  return {
+    id: request.id,
+    status: request.status,
+    createdAt: request.createdAt,
+    payload: request.payload,
+    preview: request.preview,
+    stopSellingApplied: request.stopSellingApplied,
   };
-  mockCancellationRequests.unshift(request);
-  return request;
 }
 
-// Supplier's own tours catalogue (paginated, mirrors GET /tours/supplier/my-tours)
+// Supplier's own tours catalogue (paginated, mirrors GET /tours/supplier/my-tours).
+// NOTE: the axios interceptor (src/lib/axios.js) rewrites /tours/supplier/my-tours
+// to /travioafrica/supplier/tours, so the handler must match the rewritten path.
 const mockMyTours = [
   { id: 'tour-1', title: 'Serengeti Safari Adventure', category: 'Safari', status: 'ACTIVE', photos: [], coverPhoto: null, schedulesAndPricing: { pricingSchedules: { schedules: [{ prices: [{ retailPrice: 600 }] }] } }, specialOffers: [{ id: 'so-1', name: 'Safari Week', isActive: true }], specialOfferTargets: [] },
   { id: 'tour-2', title: 'Ngorongoro Crater Day Trip', category: 'Day Trip', status: 'ACTIVE', photos: [], coverPhoto: null, schedulesAndPricing: { pricingSchedules: { schedules: [{ prices: [{ retailPrice: 250 }] }] } }, specialOffers: [], specialOfferTargets: [] },
@@ -259,29 +235,20 @@ export const handlers = [
     return HttpResponse.json({
       status: "success",
       data: {
-        bookings: filteredBookings.map((b) => {
-          const open = approvalGateEnabled
-            ? mockCancellationRequests.find(
-                (r) => r.bookingId === b.id && r.status === 'PENDING_APPROVAL'
-              )
-            : null;
-          return {
-            id: b.id,
-            bookingNumber: b.bookingNumber,
-            selectedDate: b.travelDate,
-            createdAt: b.bookingDate,
-            travelers: { adults: b.travelers },
-            total: b.total,
-            status: b.status,
-            paymentStatus: b.paymentStatus,
-            currency: b.currency,
-            customer: { name: b.customerName, email: b.customerEmail },
-            tour: { title: b.tourName },
-            pendingCancellation: open
-              ? { id: open.id, status: open.status, createdAt: open.createdAt }
-              : null,
-          };
-        }),
+        bookings: filteredBookings.map((b) => ({
+          id: b.id,
+          bookingNumber: b.bookingNumber,
+          selectedDate: b.travelDate,
+          createdAt: b.bookingDate,
+          travelers: { adults: b.travelers },
+          total: b.total,
+          status: b.status,
+          paymentStatus: b.paymentStatus,
+          currency: b.currency,
+          customer: { name: b.customerName, email: b.customerEmail },
+          tour: { title: b.tourName },
+          pendingCancellation: pendingCancellationFor(b.id),
+        })),
         pagination: {
           currentPage: 1,
           totalPages: 1,
@@ -340,6 +307,51 @@ export const handlers = [
     });
   }),
 
+  // Supplier cancellation requests (flag ON). Must be registered before the
+  // single-segment /bookings/:id route is irrelevant here (3 segments), but we
+  // keep it grouped with the other cancellation handlers for clarity.
+  http.get(`${API_BASE_URL}/bookings/supplier/cancellation-requests`, ({ request }) => {
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status');
+    const requests = status
+      ? mockCancellationRequests.filter((r) => r.status === status)
+      : mockCancellationRequests;
+    return HttpResponse.json({
+      status: 'success',
+      data: {
+        requests,
+        pendingCount: mockCancellationRequests.filter(
+          (r) => r.status === 'PENDING_APPROVAL'
+        ).length,
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalCount: requests.length,
+          limit: 25,
+        },
+      },
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/bookings/supplier/cancellation-requests/:id/withdraw`, ({ params }) => {
+    const request = mockCancellationRequests.find(
+      (r) => r.id === params.id && r.status === 'PENDING_APPROVAL'
+    );
+    if (!request) {
+      // Mirrors the backend: not yours / already decided → 404.
+      return HttpResponse.json(
+        { status: 'fail', message: 'Cancellation request not found or already decided.' },
+        { status: 404 }
+      );
+    }
+    request.status = 'WITHDRAWN';
+    request.updatedAt = new Date().toISOString();
+    return HttpResponse.json({
+      status: 'success',
+      data: { request, revertedDates: 0 },
+    });
+  }),
+
   http.get(`${API_BASE_URL}/bookings/:id`, ({ params }) => {
     const booking = mockBookings.find(b => b.id === params.id);
     
@@ -381,20 +393,57 @@ export const handlers = [
         );
       }
 
-      // Admin-approval gate ON → park a request; the booking is unchanged.
-      if (approvalGateEnabled) {
-        const request = createMockRequest(booking, body, 'PENDING_APPROVAL');
+      const reason = REASON_CATEGORIES[code] ? { code, category: REASON_CATEGORIES[code] } : null;
+      const category = reason?.category || null;
+      const countsTowardRate = category ? category === 'OPERATIONAL' : true;
+      const feeApplies = category ? category === 'OPERATIONAL' : false;
+      const gross = Number(updatedBooking.total) || 0;
+      const fee = feeApplies ? Math.round(gross * 0.25 * 100) / 100 : 0;
+
+      // Flag ON: park the cancel as an approval request. The booking is
+      // returned UNCHANGED (nothing is cancelled yet).
+      if (cancellationApprovalMode) {
+        const request = {
+          id: `req-${Date.now()}`,
+          status: 'PENDING_APPROVAL',
+          bookingId: booking.id,
+          booking: { ...booking },
+          tour: {
+            id: 'tour-1',
+            title: booking.tourName,
+            supplier: { id: 'sp-001', name: 'Test Supplier' },
+          },
+          supplier: 'sp-001',
+          payload: {
+            cancellationCode: code,
+            cancellationCategory: category,
+            explanation: body.explanation || '',
+            evidenceUrl: body.evidenceUrl,
+            customerRefundAgreed: body.customerRefundAgreed,
+            agreedToTerms: true,
+            supplierNotes: body.supplierNotes,
+          },
+          preview: {
+            refund: { amount: gross, note: 'Full refund to the customer' },
+            fee,
+            countsTowardRate,
+            stopSell: false,
+          },
+          stopSellingApplied: false,
+          batchId: null,
+          decidedBy: null,
+          decidedAt: null,
+          decisionNote: null,
+          reminderCount: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        mockCancellationRequests.unshift(request);
         return HttpResponse.json({
           status: 'success',
           data: { booking, request },
         });
       }
-
-      const category = REASON_CATEGORIES[code] || null;
-      const countsTowardRate = category ? category === 'OPERATIONAL' : true;
-      const feeApplies = category ? category === 'OPERATIONAL' : false;
-      const gross = Number(updatedBooking.total) || 0;
-      const fee = feeApplies ? Math.round(gross * 0.25 * 100) / 100 : 0;
 
       return HttpResponse.json({
         status: 'success',
@@ -419,38 +468,36 @@ export const handlers = [
   }),
 
   http.post(`${API_BASE_URL}/bookings/supplier/cancel-batch`, async ({ request }) => {
-    // Mirrors cancelBatchBySupplier: `matched` is the processed batch (max 100
-    // per run), `overflow` reports how many matched but were not processed.
-    // With the admin-approval gate ON the same endpoint returns `requested` +
-    // `requests` (nothing executed) instead of `cancelled`.
-    if (approvalGateEnabled) {
+    // Flag ON: the batch is parked as approval requests (nothing cancelled).
+    if (cancellationApprovalMode) {
       const body = await request.json().catch(() => ({}));
-      const eligible = mockBookings.filter(
-        (b) => b.status === 'PENDING' || b.status === 'CONFIRMED'
-      );
-      const requests = eligible.map((b) => createMockRequest(b, body, 'PENDING_APPROVAL'));
+      const requestId = `req-${Date.now()}`;
       return HttpResponse.json({
         status: 'success',
         data: {
-          matched: eligible.length,
+          matched: 1,
           overflow: false,
-          requested: requests.length,
+          requested: 1,
           skipped: 0,
           failed: 0,
-          stopSellingApplied: false,
-          blockedDates: [],
-          batchId: 'cb_mock',
-          results: requests.map((r) => ({
-            bookingId: r.bookingId,
-            bookingNumber: r.booking.bookingNumber,
-            ok: true,
-            requestId: r.id,
-          })),
-          requests,
+          stopSellingApplied: Boolean(body.stopAcceptingBookings),
+          blockedDates: body.stopAcceptingBookings ? [body.dateFrom] : [],
+          batchId: `batch-${Date.now()}`,
+          results: [
+            {
+              bookingId: 'BK-2026-0001',
+              bookingNumber: 'TGA-78234',
+              ok: true,
+              requestId,
+            },
+          ],
+          requests: [],
         },
       });
     }
 
+    // Mirrors cancelBatchBySupplier: `matched` is the processed batch (max 100
+    // per run), `overflow` reports how many matched but were not processed.
     return HttpResponse.json({
       status: 'success',
       data: {
@@ -466,57 +513,7 @@ export const handlers = [
     });
   }),
 
-  // Admin-approval gate: the supplier's own cancellation requests + withdraw.
-  http.get(`${API_BASE_URL}/bookings/supplier/cancellation-requests`, ({ request }) => {
-    const url = new URL(request.url);
-    const status = url.searchParams.get('status');
-    const requests =
-      status && status !== 'ALL'
-        ? mockCancellationRequests.filter((r) => r.status === status)
-        : mockCancellationRequests;
-    return HttpResponse.json({
-      status: 'success',
-      data: {
-        requests,
-        pagination: {
-          currentPage: 1,
-          totalPages: 1,
-          totalCount: requests.length,
-          limit: 20,
-        },
-      },
-    });
-  }),
-
-  http.post(
-    `${API_BASE_URL}/bookings/supplier/cancellation-requests/:id/withdraw`,
-    ({ params }) => {
-      const cancellationRequest = mockCancellationRequests.find(
-        (r) => r.id === params.id
-      );
-      if (
-        !cancellationRequest ||
-        !['PENDING_APPROVAL', 'APPROVING'].includes(cancellationRequest.status)
-      ) {
-        return HttpResponse.json(
-          { message: 'Cancellation request not found or no longer pending' },
-          { status: 404 }
-        );
-      }
-      cancellationRequest.status = 'WITHDRAWN';
-      cancellationRequest.decidedAt = new Date().toISOString();
-      cancellationRequest.decisionNote = 'Withdrawn by supplier';
-      cancellationRequest.updatedAt = cancellationRequest.decidedAt;
-      return HttpResponse.json({
-        status: 'success',
-        data: { request: cancellationRequest, revertedDates: 0 },
-      });
-    }
-  ),
-
   // Products/Tours endpoints
-  // The axios interceptor rewrites /tours/supplier/my-tours → /travioafrica/supplier/tours,
-  // so the mock has to sit on the rewritten path or msw never intercepts it.
   http.get(`${API_BASE_URL}/travioafrica/supplier/tours`, ({ request }) => {
     const url = new URL(request.url);
     const page = parseInt(url.searchParams.get('page') || '1', 10);
@@ -693,6 +690,33 @@ export const handlers = [
 
   http.delete(`${API_BASE_URL}/notifications/:id`, () => {
     return new HttpResponse(null, { status: 204 });
+  }),
+
+  // Places catalog autocomplete (cities, towns and attractions — the curated
+  // XLSX import) backing the product builder's PlaceAutocomplete pickers.
+  http.get(`${API_BASE_URL}/places/search`, ({ request }) => {
+    const url = new URL(request.url);
+    const q = (url.searchParams.get('q') || '').trim().toLowerCase();
+    const types = (url.searchParams.get('types') || '')
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const places = [
+      { name: 'Accra', type: 'city', city: 'Accra', region: 'Greater Accra', lat: 5.6037, lng: -0.187 },
+      { name: 'Kumasi', type: 'city', city: 'Kumasi', region: 'Ashanti', lat: 6.6885, lng: -1.6244 },
+      { name: 'Cape Coast', type: 'city', city: 'Cape Coast', region: 'Central', lat: 5.1315, lng: -1.2795 },
+      { name: 'Koforidua', type: 'town', city: 'Koforidua', region: 'Eastern', lat: 6.094, lng: -0.2591 },
+      { name: 'Kakum National Park', type: 'attraction', city: 'Cape Coast', region: 'Central', lat: 5.35, lng: -1.3833 },
+    ];
+
+    const filtered = places.filter((place) => {
+      if (types.length > 0 && !types.includes(place.type)) return false;
+      if (!q) return true;
+      return place.name.toLowerCase().includes(q);
+    });
+
+    return HttpResponse.json({ data: { places: filtered } });
   }),
 
   // Backend Location API (proxy)

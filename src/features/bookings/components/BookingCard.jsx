@@ -24,6 +24,10 @@ import {
   formatTravelerDetails,
   getTravelerDetails,
 } from "../lib/formatTravelers";
+import {
+  PendingCancellationBadge,
+  WithdrawCancellationButton,
+} from "./PendingCancellationBadge";
 
 const STATUS_ACTIONS = {
   PENDING: [
@@ -70,6 +74,34 @@ const PAYMENT_META = {
   },
 };
 
+// Which storefront the customer booked through. Three entities: Travio Ghana,
+// Expedition Go, Travio Africa. Visible so a supplier can tell at a glance
+// which platform a booking came in via.
+const SOURCE_META = {
+  GHANA: { label: "Travio Ghana", className: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+  EXPEDITION: { label: "Expedition Go", className: "bg-sky-50 text-sky-700 border-sky-200", dot: "bg-sky-500" },
+  TRAVIO_AFRICA: { label: "Travio Africa", className: "bg-violet-50 text-violet-700 border-violet-200", dot: "bg-violet-500" },
+};
+
+function SourceBadge({ source }) {
+  const meta = SOURCE_META[String(source || "").toUpperCase()] || {
+    label: source || "—",
+    className: "bg-gray-50 text-gray-600 border-gray-200",
+    dot: "bg-gray-400",
+  };
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border",
+        meta.className
+      )}
+    >
+      <span className={cn("w-1.5 h-1.5 rounded-full", meta.dot)} />
+      {meta.label}
+    </span>
+  );
+}
+
 function PaymentStatus({ paymentStatus, paymentTiming }) {
   const key =
     paymentStatus === "SUCCEEDED"
@@ -115,11 +147,10 @@ export default function BookingCard({
   isUpdating,
   isHighlighted,
   onMessageCustomer,
-  onWithdrawCancellation,
+  onWithdrawRequest,
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const isPayLater = booking.paymentTiming === 'later';
-  const pendingCancellation = booking.pendingCancellation || null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const travelDatePassed = new Date(booking.travelDate) < today;
@@ -134,8 +165,6 @@ export default function BookingCard({
     (a) => !(travelDatePassed && a.value === 'CONFIRMED')
   );
   const pickup = booking.pickup || {};
-  // Customer chose "pickup later" (no location yet) — distinguish this from a
-  // booking that never had pickup details, so the card shows an accurate state.
   const pickupDeferred =
     booking.pickupDeferred ||
     pickup.pickupLater ||
@@ -170,13 +199,113 @@ export default function BookingCard({
           : "border-slate-200 hover:border-slate-300 hover:shadow-md"
       )}
     >
-      {/* ===== COLLAPSED HEADER — GetYourGuide style ===== */}
+      {/* ===== COLLAPSED HEADER — mobile (stacked) ===== */}
       <div
         role="button"
         tabIndex={0}
         onClick={toggleExpand}
         onKeyDown={handleKeyDown}
-        className="flex items-center gap-4 px-4 sm:px-5 py-3.5 cursor-pointer select-none"
+        className="block sm:hidden px-4 py-3.5 cursor-pointer select-none"
+        aria-expanded={isExpanded}
+      >
+        {/* Row 1: thumbnail + title/party + status */}
+        <div className="flex items-start gap-3">
+          <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-slate-100">
+            {booking.tourPhoto ? (
+              <OptimizedImage
+                src={booking.tourPhoto}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-xl text-slate-300">
+                🏰
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="flex-1 min-w-0 text-[15px] font-semibold text-slate-900 leading-snug line-clamp-2">
+                {booking.tourName}
+              </h3>
+              <div className="shrink-0">
+                <StatusBadge
+                  status={booking.status}
+                  label={BOOKING_STATUSES[booking.status]?.label || booking.status}
+                  size="sm"
+                />
+              </div>
+            </div>
+            {partySummary && (
+              <p className="mt-0.5 text-[13px] text-slate-500 truncate">
+                {partySummary}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Row 2: key facts — date·time · travelers · ref */}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2.5 text-xs text-slate-500">
+          <span className="flex items-center gap-1 min-w-0">
+            <CalendarDays size={12} className="shrink-0 text-slate-400" />
+            <span className="truncate">
+              {formatDate(booking.travelDate)}
+              {booking.selectedTime && ` · ${formatTime(booking.selectedTime)}`}
+            </span>
+          </span>
+          <span className="text-slate-300">·</span>
+          <span className="flex items-center gap-1 whitespace-nowrap">
+            <Users size={12} className="shrink-0 text-slate-400" />
+            {guestCount} traveler{guestCount !== 1 ? "s" : ""}
+          </span>
+          <span className="text-slate-300">·</span>
+          <span className="font-mono text-[11px] text-slate-500 whitespace-nowrap">
+            {booking.bookingNumber}
+          </span>
+        </div>
+
+        {/* Row 3: price + chips + chevron */}
+        <div className="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-slate-100">
+          <p className="text-base font-bold text-slate-900 whitespace-nowrap shrink-0">
+            {formatCurrency(booking.total, booking.currency)}
+          </p>
+          <div className="flex flex-1 min-w-0 flex-wrap items-center gap-1.5">
+            {booking.paymentStatus === 'FAILED' ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 border border-red-200/60 text-[10px] font-semibold text-red-700 whitespace-nowrap">
+                <Ban size={10} className="shrink-0" /> Payment failed
+              </span>
+            ) : payLaterUnpaid ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200/60 text-[10px] font-semibold text-amber-700 whitespace-nowrap">
+                <Clock size={10} className="shrink-0" /> Pay later
+              </span>
+            ) : null}
+            {booking.discount > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 border border-red-200/60 text-[10px] font-semibold text-red-700 whitespace-nowrap">
+                <Tag size={10} className="shrink-0" />
+                <span className="truncate max-w-[100px]">
+                  {booking.offerName || 'Discount'}
+                </span>
+              </span>
+            )}
+            <SourceBadge source={booking.source} />
+          </div>
+          <ChevronDown
+            size={20}
+            className={cn(
+              "text-slate-400 transition-transform duration-200 shrink-0",
+              isExpanded && "rotate-180"
+            )}
+          />
+        </div>
+      </div>
+
+      {/* ===== COLLAPSED HEADER — desktop (horizontal) ===== */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={toggleExpand}
+        onKeyDown={handleKeyDown}
+        className="hidden sm:flex items-center gap-4 px-4 sm:px-5 py-3.5 cursor-pointer select-none"
         aria-expanded={isExpanded}
       >
         {/* Tour cover photo */}
@@ -222,6 +351,7 @@ export default function BookingCard({
             <span className="font-mono text-[11px] text-slate-500">
               {booking.bookingNumber}
             </span>
+            <SourceBadge source={booking.source} />
             <span className="text-slate-300">·</span>
             <span className="flex items-center gap-1 whitespace-nowrap">
               <Users size={12} className="shrink-0" />
@@ -233,32 +363,6 @@ export default function BookingCard({
               {booking.instantConfirmation ? "Instant confirmation" : "Manual confirmation"}
             </span>
           </p>
-
-          {/* Admin-approval gate: open cancellation request chip + Withdraw */}
-          {pendingCancellation && (
-            <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-1 px-2 py-1 rounded-full bg-amber-50 border border-amber-200/70 text-[11px] font-semibold text-amber-700">
-              <Clock size={11} className="shrink-0" />
-              Pending approval
-              {pendingCancellation.createdAt && (
-                <span className="font-normal text-amber-600">
-                  · requested {formatDate(pendingCancellation.createdAt)}
-                </span>
-              )}
-              {onWithdrawCancellation && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onWithdrawCancellation(booking);
-                  }}
-                  disabled={isUpdating}
-                  className="ml-1 font-semibold text-amber-800 underline hover:text-amber-900 disabled:opacity-50"
-                >
-                  Withdraw
-                </button>
-              )}
-            </span>
-          )}
         </div>
 
         {/* Right column: status + price + chevron */}
@@ -292,6 +396,19 @@ export default function BookingCard({
           )}
         />
       </div>
+
+      {/* ===== PENDING APPROVAL BANNER ===== */}
+      {booking.pendingCancellation && (
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-2.5 bg-amber-50 border-t border-amber-200/60">
+          <PendingCancellationBadge
+            pendingCancellation={booking.pendingCancellation}
+          />
+          <WithdrawCancellationButton
+            requestId={booking.pendingCancellation.id}
+            onWithdraw={onWithdrawRequest}
+          />
+        </div>
+      )}
 
       {/* ===== EXPANDED DETAILS ===== */}
       <AnimatePresence initial={false}>
@@ -374,6 +491,9 @@ export default function BookingCard({
                     <p className="text-sm font-medium text-slate-800 font-mono">
                       {booking.bookingNumber}
                     </p>
+                    <div className="mt-1">
+                      <SourceBadge source={booking.source} />
+                    </div>
                   </div>
                   <div>
                     <p className="text-xs text-slate-500 mb-0.5">Purchased</p>

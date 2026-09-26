@@ -6,6 +6,12 @@ export function mapBookingRow(booking) {
   return {
     id: booking.id,
     bookingNumber: booking.bookingNumber,
+    // Which storefront the customer booked through. A supplier can hold
+    // bookings from any of the three, so the badge is not brand-scoped.
+    // Fallback parses the booking-number prefix so rows written before the
+    // source column was populated still label correctly. Per config/brands.js:
+    // this brand is source TRAVIO_AFRICA with prefix 'AFR'.
+    source: booking.source || (booking.bookingNumber?.startsWith("AFR") ? "TRAVIO_AFRICA" : "EXPEDITION"),
     customerId: booking.customer?.id || "",
     customerName: booking.customer?.name || "—",
     customerEmail: booking.customer?.email || "",
@@ -20,7 +26,11 @@ export function mapBookingRow(booking) {
     // Per-tour confirmation mode (from bookingAndTickets). Missing/unset => instant.
     instantConfirmation: booking.tour?.bookingAndTickets?.instantConfirmation !== false,
     tourId: booking.tourId,
-    tourPhoto: booking.tour?.photos?.[0] || "",
+    // The supplier bookings endpoint selects coverPhoto but not the full
+    // photos array — prefer coverPhoto, fall back to the first photo.
+    // Identical select shape in every brand's supplier controller, so this
+    // used to resolve to "" wherever photos was absent.
+    tourPhoto: booking.tour?.coverPhoto || booking.tour?.photos?.[0] || "",
     travelDate: booking.travelDate,
     bookingDate: booking.createdAt,
     travelers: getTravelerCount(travelers),
@@ -38,8 +48,11 @@ export function mapBookingRow(booking) {
     pickupStatus: booking.pickupStatus || null,
     pickupDeferred: !!booking.pickupDeferred,
     isIncomplete: booking.isIncomplete != null ? booking.isIncomplete : null,
-    // Tour's pickup config (zones / locations / pickupType) so the edit modal
-    // can offer the supplier's own pickup points instead of free text only.
+    // Server-derived planner state: 'deferred' | 'incomplete' | 'confirmed'.
+    pickupState: booking.pickupState || null,
+    // Supplier stop order within the day + "picked up" marker.
+    pickupOrder: booking.pickupOrder ?? null,
+    pickedUpAt: booking.pickedUpAt || null,
     pickupConfig: typeof booking.tour?.bookingAndTickets === 'string'
       ? (() => { try { return JSON.parse(booking.tour.bookingAndTickets); } catch { return null; } })()
       : booking.tour?.bookingAndTickets || null,
@@ -51,8 +64,9 @@ export function mapBookingRow(booking) {
     offerDiscountType: booking.offerDiscountType || booking.appliedOffer?.discountType || null,
     offerDiscountPct: booking.offerDiscountPct ?? booking.appliedOffer?.discountPercentage ?? null,
     offerDiscountFix: booking.offerDiscountFix ?? booking.appliedOffer?.fixedDiscountValue ?? null,
-    // Admin-approval gate: an open cancellation request riding along as a chip
-    // ({ id, status, createdAt }) — null in flag-OFF mode / when none is open.
+    // Set when SUPPLIER_CANCEL_REQUIRES_APPROVAL is on and this booking has a
+    // parked cancellation request awaiting an admin decision. Shape:
+    // { id, status:'PENDING_APPROVAL', createdAt, payload, preview, stopSellingApplied } | null
     pendingCancellation: booking.pendingCancellation || null,
   };
 }
@@ -124,19 +138,15 @@ export function cancelBookingsBatch(payload) {
   });
 }
 
-// ── Admin-approval gate: supplier cancellation requests ──
+// ── Admin-approval cancellation requests (flag ON) ──
 
 /**
- * GET /bookings/supplier/cancellation-requests — the supplier's own requests
- * (pending + decided), newest first. `status` accepts PENDING_APPROVAL |
+ * GET /bookings/supplier/cancellation-requests — the supplier's parked
+ * cancellation requests, newest first. `status` is one of PENDING_APPROVAL |
  * APPROVED | REJECTED | WITHDRAWN | SUPERSEDED | ALL. Resolves to
- * { requests, pagination } from response.data.data.
+ * { requests, pagination } inside response.data.data.
  */
-export async function fetchSupplierCancellationRequests({
-  status,
-  page = 1,
-  limit = 20,
-} = {}) {
+export async function fetchCancellationRequests({ status, page = 1, limit = 25 } = {}) {
   const params = { page, limit };
   if (status && status !== "ALL") params.status = status;
   const response = await api.get("/bookings/supplier/cancellation-requests", {
@@ -147,14 +157,16 @@ export async function fetchSupplierCancellationRequests({
   return {
     requests: payload.requests || [],
     pagination: payload.pagination || null,
+    pendingCount: payload.pendingCount ?? null,
   };
 }
 
 /**
- * POST /bookings/supplier/cancellation-requests/:id/withdraw — withdraw one of
- * the supplier's own PENDING_APPROVAL requests. The booking is unchanged and
- * any dates the request blocked are re-opened. Resolves to
- * { request, revertedDates }; 404 when it is not yours or no longer pending.
+ * POST /bookings/supplier/cancellation-requests/:id/withdraw — pulls back a
+ * PENDING_APPROVAL request. Nothing was ever changed, so withdrawing only
+ * re-opens any dates the batch request had blocked. 404 means the request was
+ * already decided (or belongs to another supplier).
+ * Resolves to { request, revertedDates } inside response.data.data.
  */
 export function withdrawCancellationRequest(id) {
   return api.post(
@@ -181,8 +193,18 @@ export async function fetchPickupPlanner(params = {}) {
   const payload = response.data?.data || {};
   return {
     bookings: (payload.bookings || []).map(mapBookingRow),
+    counts: payload.counts || null,
     pagination: payload.pagination || null,
   };
+}
+
+/** Persist the supplier's stop order for one service day. */
+export function reorderPickupStops(date, order) {
+  return api.patch(
+    `/bookings/supplier/pickup-planner/reorder`,
+    { date, order },
+    { skipGlobalErrorHandler: true }
+  );
 }
 
 export function updateBookingPickup(id, payload) {

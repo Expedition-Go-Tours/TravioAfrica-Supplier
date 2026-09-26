@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
+  Ban,
+  CheckCircle2,
   CalendarX2,
   Loader2,
   X,
@@ -9,7 +11,7 @@ import {
 import { toast } from "sonner";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import DatePicker from "@/components/forms/DatePicker";
-import { formatDate, cn } from "@/lib/utils";
+import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { fetchSupplierBookings, cancelBookingsBatch, getCancellationTaxonomy } from "../api";
 import { fetchCancellationProducts } from "@/features/cancellation/api";
 import {
@@ -19,7 +21,6 @@ import {
 import CancellationReasonWizard, {
   CancellationConfirmPanel,
 } from "./CancellationReasonWizard";
-import BulkCancelResult from "./BulkCancelResult";
 
 /**
  * GYG-style bulk cancellation wizard (Cancel multiple bookings):
@@ -193,11 +194,10 @@ export default function BulkCancelWizard({ isOpen, onClose, onCompleted }) {
       const data = response.data?.data || null;
       setResult(data);
       setStep("result");
-      // Admin-approval gate returns `requested`/`requests` instead of
-      // `cancelled` — nothing has been executed yet.
-      if (data && data.requested !== undefined) {
+      if (data?.requested !== undefined || Array.isArray(data?.requests)) {
+        const count = data?.requested ?? 0;
         toast.success(
-          `${data.requested} cancellation request${data.requested === 1 ? "" : "s"} submitted for review`
+          `${count} cancellation request${count === 1 ? "" : "s"} submitted for review`
         );
       } else {
         toast.success(
@@ -599,7 +599,7 @@ export default function BulkCancelWizard({ isOpen, onClose, onCompleted }) {
               </div>
             )}
 
-            {/* ══ Step 4: result ══ */}
+            {/* ══ Step 4: result (executed vs parked requests) ══ */}
             {step === "result" && result && (
               <div>
                 <BulkCancelResult result={result} taxonomy={taxonomy} />
@@ -619,5 +619,171 @@ export default function BulkCancelWizard({ isOpen, onClose, onCompleted }) {
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+/**
+ * Result step for the bulk-cancel wizard. Branches on whether the batch was
+ * executed (flag OFF, `cancelled`) or parked as approval requests (flag ON,
+ * `requested`/`requests`). Exported for focused tests of both branches.
+ */
+export function BulkCancelResult({ result, taxonomy }) {
+  if (!result) return null;
+
+  const isRequest =
+    result.requested !== undefined || Array.isArray(result.requests);
+
+  if (isRequest) {
+    const requested = result.requested ?? 0;
+    const skipped = result.skipped ?? 0;
+    const failed = result.failed ?? 0;
+    return (
+      <div>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {[
+            { label: "Requests submitted", value: requested },
+            { label: "Skipped", value: skipped },
+            { label: "Failed", value: failed },
+            { label: "Matched", value: result.matched ?? 0 },
+          ].map((s) => (
+            <div
+              key={s.label}
+              className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+            >
+              <p className="text-lg font-bold text-slate-900">{s.value}</p>
+              <p className="text-xs text-slate-500">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-2 text-sm text-slate-600">
+          <p className="flex items-start gap-2">
+            <CheckCircle2
+              size={15}
+              className="text-amber-600 shrink-0 mt-0.5"
+            />
+            <span>
+              {requested} cancellation request{requested === 1 ? "" : "s"}{" "}
+              submitted for review. Nothing has been cancelled yet and the
+              customers have not been told — each request is reviewed by our
+              team.
+            </span>
+          </p>
+
+          {result.stopSellingApplied && result.blockedDates?.length > 0 && (
+            <p className="flex items-start gap-2">
+              <Ban size={15} className="text-amber-600 shrink-0 mt-0.5" />
+              Stop-selling is already live for{" "}
+              {result.blockedDates.length} date
+              {result.blockedDates.length === 1 ? "" : "s"}:{" "}
+              {result.blockedDates.slice(0, 6).join(", ")}
+              {result.blockedDates.length > 6
+                ? ` +${result.blockedDates.length - 6} more`
+                : ""}
+              . Withdrawing a request re-opens them.
+            </p>
+          )}
+
+          {result.overflow && (
+            <p className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200/70 p-3 text-amber-800">
+              <AlertTriangle size={15} className="shrink-0 mt-0.5" />
+              Your selection matched more bookings than one run can process
+              (100 max). This run included the first 100 — run the wizard again
+              for the rest.
+            </p>
+          )}
+
+          {failed > 0 && Array.isArray(result.results) && (
+            <ul className="rounded-lg bg-red-50 border border-red-200/70 p-3 text-xs text-red-700 space-y-1">
+              <li className="font-semibold">
+                {failed} booking(s) could not be submitted:
+              </li>
+              {result.results
+                .filter((r) => !r.ok)
+                .slice(0, 5)
+                .map((r) => (
+                  <li key={r.bookingId}>
+                    {r.bookingNumber}: {r.error}
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        {[
+          { label: "Cancelled", value: result.cancelled ?? 0 },
+          { label: "Failed", value: result.failed ?? 0 },
+          {
+            label: "Total refunded",
+            value: formatCurrency(Number(result.totalRefunded) || 0),
+          },
+          {
+            label: "Cancellation fees",
+            value: formatCurrency(Number(result.totalFees) || 0),
+          },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+          >
+            <p className="text-lg font-bold text-slate-900">{s.value}</p>
+            <p className="text-xs text-slate-500">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-2 text-sm text-slate-600">
+        <p className="flex items-start gap-2">
+          <CheckCircle2 size={15} className="text-emerald-600 shrink-0 mt-0.5" />
+          {result.matched ?? 0} booking(s) matched this run. Each customer gets
+          a full refund and {(taxonomy?.feePct ?? 25) + "%"} cancellation fees (
+          {formatCurrency(Number(result.totalFees) || 0)}) are deducted
+          automatically from your next payout request.
+        </p>
+
+        {result.blockedDates?.length > 0 && (
+          <p className="flex items-start gap-2">
+            <Ban size={15} className="text-amber-600 shrink-0 mt-0.5" />
+            Stopped accepting bookings for {result.blockedDates.length} date
+            {result.blockedDates.length === 1 ? "" : "s"}:{" "}
+            {result.blockedDates.slice(0, 6).join(", ")}
+            {result.blockedDates.length > 6
+              ? ` +${result.blockedDates.length - 6} more`
+              : ""}
+          </p>
+        )}
+
+        {result.overflow && (
+          <p className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200/70 p-3 text-amber-800">
+            <AlertTriangle size={15} className="shrink-0 mt-0.5" />
+            Your selection matched more bookings than one run can cancel (100
+            max). This run included the first 100 — run the wizard again to
+            cancel the rest.
+          </p>
+        )}
+
+        {result.failed > 0 && Array.isArray(result.results) && (
+          <ul className="rounded-lg bg-red-50 border border-red-200/70 p-3 text-xs text-red-700 space-y-1">
+            <li className="font-semibold">
+              {result.failed} booking(s) could not be cancelled:
+            </li>
+            {result.results
+              .filter((r) => !r.ok)
+              .slice(0, 5)
+              .map((r) => (
+                <li key={r.bookingId}>
+                  {r.bookingNumber}: {r.error}
+                </li>
+              ))}
+          </ul>
+        )}
+      </div>
+    </div>
   );
 }
