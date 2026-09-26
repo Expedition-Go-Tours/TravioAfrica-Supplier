@@ -4,7 +4,7 @@ import {
   User, Bell, CreditCard, Shield, FileText, Users,
   Loader2, Upload, Trash2, X, Plus, Building2,
   Wallet, Globe, MapPin, Clock, Phone, Save, Key, Eye, EyeOff,
-  Landmark, Banknote, AlertTriangle, RefreshCw
+  Landmark, Banknote, AlertTriangle, RefreshCw, Smartphone
 } from "lucide-react";
 import { toast } from "sonner";
 import PhoneInput from "@/components/forms/PhoneInput";
@@ -21,7 +21,7 @@ import {
   resendNotificationRecipient, removeNotificationRecipient,
   fetchTaxInfo, updateTaxInfo,
   fetchPayoutMethods, createPayoutMethod, deletePayoutMethod,
-  fetchPayouts,
+  fetchPayouts, fetchPayoutSettings, fetchFinanceSummary,
   fetchTeamMembers, inviteTeamMember, removeTeamMember, updateTeamMemberRole,
   directAddTeamMember, resendInvite, revokeTeamInvite
 } from "../api";
@@ -29,10 +29,15 @@ import { getAuthToken, useAuthStore } from "@/stores/authStore";
 import { cn, formatCurrency } from "@/lib/utils";
 import { config } from "@/config";
 import { useTeamRole } from "@/hooks/useTeamRole";
-import { TEAM_ROLE_LABELS, TEAM_ROLE_COLORS, describeRoles, sortTeamRoles } from "@/config/teamRoles";
 import { canOpenSettingsTab } from "@/config/pageAccess";
+import PayoutMethodFormSheet from "@/features/finance/components/PayoutMethodFormSheet";
+import { maskTail } from "@/features/finance/config/payoutMethodForm";
+import { TEAM_ROLE_LABELS, TEAM_ROLE_COLORS, MAX_TEAM_ROLES, describeRoles, sortTeamRoles } from "@/config/teamRoles";
 import TeamRolePicker from "@/features/settings/components/TeamRolePicker";
 import SocialMediaManager from "../components/SocialMediaManager";
+import OperatingHoursEditor from "../components/OperatingHoursEditor";
+import { emptyWeeklyHours, normalizeWeeklyHours, validateOperatingHours } from "../utils/operatingHours";
+import { PayoutScheduleEditor } from "@/features/finance/components/PayoutScheduleCard";
 
 const TABS = [
   { key: "profile", label: "Profile", icon: User },
@@ -43,16 +48,20 @@ const TABS = [
   { key: "team", label: "Team", icon: Users },
 ];
 
-const METHOD_TYPES = [
-  { value: "BANK_TRANSFER", label: "Bank Transfer", icon: Building2, desc: "Direct bank deposit" },
-  { value: "PAYPAL", label: "PayPal", icon: Wallet, desc: "Online payment platform" },
-];
-
 const FADE_UP = {
   initial: { opacity: 0, y: 16 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
   exit: { opacity: 0, y: -8, transition: { duration: 0.2, ease: "easeIn" } },
 };
+
+/**
+ * The masked identifier for a saved method. Picks whichever identifier that
+ * method actually has — a SEPA account only has an IBAN, so falling back to
+ * `accountNumber` alone used to render a bare "****" with nothing after it.
+ */
+function settingsMethodIdentifier(method) {
+  return maskTail(method.iban || method.sortCode || method.routingNumber || method.accountNumber || method.mobileNumber);
+}
 
 export default function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -132,7 +141,8 @@ function ProfileTab() {
   const [form, setForm] = useState({
     name: "", phone: "", language: "en", timezone: "UTC", email: "",
     description: "", address: "", city: "", country: "", region: "",
-    website: "", operatingHours: "",
+    legalBusinessName: "", businessType: "", registrationNumber: "", tin: "", yearEstablished: "",
+    website: "", operatingHours: emptyWeeklyHours(),
     instagram: "", facebook: "", twitter: "",
     tiktok: "", youtube: "", linkedin: "", whatsapp: "", pinterest: "",
   });
@@ -141,6 +151,7 @@ function ProfileTab() {
   const [logoPreview, setLogoPreview] = useState(null);
   const [currentLogoUrl, setCurrentLogoUrl] = useState(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [hoursErrors, setHoursErrors] = useState({});
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -154,14 +165,19 @@ function ProfileTab() {
         if (user) {
           const bi = biz?.businessInfo || {};
           const loaded = {
-            name: user.name || "", phone: user.phone || "",
+            name: user.name || "", phone: user.phone || bi.phoneNumber || "",
             language: user.language || "en", timezone: user.timezone || "UTC",
             email: user.email || "",
             description: bi.description || "", address: bi.address || "",
             city: bi.city || "", country: bi.country || "",
             region: bi.region || "", website: bi.website || "",
+            legalBusinessName: bi.legalBusinessName || "",
+            businessType: bi.businessType || "",
+            registrationNumber: bi.registrationNumber || "",
+            tin: bi.tin || "",
+            yearEstablished: bi.yearEstablished != null ? String(bi.yearEstablished) : "",
             instagram: bi.instagram || "", facebook: bi.facebook || "",
-            twitter: bi.twitter || "", operatingHours: bi.operatingHours || "",
+            twitter: bi.twitter || "", operatingHours: normalizeWeeklyHours(bi.operatingHours),
             tiktok: bi.tiktok || "", youtube: bi.youtube || "",
             linkedin: bi.linkedin || "", whatsapp: bi.whatsapp || "",
             pinterest: bi.pinterest || "",
@@ -190,6 +206,15 @@ function ProfileTab() {
   };
 
   const handleSaveBusiness = async () => {
+    // The schedule is optional, but a range that ends before it starts must not
+    // be stored — surface it on the offending day instead of saving junk.
+    const errorsFound = validateOperatingHours(form.operatingHours);
+    if (Object.keys(errorsFound).length > 0) {
+      setHoursErrors(errorsFound);
+      toast.error("Fix your operating hours before saving");
+      return;
+    }
+    setHoursErrors({});
     setSaving(true);
     try {
       await updateBusinessProfile({
@@ -197,6 +222,9 @@ function ProfileTab() {
           description: form.description, address: form.address,
           city: form.city, country: form.country, region: form.region,
           website: form.website, operatingHours: form.operatingHours,
+          legalBusinessName: form.legalBusinessName, businessType: form.businessType,
+          registrationNumber: form.registrationNumber, tin: form.tin,
+          yearEstablished: form.yearEstablished,
           instagram: form.instagram, facebook: form.facebook, twitter: form.twitter,
           tiktok: form.tiktok, youtube: form.youtube, linkedin: form.linkedin,
           whatsapp: form.whatsapp, pinterest: form.pinterest,
@@ -262,6 +290,9 @@ function ProfileTab() {
     description: form.description, address: form.address, city: form.city,
     country: form.country, region: form.region, website: form.website,
     operatingHours: form.operatingHours,
+    legalBusinessName: form.legalBusinessName, businessType: form.businessType,
+    registrationNumber: form.registrationNumber, tin: form.tin,
+    yearEstablished: form.yearEstablished,
     instagram: form.instagram, facebook: form.facebook, twitter: form.twitter,
     tiktok: form.tiktok, youtube: form.youtube, linkedin: form.linkedin,
     whatsapp: form.whatsapp, pinterest: form.pinterest,
@@ -269,6 +300,9 @@ function ProfileTab() {
     description: initialForm.description, address: initialForm.address, city: initialForm.city,
     country: initialForm.country, region: initialForm.region, website: initialForm.website,
     operatingHours: initialForm.operatingHours,
+    legalBusinessName: initialForm.legalBusinessName, businessType: initialForm.businessType,
+    registrationNumber: initialForm.registrationNumber, tin: initialForm.tin,
+    yearEstablished: initialForm.yearEstablished,
     instagram: initialForm.instagram, facebook: initialForm.facebook, twitter: initialForm.twitter,
     tiktok: initialForm.tiktok, youtube: initialForm.youtube, linkedin: initialForm.linkedin,
     whatsapp: initialForm.whatsapp, pinterest: initialForm.pinterest,
@@ -433,6 +467,57 @@ function ProfileTab() {
         </div>
         <div className="px-6 py-5 space-y-5">
           <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Business details</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Legal Business Name</label>
+                <input type="text" value={form.legalBusinessName}
+                  onChange={(e) => setForm((p) => ({ ...p, legalBusinessName: e.target.value }))}
+                  placeholder="As registered with the Registrar General"
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-all" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Business Type</label>
+                <Select value={form.businessType || "individual"}
+                  onValueChange={(v) => setForm((p) => ({ ...p, businessType: v }))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select business type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="individual">Individual</SelectItem>
+                    <SelectItem value="company">Registered Company</SelectItem>
+                    <SelectItem value="non_profit">Non-profit</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Registration Number</label>
+                <input type="text" value={form.registrationNumber}
+                  onChange={(e) => setForm((p) => ({ ...p, registrationNumber: e.target.value }))}
+                  placeholder="e.g. CS123456789"
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-all" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Tax Identification Number (TIN)</label>
+                <input type="text" value={form.tin}
+                  onChange={(e) => setForm((p) => ({ ...p, tin: e.target.value }))}
+                  placeholder="e.g. C0012345678"
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-all" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Year Established</label>
+                <input type="text" inputMode="numeric" value={form.yearEstablished}
+                  onChange={(e) => setForm((p) => ({ ...p, yearEstablished: e.target.value.replace(/[^0-9]/g, "").slice(0, 4) }))}
+                  placeholder="e.g. 2019"
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-all" />
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-slate-400">
+              Taken from your supplier application. Update anything that has changed since you applied.
+            </p>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Business Description</label>
             <textarea value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
               rows={3} placeholder="Tell travelers about your business, your story, and what makes your tours special..."
@@ -473,14 +558,23 @@ function ProfileTab() {
                 placeholder="https://yourbusiness.com"
                 className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-all" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                <Clock size={13} className="inline mr-1 text-slate-400" />Operating Hours
-              </label>
-              <input type="text" value={form.operatingHours} onChange={(e) => setForm((p) => ({ ...p, operatingHours: e.target.value }))}
-                placeholder="e.g. Mon-Fri 9AM-5PM"
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-all" />
-            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <Clock size={13} className="inline mr-1 text-slate-400" />Operating Hours
+            </label>
+            <p className="text-xs text-slate-400 mb-3">
+              The hours your business is open. Leave a day empty if you are closed.
+            </p>
+            <OperatingHoursEditor
+              value={form.operatingHours}
+              onChange={(next) => {
+                setForm((p) => ({ ...p, operatingHours: next }));
+                if (Object.keys(hoursErrors).length > 0) setHoursErrors({});
+              }}
+              errors={hoursErrors}
+            />
           </div>
 
           <div>
@@ -909,50 +1003,28 @@ function PayoutsTab() {
   const [payouts, setPayouts] = useState([]);
   const [payoutsSummary, setPayoutsSummary] = useState({});
   const [showMethodForm, setShowMethodForm] = useState(false);
-  const [methodForm, setMethodForm] = useState({
-    type: "BANK_TRANSFER", accountName: "", accountNumber: "", bankName: "",
-    bankCountry: "", paypalEmail: "", currency: "USD",
-  });
-  const [savingMethod, setSavingMethod] = useState(false);
+  const [plan, setPlan] = useState(null);
+  const [available, setAvailable] = useState(0);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [m, p] = await Promise.all([
+      const [m, p, settings, summary] = await Promise.all([
         fetchPayoutMethods(),
         fetchPayouts({ limit: 10 }),
+        fetchPayoutSettings().catch(() => null),
+        fetchFinanceSummary().catch(() => null),
       ]);
       setMethods(m);
       setPayouts(p?.payouts || []);
       setPayoutsSummary(p?.summary || {});
+      setPlan(settings);
+      setAvailable(Number(summary?.availableBalance?.amount) || 0);
     } catch { /* ignore */ }
     finally { setLoading(false); }
   };
 
   useEffect(() => { Promise.resolve().then(() => loadData()); }, []);
-
-  const handleAddMethod = async (e) => {
-    e.preventDefault();
-    setSavingMethod(true);
-    try {
-      const payload = { type: methodForm.type, currency: methodForm.currency };
-      if (methodForm.type === "BANK_TRANSFER") {
-        Object.assign(payload, {
-          accountName: methodForm.accountName, accountNumber: methodForm.accountNumber,
-          bankName: methodForm.bankName, bankCountry: methodForm.bankCountry,
-        });
-      } else {
-        payload.paypalEmail = methodForm.paypalEmail;
-      }
-      await createPayoutMethod(payload);
-      toast.success("Payout method added");
-      setShowMethodForm(false);
-      setMethodForm({ type: "BANK_TRANSFER", accountName: "", accountNumber: "", bankName: "", bankCountry: "", paypalEmail: "", currency: "USD" });
-      await loadData();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to add payout method");
-    } finally { setSavingMethod(false); }
-  };
 
   const handleDeleteMethod = async (id) => {
     try {
@@ -988,6 +1060,9 @@ function PayoutsTab() {
         </div>
       </div>
 
+      {/* Automated payout schedule (weekly / twice a month / monthly) */}
+      {plan && <PayoutScheduleEditor plan={plan} available={available} onSaved={setPlan} />}
+
       {/* Payout Methods */}
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
@@ -1000,108 +1075,26 @@ function PayoutsTab() {
               <p className="text-xs text-slate-500">Manage how you receive payments</p>
             </div>
           </div>
-          <button onClick={() => setShowMethodForm((v) => !v)}
-            className={cn(
-              "flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all shadow-sm",
-              showMethodForm ? "bg-white text-slate-600 border border-slate-200" : "bg-emerald-600 text-white hover:bg-emerald-700"
-            )}>
-            {showMethodForm ? <X size={14} /> : <Plus size={14} />}
-            {showMethodForm ? "Cancel" : "Add Method"}
+          <button onClick={() => setShowMethodForm(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all shadow-sm bg-emerald-600 text-white hover:bg-emerald-700">
+            <Plus size={14} />
+            Add method
           </button>
         </div>
 
         <div className="px-6 py-4">
-          <AnimatePresence>
-            {showMethodForm && (
-              <motion.form
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                onSubmit={handleAddMethod}
-                className="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4 overflow-hidden"
-              >
-                <div className="grid grid-cols-2 gap-3">
-                  {METHOD_TYPES.map((t) => {
-                    const Icon = t.icon;
-                    return (
-                      <button key={t.value} type="button"
-                        onClick={() => setMethodForm((p) => ({ ...p, type: t.value }))}
-                        className={cn(
-                          "flex items-center gap-3 p-3.5 rounded-xl border-2 text-left transition-all",
-                          methodForm.type === t.value
-                            ? "border-emerald-500 bg-emerald-50/50"
-                            : "border-slate-200 bg-white hover:border-slate-300"
-                        )}>
-                        <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                          methodForm.type === t.value ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>
-                          <Icon size={18} />
-                        </div>
-                        <div>
-                          <p className={cn("text-sm font-semibold", methodForm.type === t.value ? "text-emerald-800" : "text-slate-700")}>{t.label}</p>
-                          <p className="text-[11px] text-slate-500">{t.desc}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {methodForm.type === "BANK_TRANSFER" ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="col-span-2">
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Account Name</label>
-                      <input value={methodForm.accountName} onChange={(e) => setMethodForm((p) => ({ ...p, accountName: e.target.value }))}
-                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-all" required />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Account Number</label>
-                      <input value={methodForm.accountNumber} onChange={(e) => setMethodForm((p) => ({ ...p, accountNumber: e.target.value }))}
-                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-all" required />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Bank Name</label>
-                      <input value={methodForm.bankName} onChange={(e) => setMethodForm((p) => ({ ...p, bankName: e.target.value }))}
-                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-all" required />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Bank Country</label>
-                      <input value={methodForm.bankCountry} onChange={(e) => setMethodForm((p) => ({ ...p, bankCountry: e.target.value }))}
-                        placeholder="e.g. GH, US, UK"
-                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-all" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Currency</label>
-                      <Select value={methodForm.currency} onValueChange={(v) => setMethodForm((p) => ({ ...p, currency: v }))}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Currency" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="USD">USD</SelectItem>
-                          <SelectItem value="EUR">EUR</SelectItem>
-                          <SelectItem value="GBP">GBP</SelectItem>
-                          <SelectItem value="GHS">GHS</SelectItem>
-                          <SelectItem value="NGN">NGN</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">PayPal Email</label>
-                    <input type="email" value={methodForm.paypalEmail} onChange={(e) => setMethodForm((p) => ({ ...p, paypalEmail: e.target.value }))}
-                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-all" required />
-                  </div>
-                )}
-
-                <div className="flex justify-end pt-2">
-                  <button type="submit" disabled={savingMethod}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-medium hover:bg-emerald-700 transition-all disabled:opacity-50">
-                    {savingMethod ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                    Add Payout Method
-                  </button>
-                </div>
-              </motion.form>
-            )}
-          </AnimatePresence>
+          <PayoutMethodFormSheet
+            open={showMethodForm}
+            onClose={() => setShowMethodForm(false)}
+            onSubmit={async (payload) => {
+              await createPayoutMethod(payload);
+              toast.success("Payout method added — we'll check it before your first payout.");
+              setShowMethodForm(false);
+              await loadData();
+            }}
+            title="Add payout method"
+            submitLabel="Add payout method"
+          />
 
           {methods.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -1117,17 +1110,34 @@ function PayoutsTab() {
                 <div key={method.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center">
-                      {method.type === "BANK_TRANSFER" ? <Landmark size={18} className="text-slate-600" /> : <Wallet size={18} className="text-slate-600" />}
+                      {method.type === "BANK_TRANSFER"
+                        ? <Landmark size={18} className="text-slate-600" />
+                        : method.type === "MOBILE_MONEY"
+                          ? <Smartphone size={18} className="text-slate-600" />
+                          : <Wallet size={18} className="text-slate-600" />}
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-700">
-                        {method.type === "BANK_TRANSFER" ? method.bankName || "Bank Account" : "PayPal"}
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-700 truncate">
+                        {method.type === "BANK_TRANSFER"
+                          ? method.bankName || "Bank Account"
+                          : method.type === "MOBILE_MONEY"
+                            ? method.mobileProvider || "Mobile Money"
+                            : "PayPal"}
+                        <span className="font-normal text-slate-400"> · {method.currency || "USD"}</span>
                         {method.isDefault && <span className="ml-2 text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md font-medium">Default</span>}
                       </p>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {method.type === "BANK_TRANSFER"
-                          ? `****${method.accountNumber?.slice(-4) || ""}`
-                          : method.paypalEmail}
+                      <p className="text-xs text-slate-500 mt-0.5 truncate">
+                        {method.type === "PAYPAL"
+                          ? method.paypalEmail
+                          : [method.accountName, settingsMethodIdentifier(method)].filter(Boolean).join(" · ")}
+                        <span
+                          className={cn(
+                            "ml-2 align-middle text-[10px] font-medium",
+                            method.verified ? "text-emerald-600" : "text-amber-600"
+                          )}
+                        >
+                          {method.verified ? "Verified" : "Pending"}
+                        </span>
                       </p>
                     </div>
                   </div>
@@ -1479,6 +1489,25 @@ function memberRoles(member) {
   return roles.length ? roles : sortTeamRoles(member?.role);
 }
 
+/**
+ * One column template for the team list, shared by the header and every row.
+ *
+ * This was a flex row whose columns were hand-matched per element — the header
+ * said `w-24` where the row said `w-56`, so the labels never lined up with their
+ * columns, and on a phone the row overflowed its card. The avatar was a fixed
+ * 32px flex item with the default `flex-shrink: 1`, so it absorbed that overflow
+ * and got squeezed narrower than it was tall; `rounded-full` then drew a sliver
+ * instead of a circle. A grid track is not compressed by its content, so the
+ * avatar is now pinned to a fixed 2rem track, and sharing a single template
+ * string means the header and the rows cannot drift apart again.
+ *
+ * Below `sm` the row becomes two lines — email above, roles + status below —
+ * because 32 + 176 + 88 + 64px of fixed columns plus gaps does not fit a phone.
+ */
+const TEAM_LIST_COLS =
+  "grid-cols-[2rem_minmax(0,1fr)_auto] sm:grid-cols-[2rem_minmax(0,1fr)_9rem_5.5rem_3.5rem]";
+const TEAM_LIST_ROW = "items-center gap-x-3 gap-y-1.5";
+
 function TeamTab() {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1568,9 +1597,9 @@ function TeamTab() {
   return (
     <motion.div variants={FADE_UP} initial="initial" animate="animate" exit="exit" className="space-y-6">
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+            <div className="w-9 h-9 shrink-0 rounded-lg bg-emerald-50 flex items-center justify-center">
               <Users size={16} className="text-emerald-600" />
             </div>
             <div>
@@ -1579,12 +1608,12 @@ function TeamTab() {
             </div>
           </div>
           <button onClick={() => setShowInvite((v) => !v)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition-all shadow-sm">
+            className="flex items-center gap-1.5 shrink-0 px-3.5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition-all shadow-sm">
             <Plus size={14} /> Invite Member
           </button>
         </div>
 
-        <div className="px-6 py-4">
+        <div className="px-4 sm:px-6 py-4">
           <AnimatePresence>
             {showInvite && (
               <motion.form
@@ -1610,9 +1639,9 @@ function TeamTab() {
                     onChange={(roles) => setForm((p) => ({ ...p, roles }))}
                   />
                 </div>
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex flex-wrap items-center gap-2 pt-1">
                   <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer select-none">
-                    <div className="relative">
+                    <div className="relative shrink-0">
                       <input type="checkbox" checked={directAdd} onChange={(e) => setDirectAdd(e.target.checked)}
                         className="sr-only peer" />
                       <div className="w-8 h-4 bg-slate-200 rounded-full peer-checked:bg-emerald-500 transition-colors" />
@@ -1620,7 +1649,7 @@ function TeamTab() {
                     </div>
                     Add directly (no email)
                   </label>
-                  <div className="flex-1" />
+                  <div className="hidden flex-1 sm:block" />
                   <button type="button" onClick={() => setShowInvite(false)}
                     className="px-3 py-2 text-slate-600 rounded-xl text-xs font-medium hover:bg-slate-100 transition-all">
                     Cancel
@@ -1649,69 +1678,111 @@ function TeamTab() {
             </div>
           ) : (
             <div className="space-y-2">
-              <div className="flex items-center gap-3 px-3 py-3 text-xs font-semibold text-slate-400 border-b border-slate-100">
-                <span className="flex-1">Member</span>
-                <span className="w-24">Role</span>
-                <span className="w-20">Status</span>
-                <span className="w-10" />
+              <div className={cn("hidden sm:grid", TEAM_LIST_COLS, TEAM_LIST_ROW, "px-3 py-2.5 text-xs font-semibold text-slate-400 border-b border-slate-100")}>
+                <span className="col-start-2">Member</span>
+                <span className="col-start-3">Role</span>
+                <span className="col-start-4">Status</span>
+                <span className="col-start-5" />
               </div>
-              {members.map((m) => (
-                <div key={m.id} className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <span className="text-xs font-bold text-emerald-700">{m.email.charAt(0).toUpperCase()}</span>
-                  </div>
-                  <span className="flex-1 text-sm text-slate-700">{m.email}</span>
-                  <div className="w-56 relative">
-                    {editingRole === m.id ? (
-                      <div className="rounded-xl border border-slate-200 bg-white p-2.5">
-                        <TeamRolePicker
-                          compact
-                          value={memberRoles(m)}
-                          onChange={(roles) => handleRoleChange(m.id, roles)}
-                        />
+              {members.map((m) => {
+                const roles = memberRoles(m);
+                const isPending = m.status === "PENDING";
+                const isRevoked = m.status === "REVOKED";
+                return (
+                  <div
+                    key={m.id}
+                    className={cn(
+                      "rounded-lg transition-colors",
+                      editingRole === m.id ? "bg-slate-50" : "hover:bg-slate-50",
+                    )}
+                  >
+                    <div className={cn("grid", TEAM_LIST_COLS, TEAM_LIST_ROW, "px-3 py-3")}>
+                      <div className="col-start-1 row-start-1 row-span-2 sm:row-span-1 w-8 h-8 shrink-0 rounded-full bg-emerald-100 flex items-center justify-center select-none">
+                        <span className="text-xs font-bold text-emerald-700">{m.email.charAt(0).toUpperCase()}</span>
+                      </div>
+                      <span className="col-start-2 row-start-1 min-w-0 truncate text-sm text-slate-700" title={m.email}>
+                        {m.email}
+                      </span>
+                      {/* Phones: roles and status share one wrapped line under the
+                          email. From sm up this wrapper becomes display:contents, so
+                          each child is placed in its own column and lines up with the
+                          header above. */}
+                      <div className="col-start-2 row-start-2 flex flex-wrap items-center gap-1.5 sm:contents">
+                        <div className="min-w-0 sm:col-start-3 sm:row-start-1">
+                          <button
+                            onClick={() => setEditingRole(m.id)}
+                            className="flex flex-wrap items-center gap-1 text-left min-w-0"
+                            title="Change roles"
+                            aria-label={`Change roles for ${m.email}`}
+                          >
+                            {roles.length > 0 ? roles.map((role) => (
+                              <span
+                                key={role}
+                                className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap transition-opacity hover:opacity-80", TEAM_ROLE_COLORS[role] || "bg-slate-100 text-slate-600")}
+                              >
+                                {TEAM_ROLE_LABELS[role] || role}
+                              </span>
+                            )) : (
+                              <span className="inline-flex items-center rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-[11px] font-medium text-slate-400">
+                                Set role
+                              </span>
+                            )}
+                          </button>
+                        </div>
+                        <div className="sm:col-start-4 sm:row-start-1">
+                          <span className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
+                            isPending && "bg-amber-50 text-amber-700",
+                            isRevoked && "bg-slate-100 text-slate-500",
+                            !isPending && !isRevoked && "bg-emerald-50 text-emerald-700",
+                          )}>
+                            <span className={cn(
+                              "w-1.5 h-1.5 shrink-0 rounded-full",
+                              isPending ? "bg-amber-500" : isRevoked ? "bg-slate-400" : "bg-emerald-500",
+                            )} />
+                            {isPending ? "Pending" : isRevoked ? "Cancelled" : "Active"}
+                          </span>
+                        </div>
+                      </div>
+                      {/* justify-end pins the remove button to the same spot whether
+                          or not a pending member also shows the resend button. */}
+                      <div className="col-start-3 row-start-1 sm:col-start-5 flex items-center justify-end gap-0.5 shrink-0">
+                        {isPending && <ResendButton email={m.email} />}
                         <button
-                          onClick={() => setEditingRole(null)}
-                          className="mt-2 text-[10px] font-medium text-slate-400 hover:text-slate-600"
+                          onClick={() => setMemberToRemove(m)}
+                          aria-label={isPending ? `Cancel invitation to ${m.email}` : `Remove ${m.email}`}
+                          className="p-1.5 shrink-0 text-slate-300 hover:text-red-500 rounded-lg hover:bg-red-50 transition-all"
                         >
-                          Done
+                          <X size={14} />
                         </button>
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => setEditingRole(m.id)}
-                        className="flex flex-wrap items-center gap-1 text-left"
-                        title="Change roles"
-                      >
-                        {memberRoles(m).map((role) => (
-                          <span
-                            key={role}
-                            className={cn("text-[10px] font-medium px-2 py-1 rounded hover:opacity-80 transition-opacity", TEAM_ROLE_COLORS[role] || "bg-slate-100 text-slate-600")}
-                          >
-                            {TEAM_ROLE_LABELS[role] || role}
-                          </span>
-                        ))}
-                      </button>
+                    </div>
+                    {/* The editor gets its own full-width panel instead of living in
+                        the 9rem role column, where it used to force the column wider
+                        and shove the row out of the card. */}
+                    {editingRole === m.id && (
+                      <div className="px-3 pb-3 sm:pl-11">
+                        <div className="rounded-xl border border-slate-200 bg-white p-3">
+                          <TeamRolePicker
+                            compact
+                            value={roles}
+                            onChange={(next) => handleRoleChange(m.id, next)}
+                          />
+                          <div className="mt-2.5 flex items-center justify-between gap-3">
+                            <p className="text-[10px] text-slate-400">Up to {MAX_TEAM_ROLES} roles per member.</p>
+                            <button
+                              onClick={() => setEditingRole(null)}
+                              className="shrink-0 px-2.5 py-1 rounded-lg bg-slate-100 text-[11px] font-semibold text-slate-600 hover:bg-slate-200 transition-colors"
+                            >
+                              Done
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
-                  <span className="w-20">
-                    <span className={cn(
-                      "text-[10px] font-medium px-1.5 py-0.5 rounded",
-                      m.status === "PENDING" && "bg-amber-50 text-amber-700",
-                      m.status === "REVOKED" && "bg-slate-100 text-slate-500",
-                      m.status !== "PENDING" && m.status !== "REVOKED" && "bg-emerald-50 text-emerald-700",
-                    )}>
-                      {m.status === "PENDING" ? "Pending" : m.status === "REVOKED" ? "Cancelled" : "Active"}
-                    </span>
-                  </span>
-                  {m.status === "PENDING" && (
-                    <ResendButton email={m.email} />
-                  )}
-                  <button onClick={() => setMemberToRemove(m)}
-                    className="p-1.5 text-slate-300 hover:text-red-500 rounded-lg hover:bg-red-50 transition-all">
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -1734,7 +1805,7 @@ function TeamTab() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <div className="w-10 h-10 shrink-0 rounded-full bg-red-100 flex items-center justify-center">
                   <AlertTriangle size={20} className="text-red-600" />
                 </div>
                 <div>
