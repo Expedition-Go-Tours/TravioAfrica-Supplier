@@ -104,10 +104,7 @@ describe('a role without the Bookings page', () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByText('Total Bookings')).toBeInTheDocument());
-    expect(screen.getByText('Total Earnings')).toBeInTheDocument();
-    // This brand's Top Products panel is still a placeholder, but it is the one
-    // panel left in the row and it must not be an error.
-    expect(screen.getByText('Product analytics coming soon')).toBeInTheDocument();
+    expect(screen.getByText('Shai Hills Safari')).toBeInTheDocument();
   });
 });
 

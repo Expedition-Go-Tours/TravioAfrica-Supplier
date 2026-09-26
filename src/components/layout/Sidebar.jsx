@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import { useSidebarStore } from "@/stores/sidebarStore";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
 import { loadSupplierProfile } from "@/features/auth/api";
 import api from "@/lib/axios";
-import { LogOut, ChevronLeft, ChevronRight, Menu, LayoutDashboard, Package, Ticket, CalendarDays, Users, DollarSign, Star, Bell, BarChart3, BadgeCheck, Settings, CalendarX2, BadgePercent, MapPinned, ShieldCheck, Calendar } from "lucide-react";
+import { LogOut, ChevronLeft, LayoutDashboard, Package, Ticket, CalendarDays, Users, DollarSign, Star, Bell, BarChart3, BadgeCheck, Settings, CalendarX2, BadgePercent, MapPinned, ShieldCheck, Calendar } from "lucide-react";
 import OptimizedImage from "@/components/shared/OptimizedImage";
 import { useTeamRole } from "@/hooks/useTeamRole";
 import { PAGE_ACCESS } from "@/config/pageAccess";
@@ -62,7 +61,6 @@ const [logoutConfirmOpen, setShowLogoutConfirm] = useState(false);
   // Derived state: a collapsed sidebar can never show the confirm dialog.
   // Expressing the reset during render avoids a setState-from-effect cascade.
   const showLogoutConfirm = logoutConfirmOpen && !isCollapsed;
-  const [profileHover, setProfileHover] = useState(false);
   const { hasPermission, isOwner, teamRoles } = useTeamRole();
 
   // Who the viewer is acting as. A team member's own account is a plain
@@ -72,14 +70,14 @@ const [logoutConfirmOpen, setShowLogoutConfirm] = useState(false);
   const actsForSupplier =
     Boolean(user?.roles?.includes("supplier")) || Boolean(supplierProfile) || teamRoles.length > 0;
 
+  // A member without business-profile rights still gets their own Security tab,
+  // so the card falls back to the settings root instead of a hidden tab.
+  const canEditBusiness = hasPermission("settings.business");
+
   const navItems = allNavItems.filter((item) => {
     if (!item.permission) return true;
     return hasPermission(item.permission);
   });
-
-  // A member without business-profile rights still gets their own Security tab,
-  // so the card falls back to the settings root instead of a hidden tab.
-  const canEditBusiness = hasPermission("settings.business");
 
   // This card is the BUSINESS, so it must show the business whoever is signed
   // in. `/suppliers/application/status` is resolved server-side through the
@@ -192,53 +190,42 @@ const [logoutConfirmOpen, setShowLogoutConfirm] = useState(false);
 
   return (
     <>
-      <button
-        onClick={() => useSidebarStore.getState().toggleMobile()}
-        className={`fixed top-3 left-3 z-[60] p-2.5 rounded-xl bg-[#065f46] text-white shadow-lg hover:bg-[#047857] transition-colors ${isMobileOpen ? "hidden" : "lg:hidden"}`}
-        aria-label="Toggle menu"
-      >
-        <Menu size={18} />
-      </button>
-
       <aside
         className={`fixed left-0 top-0 h-screen bg-[#065f46] border-r border-white/10 transition-all duration-300 z-50 flex flex-col
           ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
           ${isCollapsed ? "lg:w-[64px] lg:translate-x-0" : "lg:w-[270px] lg:translate-x-0"}
           w-[260px]`}
       >
-        {/* Brand + Collapse */}
-        <div className={`flex items-center h-[80px] shrink-0 border-b border-white/10 ${isCollapsed ? "justify-center px-2" : "justify-between px-5"}`}>
-          {!isCollapsed && (
-            <div className="min-w-0">
-              <span className="text-2xl font-bold text-white tracking-tight block leading-none">TravioAfrica</span>
-              <span className="text-xs font-medium text-white/50 block mt-1">Dashboard</span>
-            </div>
-          )}
+        {/* Collapse toggle — separate from profile */}
+        <div className={`flex shrink-0 ${isCollapsed ? "justify-center px-2 pt-2 pb-1" : "justify-end px-3 pt-2 pb-1"}`}>
           <button
             onClick={() => isMobileOpen ? closeMobile() : toggle()}
-            className="flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 p-1.5"
+            className="flex items-center gap-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 p-1.5"
             title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            <ChevronLeft size={15} />
+            <ChevronLeft size={15} className={`transition-transform duration-200 ${isCollapsed ? "rotate-180" : ""}`} />
+            {!isCollapsed && <span className="text-xs whitespace-nowrap">Collapse sidebar</span>}
           </button>
         </div>
 
-        {/* Profile */}
-        <button
+        {/* Profile — Glassmorphism card */}
+        <div
           onClick={() => navigate(canEditBusiness ? "/settings?tab=profile" : "/settings")}
-          onMouseEnter={() => setProfileHover(true)}
-          onMouseLeave={() => setProfileHover(false)}
-          className={`shrink-0 w-full text-center cursor-pointer hover:bg-white/5 transition-colors border-b border-white/5 relative ${isCollapsed ? "py-4" : "py-4 px-5"}`}
+          className={`shrink-0 cursor-pointer ${
+            isCollapsed
+              ? "py-3 px-2"
+              : "bg-white/[0.06] backdrop-blur-[16px] border border-white/[0.1] rounded-[18px] p-6 mx-3 mb-3"
+          }`}
         >
-          <div className={`flex flex-col items-center gap-2 ${isCollapsed ? "" : "relative"}`}>
+          <div className="flex flex-col items-center gap-2">
             <div className="relative shrink-0">
               {effectiveLogoUrl ? (
-                <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white/20">
-                  <OptimizedImage src={effectiveLogoUrl} width={40} className="w-full h-full object-cover" />
+                <div className={`${isCollapsed ? "w-9 h-9" : "w-20 h-20"} rounded-full overflow-hidden ring-[3px] ring-white/20 shadow-[0_4px_16px_rgba(0,0,0,0.2)]`}>
+                  <OptimizedImage src={effectiveLogoUrl} width={isCollapsed ? 36 : 80} className="w-full h-full object-cover" />
                 </div>
               ) : (
-                <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center ring-2 ring-white/20">
-                  <span className="text-sm font-bold text-white">
+                <div className={`${isCollapsed ? "w-9 h-9" : "w-20 h-20"} rounded-full bg-white/15 flex items-center justify-center ring-[3px] ring-white/20 shadow-[0_4px_16px_rgba(0,0,0,0.2)]`}>
+                  <span className={`${isCollapsed ? "text-sm" : "text-2xl"} font-bold text-white`}>
                     {(businessName || user?.name || "S").charAt(0).toUpperCase()}
                   </span>
                 </div>
@@ -246,11 +233,11 @@ const [logoutConfirmOpen, setShowLogoutConfirm] = useState(false);
             </div>
             {!isCollapsed && (
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-white truncate leading-tight" title={businessName || user?.name}>
+                <p className="text-[15px] font-bold text-white truncate leading-tight" title={businessName || user?.name}>
                   {businessName || user?.name || "Supplier"}
                 </p>
                 {statusStyle ? (
-                  <div className="flex items-center justify-center gap-1 mt-0.5">
+                  <div className="flex items-center justify-center gap-1 mt-1">
                     {statusStyle.label === "Verified" ? (
                       <BadgeCheck size={13} className="text-blue-400 shrink-0" />
                     ) : (
@@ -259,39 +246,26 @@ const [logoutConfirmOpen, setShowLogoutConfirm] = useState(false);
                     <span className={`text-[11px] font-medium ${statusStyle.text}`}>{statusStyle.label}</span>
                   </div>
                 ) : (
-                  <span className="text-[11px] text-white/40 block mt-0.5">Administrator</span>
+                  <span className="text-[11px] text-white/40 block mt-1">Administrator</span>
                 )}
                 {/* A member still needs to see what they can do: the badge above
                     describes the business, this line describes the person. The
                     owner keeps the single "Administrator" line. */}
                 {!isOwner && (
-                  <span className="text-[11px] text-white/40 block mt-0.5" title="Your team role">
+                  <span className="text-[11px] text-white/40 block mt-1" title="Your team role">
                     {describeRoles(teamRoles) || "Team member"}
                   </span>
                 )}
                 {memberSince && (
-                  <div className="flex items-center justify-center gap-1 mt-1.5 text-[11px] font-normal tracking-tight text-white/50">
-                    <Calendar size={12} className="opacity-60 shrink-0" />
+                  <div className="flex items-center justify-center gap-1 mt-2 text-xs font-normal tracking-tight text-white/50 hover:text-white/65 transition-colors duration-200">
+                    <Calendar size={14} className="opacity-60 shrink-0" />
                     <span>Member since {new Date(memberSince).getFullYear()}</span>
                   </div>
                 )}
               </div>
             )}
           </div>
-          <AnimatePresence>
-            {profileHover && !isCollapsed && (
-              <motion.div
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -6 }}
-                transition={{ duration: 0.15 }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40"
-              >
-                <ChevronRight size={16} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </button>
+        </div>
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 min-h-0 scrollbar-none">

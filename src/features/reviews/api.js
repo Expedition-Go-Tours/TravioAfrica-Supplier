@@ -26,6 +26,10 @@ export function mapReviewRow(review) {
     flagComment: review.flagComment || null,
     flaggedAt: review.flaggedAt || null,
     flagged: review.status?.toUpperCase() === "FLAGGED",
+    // The Africa brand controller always stamps AFRICA, so this fallback is a
+    // safety net rather than the common case. GHANA here would misattribute a
+    // review if the field ever went missing.
+    storefront: review.storefront || "AFRICA",
   };
 }
 

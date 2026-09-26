@@ -309,7 +309,7 @@ export default function SearchDropdown() {
   };
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative w-auto sm:w-full" ref={containerRef}>
       <button
         onClick={() => {
           if (!open) {
@@ -319,22 +319,23 @@ export default function SearchDropdown() {
           setOpen(!open);
         }}
         className={cn(
-          "flex h-9 items-center gap-2 rounded-xl border bg-white px-3 text-sm transition-all duration-200",
+          "flex h-9 items-center gap-2 rounded-xl text-sm transition-all duration-200",
+          "border-0 bg-transparent px-1.5 sm:border sm:bg-white sm:px-3 sm:w-full",
           open
-            ? "border-[#044b3b]/40 ring-2 ring-[#044b3b]/10 text-[#1e293b] shadow"
-            : "border-[#eaeaea] text-[#64748b] hover:border-[#044b3b]/30 hover:text-[#1e293b]",
+            ? "text-[#044b3b] sm:border-[#044b3b]/40 sm:ring-2 sm:ring-[#044b3b]/10 sm:text-[#1e293b] sm:shadow"
+            : "text-[#64748b] sm:border-[#eaeaea] sm:hover:border-[#044b3b]/30 sm:hover:text-[#1e293b]",
         )}
         aria-label="Search pages and products"
         aria-expanded={open}
         aria-haspopup="dialog"
       >
-        <Search className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">{query || "Search…"}</span>
         {!open && (
-          <kbd className="hidden sm:ml-2 sm:inline-block rounded-md border border-[#eaeaea] bg-[#f8fafc] px-1.5 py-0.5 text-[10px] font-medium text-[#64748b]">
+          <kbd className="hidden sm:inline-block rounded-md border border-[#eaeaea] bg-[#f8fafc] px-1.5 py-0.5 text-[10px] font-medium text-[#64748b]">
             ⌘K
           </kbd>
         )}
+        <Search className="h-3.5 w-3.5 ml-auto" />
       </button>
 
       <AnimatePresence>
@@ -344,7 +345,7 @@ export default function SearchDropdown() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
-            className="absolute left-0 top-full mt-2 w-[280px] sm:w-[380px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-[#eaeaea] bg-white shadow-lg z-50"
+            className="fixed sm:absolute top-16 sm:top-full sm:mt-2 left-4 sm:left-0 right-4 sm:right-auto sm:w-full min-w-0 sm:min-w-[280px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-[#eaeaea] bg-white shadow-lg z-50"
             role="dialog"
             aria-modal="true"
             aria-label="Search pages and products"

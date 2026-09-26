@@ -23,6 +23,7 @@ const BACKEND_TYPE_TO_UI = {
   PAYOUT_REQUEST_SUBMITTED: "payment",
   PAYOUT_REQUEST_APPROVED: "payment",
   PAYOUT_REQUEST_REJECTED: "alert",
+  PAYOUT_SCHEDULE_UPDATED: "payment",
   SYSTEM_ALERT: "system",
   NEW_MESSAGE: "message",
   TEAM_INVITE_ACCEPTED: "system",
@@ -32,12 +33,25 @@ const BACKEND_TYPE_TO_UI = {
   DOCUMENT_REJECTED: "alert",
   DOCUMENT_EXPIRY_REMINDER: "alert",
   DOCUMENT_EXPIRED: "alert",
-  // Supplier cancellation approval gate (Phase 3)
-  CANCELLATION_REQUEST_APPROVED: "cancellationApproved",
-  CANCELLATION_REQUEST_REJECTED: "cancellationRejected",
+  // Supplier cancellation approval flow (admin decided on a parked request).
+  CANCELLATION_REQUEST_APPROVED: "cancellation_approved",
+  CANCELLATION_REQUEST_REJECTED: "cancellation_rejected",
 };
 
+const CANCELLATION_DECISION_TYPES = [
+  "CANCELLATION_REQUEST_APPROVED",
+  "CANCELLATION_REQUEST_REJECTED",
+];
+
 function getNotificationRoute(type, data = {}) {
+  if (CANCELLATION_DECISION_TYPES.includes(type)) {
+    if (data.bookingId) {
+      return { path: `/bookings?bookingId=${data.bookingId}`, label: "View booking" };
+    }
+    if (data.bookingUrl) {
+      return { path: data.bookingUrl, label: "View booking" };
+    }
+  }
   if (type === "REFUND_CLAIM" && data.claimId) {
     return { path: `/finance?tab=claims&claimId=${data.claimId}`, label: "View Refund Request" };
   }
@@ -74,8 +88,6 @@ function getNotificationRoute(type, data = {}) {
     case "BOOKING_MODIFIED":
     case "BOOKING_PAYMENT_FAILED":
     case "PICKUP_UPDATED":
-    case "CANCELLATION_REQUEST_APPROVED":
-    case "CANCELLATION_REQUEST_REJECTED":
       return { path: "/bookings", label: "View Bookings" };
     case "BOOKING_AWAITING_CONFIRMATION":
     case "PAYMENT_FAILED":
@@ -92,6 +104,7 @@ function getNotificationRoute(type, data = {}) {
     case "PAYOUT_PROCESSED":
     case "PAYOUT_APPROVED":
     case "PAYOUT_COMPLETED":
+    case "PAYOUT_SCHEDULE_UPDATED":
       return { path: "/finance", label: "View Finance" };
     case "PAYOUT_REQUEST_SUBMITTED":
     case "PAYOUT_REQUEST_APPROVED":
@@ -117,20 +130,40 @@ function getNotificationRoute(type, data = {}) {
   }
 }
 
+function cancellationDecisionCopy(type, data = {}) {
+  const approved = type === "CANCELLATION_REQUEST_APPROVED";
+  const bookingNumber = data.bookingNumber ? ` for booking ${data.bookingNumber}` : "";
+  const tourTitle = data.tourTitle ? ` (${data.tourTitle})` : "";
+  const note = data.note ? ` Note: ${data.note}` : "";
+  return {
+    title: approved ? "Cancellation approved" : "Cancellation rejected",
+    message: approved
+      ? `Your cancellation request${bookingNumber}${tourTitle} was approved. The booking is now cancelled and the customer has been notified.`
+      : `Your cancellation request${bookingNumber}${tourTitle} was rejected. The booking stays as it is.${note}`,
+  };
+}
+
 export function mapBackendNotification(notification) {
-  const route = getNotificationRoute(notification.type, notification.data || {});
+  const data = notification.data || {};
+  const route = getNotificationRoute(notification.type, data);
+  const isCancellationDecision = CANCELLATION_DECISION_TYPES.includes(
+    notification.type
+  );
+  const fallback = isCancellationDecision
+    ? cancellationDecisionCopy(notification.type, data)
+    : null;
 
   return {
     id: notification.id,
     type: BACKEND_TYPE_TO_UI[notification.type] || "system",
-    title: notification.title,
-    message: notification.message,
+    title: notification.title || fallback?.title || "",
+    message: notification.message || fallback?.message || "",
     date: notification.createdAt,
     read: Boolean(notification.read),
     action: route.path,
     actionLabel: route.label,
     backendType: notification.type,
-    data: notification.data || {},
+    data,
   };
 }
 

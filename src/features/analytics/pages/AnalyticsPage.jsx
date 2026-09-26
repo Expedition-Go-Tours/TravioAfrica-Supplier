@@ -1,15 +1,42 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { DollarSign, ShoppingCart, Star, TrendingUp, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
+import {
+  DollarSign, ShoppingCart, Star, TrendingUp, Loader2, RefreshCw, AlertTriangle,
+  Image as ImageIcon,
+} from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import OptimizedImage from "@/components/shared/OptimizedImage";
 import { getAuthToken } from "@/stores/authStore";
 import { fetchSupplierAnalytics, fetchMonthlyRevenue, fetchProductAnalytics } from "../api";
+
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * The API buckets revenue as YYYY-MM ("2026-10"). Render it the way a person
+ * reads a trend: "Oct 26", falling back to the raw value if it isn't a bucket.
+ */
+const formatMonthLabel = (value) => {
+  const [year, month] = String(value ?? "").split("-");
+  const index = Number(month) - 1;
+  if (!year || !MONTH_LABELS[index]) return String(value ?? "");
+  return `${MONTH_LABELS[index]} ${year.slice(-2)}`;
+};
+
+/** Axis money: "$820" below a thousand, "$12.5k" above. */
+const formatAxisCurrency = (value) => {
+  const n = Number(value) || 0;
+  if (Math.abs(n) >= 1000) {
+    return `$${(n / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })}k`;
+  }
+  return `$${n.toLocaleString("en-US")}`;
+};
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload?.length) {
     return (
       <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-3">
-        <p className="text-xs font-medium text-slate-500 mb-1">{label}</p>
+        <p className="text-xs font-medium text-slate-500 mb-1">{formatMonthLabel(label)}</p>
         <p className="text-sm font-semibold text-slate-800">{formatCurrency(payload[0].value)}</p>
       </div>
     );
@@ -17,9 +44,37 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
+/**
+ * Best Selling Products thumbnail. The products endpoint carries the tour's cover
+ * photo, so show the real image — with a neutral placeholder if a tour has none
+ * or the image fails to load, never an initial.
+ */
+function ProductThumb({ src, alt }) {
+  const [failed, setFailed] = useState(false);
+  const showImage = Boolean(src) && !failed;
+
+  return (
+    <div className="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200/70 flex items-center justify-center shrink-0 overflow-hidden">
+      {showImage ? (
+        <OptimizedImage
+          src={src}
+          alt={alt}
+          width={36}
+          height={36}
+          className="w-full h-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <ImageIcon size={14} className="text-slate-300" />
+      )}
+    </div>
+  );
+}
+
 const PIE_COLORS = ["#044b3b", "#0f766e", "#0891b2", "#ca8a04", "#94a3b8"];
 
 export default function AnalyticsPage() {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -80,20 +135,37 @@ export default function AnalyticsPage() {
   const productRevenue = useMemo(() => {
     // Grouped by name so a name shared by two tours reads as one product, and
     // ranked by revenue: the best sellers, over every booking rather than only
-    // the 50 most recent this page used to walk. The count comes out of the same
-    // pass, instead of re-filtering the whole list once per product.
+    // the 50 most recent this page used to walk.
     const map = {};
     products.forEach(p => {
       const name = p.name || "Unknown";
-      if (!map[name]) map[name] = { revenue: 0, bookings: 0 };
+      if (!map[name]) map[name] = { revenue: 0, bookings: 0, photo: "", tourId: "" };
       map[name].revenue += (p.revenue || 0);
       map[name].bookings += p.bookings || 0;
+      if (!map[name].photo && p.photo) map[name].photo = p.photo;
+      if (!map[name].tourId && p.tourId) map[name].tourId = p.tourId;
     });
+
     return Object.entries(map)
       .sort((a, b) => b[1].revenue - a[1].revenue)
       .slice(0, 4)
-      .map(([name, agg]) => ({ name, revenue: agg.revenue, bookings: agg.bookings, rating: avgRating }));
+      .map(([name, agg]) => ({
+        name,
+        revenue: agg.revenue,
+        bookings: agg.bookings,
+        photo: agg.photo,
+        tourId: agg.tourId,
+        rating: avgRating,
+      }));
   }, [products, avgRating]);
+
+  // The endpoint returns a continuous month window (zeros included), so an
+  // "empty" trend means every bucket is zero — show that state instead of a
+  // flat chart with no bars.
+  const hasRevenue = useMemo(
+    () => monthlyRevenueData.some((m) => Number(m.revenue) > 0),
+    [monthlyRevenueData],
+  );
 
   return (
     <div className="space-y-5">
@@ -192,16 +264,21 @@ export default function AnalyticsPage() {
           </div>
           {loading ? (
             <div className="h-[240px] bg-slate-50 rounded-lg animate-pulse" />
-          ) : (
+          ) : hasRevenue ? (
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={monthlyRevenueData} barCategoryGap="24%">
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
+                <XAxis dataKey="month" interval={1} tickFormatter={formatMonthLabel} tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatAxisCurrency} />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f8fafc" }} />
-                <Bar dataKey="grossAmount" fill="#044b3b" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                <Bar dataKey="revenue" fill="#044b3b" radius={[4, 4, 0, 0]} maxBarSize={40} />
               </BarChart>
             </ResponsiveContainer>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[240px] text-center">
+              <TrendingUp size={22} className="text-slate-200 mb-2" />
+              <p className="text-xs text-slate-400">No revenue recorded in the last 12 months</p>
+            </div>
           )}
         </div>
 
@@ -265,9 +342,7 @@ export default function AnalyticsPage() {
                   <tr key={i} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
                     <td className="py-3 pr-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-[#044b3b]/10 flex items-center justify-center text-xs font-bold text-[#044b3b] shrink-0">
-                          {(p.name || "?").charAt(0)}
-                        </div>
+                        <ProductThumb src={p.photo} alt={p.name} />
                         <p className="text-[11px] text-slate-700 font-medium leading-relaxed line-clamp-2">{p.name}</p>
                       </div>
                     </td>
@@ -275,7 +350,14 @@ export default function AnalyticsPage() {
                     <td className="py-3 px-3 text-right text-[11px] text-slate-600">{p.bookings}</td>
                     <td className="py-3 pl-3 text-right text-[11px] text-amber-600">{p.rating.toFixed(2)} ★</td>
                     <td className="py-3 pl-3 text-right">
-                      <button className="text-[11px] text-[#044b3b] font-medium hover:underline whitespace-nowrap">View details</button>
+                      <button
+                        type="button"
+                        onClick={() => p.tourId && navigate(`/products/${p.tourId}`)}
+                        disabled={!p.tourId}
+                        className="text-[11px] text-[#044b3b] font-medium hover:underline whitespace-nowrap disabled:text-slate-300 disabled:no-underline disabled:cursor-not-allowed"
+                      >
+                        View details
+                      </button>
                     </td>
                   </tr>
                 ))}

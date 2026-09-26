@@ -35,8 +35,7 @@ export default function CancellationCard({ summary, days = 90, onDaysChange, onV
   const rate = summary?.cancellationRate ?? 0;
   const confirmed = summary?.confirmed ?? 0;
   const cancelled = summary?.cancelled ?? 0;
-  // TravioAfrica's summary ships a completion rate (%) rather than a count.
-  const completed = summary?.completionRate ?? 0;
+  const completed = summary?.completed ?? 0;
   const eligible = summary?.eligibleBookings ?? 0;
   const noShowRate = summary?.noShowRate ?? 0;
 
@@ -120,7 +119,7 @@ export default function CancellationCard({ summary, days = 90, onDaysChange, onV
               <div className="text-xs text-slate-500 mt-1">Cancelled</div>
             </div>
             <div className="text-center px-2 sm:px-4 py-3">
-              <div className="text-2xl sm:text-3xl font-bold text-slate-800">{completed}%</div>
+              <div className="text-2xl sm:text-3xl font-bold text-slate-800">{completed}</div>
               <div className="text-xs text-slate-500 mt-1">Completed</div>
             </div>
           </div>

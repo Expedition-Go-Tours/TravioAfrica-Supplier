@@ -7,7 +7,6 @@ import CancellationCard from "../components/CancellationCard";
 import AboutCancellationCard from "../components/AboutCancellationCard";
 import CancellationRecordsTable from "../components/CancellationRecordsTable";
 import CancellationDetailsModal from "../components/CancellationDetailsModal";
-import CancellationRequestsSection from "../components/CancellationRequestsSection";
 
 export default function CancellationRatePage() {
   const [summary, setSummary] = useState(null);
@@ -138,9 +137,6 @@ export default function CancellationRatePage() {
           </p>
         </div>
       </div>
-
-      {/* Admin-approval gate: pending + decided cancellation requests */}
-      <CancellationRequestsSection />
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">

@@ -106,7 +106,7 @@ export default function DashboardPage() {
       canOpen("/bookings")
         ? fetchSupplierBookings({ page: 1, limit: 4 }).then(r => r.bookings).catch(() => [])
         : Promise.resolve([]),
-      fetchCancellationSummary().catch(() => null),
+      fetchCancellationSummary(undefined, 30).catch(() => null),
       fetchMonthlyRevenue(12).catch(() => []),
     ])
       .then(([data, bookings, cancellationData, monthly]) => {
@@ -142,6 +142,7 @@ export default function DashboardPage() {
   const tours = dashboardData?.tours || {};
   const bookings = dashboardData?.bookings || {};
   const earnings = dashboardData?.earnings || {};
+  const topProducts = dashboardData?.topProducts || [];
 
   const activeTours = tours.active || 0;
   const activeBookings = bookings.confirmed || 0;
@@ -187,12 +188,13 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {STATS_CONFIG.map((s, i) => {
           const Icon = s.icon;
+          const openable = canOpen(s.path);
           return (
             <div
               key={s.label}
-              onClick={canOpen(s.path) ? () => navigate(s.path, s.state ? { state: s.state } : undefined) : undefined}
+              onClick={openable ? () => navigate(s.path, s.state ? { state: s.state } : undefined) : undefined}
               className={`bg-white border border-emerald-100/60 rounded-xl p-4 transition-all border-l-4 ${s.accent} ${
-                canOpen(s.path) ? "hover:shadow-md hover:shadow-emerald-900/5 hover:border-emerald-200 cursor-pointer" : ""
+                openable ? "hover:shadow-md hover:shadow-emerald-900/5 hover:border-emerald-200 cursor-pointer" : ""
               }`}
             >
               <div className="flex items-center justify-between mb-2.5">
@@ -235,10 +237,10 @@ export default function DashboardPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={revenueData} barCategoryGap="20%">
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#94a3b8", fontWeight: 500 }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8", fontWeight: 500 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: "#94a3b8", fontWeight: 500 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f0fdf4" }} />
-                  <Bar dataKey="grossAmount" fill="#044b3b" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                  <Bar dataKey="revenue" fill="#044b3b" radius={[4, 4, 0, 0]} maxBarSize={32} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -491,8 +493,49 @@ export default function DashboardPage() {
             <div className="space-y-3">
               {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-emerald-50/40 rounded-lg animate-pulse" />)}
             </div>
+          ) : topProducts.length > 0 ? (
+            <div className="space-y-2">
+              {topProducts.map((product, i) => (
+                <button
+                  key={product.id}
+                  onClick={canOpen(`/products/${product.id}`) ? () => navigate(`/products/${product.id}`) : undefined}
+                  className="w-full flex items-center gap-3 rounded-lg border border-transparent hover:border-emerald-200 hover:bg-emerald-50/30 p-2 text-left transition-all"
+                >
+                  <span className="w-5 shrink-0 text-xs font-semibold text-slate-400 tabular-nums">{i + 1}</span>
+                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-emerald-50 shrink-0">
+                    {product.coverPhoto ? (
+                      <OptimizedImage src={product.coverPhoto} width={40} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-emerald-300">
+                        <ShoppingBag size={16} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-medium text-slate-800 truncate" title={product.title}>
+                      {product.title}
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      {product.bookings} booking{product.bookings !== 1 ? "s" : ""}
+                      {product.reviewCount > 0 && (
+                        <span className="ml-2 inline-flex items-center gap-0.5">
+                          <Star size={10} className="fill-amber-400 text-amber-400" />
+                          {product.averageRating.toFixed(1)}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <span className="text-[13px] font-semibold text-emerald-600 shrink-0 tabular-nums">
+                    {formatCurrency(product.revenue)}
+                  </span>
+                </button>
+              ))}
+            </div>
           ) : (
-            <p className="text-xs font-medium text-slate-400 text-center py-8">Product analytics coming soon</p>
+            <div className="flex flex-col items-center justify-center py-8 gap-1.5">
+              <ShoppingBag size={20} className="text-slate-300" />
+              <p className="text-xs font-medium text-slate-400">No product bookings yet</p>
+            </div>
           )}
         </div>
       </div>

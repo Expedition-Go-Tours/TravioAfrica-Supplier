@@ -1,4 +1,4 @@
-import { ChevronDown, LogOut, User, Mail, Loader2 } from "lucide-react";
+import { ChevronDown, LogOut, User, Mail, Loader2, Menu } from "lucide-react";
 import NotificationBell from "@/features/notifications/components/NotificationBell";
 import SearchDropdown from "@/components/layout/SearchDropdown";
 import { useSidebarStore } from "@/stores/sidebarStore";
@@ -19,7 +19,7 @@ import { SHELL_GUTTER } from "./shell";
 
 export default function Header() {
   const navigate = useNavigate();
-  const { isCollapsed } = useSidebarStore();
+  const { isCollapsed, isMobileOpen, toggleMobile } = useSidebarStore();
   const user = useAuthStore((state) => state.user);
   const [logoutLoading, setLogoutLoading] = useState(false);
 
@@ -43,25 +43,45 @@ export default function Header() {
 
   return (
     <header
-      className={`fixed top-0 right-0 h-16 bg-white border-b border-[#eaeaea] flex items-center justify-between ${SHELL_GUTTER} z-40 transition-all duration-300 ${
+      className={`fixed top-0 right-0 h-16 bg-white border-b border-[#eaeaea] flex items-center ${SHELL_GUTTER} z-40 transition-all duration-300 ${
         isCollapsed ? "lg:left-[64px]" : "lg:left-[270px]"
       } left-0`}
     >
-      <div className="flex items-center ml-12 lg:ml-0">
-        <SearchDropdown />
+      {/* Mobile: Menu toggle */}
+      {!isMobileOpen && (
+        <button
+          onClick={toggleMobile}
+          className="lg:hidden p-1.5 rounded-lg text-[#065f46] hover:bg-[#065f46]/10 transition-colors mr-1 sm:mr-2 shrink-0"
+          aria-label="Toggle menu"
+        >
+          <Menu size={16} />
+        </button>
+      )}
+
+      {/* Left: Logo
+          Deliberately absent here, as it is in the Ghana sibling only because that
+          dashboard has a wordmark asset. This one had no logo in its header and
+          adding one is a branding change, not a port. */}
+
+      {/* Center: Search — centered with controlled width */}
+      <div className="flex-1 flex items-center justify-end sm:justify-center min-w-0 px-2 lg:px-4">
+        <div className="w-auto sm:w-full max-w-sm">
+          <SearchDropdown />
+        </div>
       </div>
-      <div className="flex-1 min-w-0" />
-      <div className="flex items-center gap-2 sm:gap-3">
+
+      {/* Right: Notifications + Profile */}
+      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 ml-2 lg:ml-4">
         <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-[#eaeaea] hover:bg-[#f5f5f5] rounded-lg py-1 pr-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#065f46]/30">
+            <button className="flex items-center gap-2 sm:gap-3 pl-1.5 sm:pl-3 border-l border-[#eaeaea] hover:bg-[#f5f5f5] rounded-lg py-1 pr-1.5 sm:pr-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#065f46]/30">
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-medium text-slate-700">{displayName}</p>
                 <p className="text-[10px] text-slate-400 capitalize">{displayRole}</p>
               </div>
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-[#044b3b] shrink-0 ring-2 ring-[#044b3b]/10">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-[#044b3b] shrink-0 ring-2 ring-[#044b3b]/10">
                 {(user?.avatar || user?.photoURL) ? (
                   <OptimizedImage src={user.avatar || user.photoURL} width={32} className="w-full h-full object-cover" />
                 ) : (

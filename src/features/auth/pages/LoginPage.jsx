@@ -120,7 +120,11 @@ export default function LoginPage() {
     setGoogleLoading(true);
     try {
       const baseUrl = config.api.baseURL;
-      window.location.href = `${baseUrl}/auth/google`;
+      // The backend picks the OAuth return origin (and therefore the brand's
+      // Google client) from this `state`, validated against ALLOWED_ORIGINS.
+      // Without it the server falls back to the request Origin header.
+      const state = encodeURIComponent(window.location.origin);
+      window.location.href = `${baseUrl}/auth/google?state=${state}`;
     } catch {
       setGoogleLoading(false);
     }

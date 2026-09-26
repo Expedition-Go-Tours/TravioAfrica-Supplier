@@ -97,9 +97,9 @@ export function TeamRoleProvider({ children }) {
   const canManageTeam = () => hasPermission("settings.manage");
   const canManageTours = () => hasPermission("tours.view");
   const canManageFinance = () => hasPermission("payouts.view");
+  const canManageChat = () => hasPermission("chat.view");
   const canManageAnalytics = () => hasPermission("analytics.view");
   const canManageBusinessProfile = () => hasPermission("settings.business");
-  const canManageChat = () => hasPermission("chat.view");
 
   return (
     <TeamRoleContext.Provider
@@ -114,9 +114,9 @@ export function TeamRoleProvider({ children }) {
         canManageTeam,
         canManageTours,
         canManageFinance,
+        canManageChat,
         canManageAnalytics,
         canManageBusinessProfile,
-        canManageChat,
       }}
     >
       {children}
