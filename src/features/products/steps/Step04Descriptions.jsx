@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { HelpCircle, Plus, X, Info } from 'lucide-react'
+import { HelpCircle, Plus, X, Info, Trash2 } from 'lucide-react'
 import { useProductBuilderStore } from '@/features/products/productBuilderStore'
 import { useStepErrors } from '@/features/products/useStepErrors'
 import {
@@ -16,6 +16,7 @@ export default function Step04Descriptions() {
   const setField = useProductBuilderStore((s) => s.setField)
   const addHighlight = useProductBuilderStore((s) => s.addHighlight)
   const updateHighlight = useProductBuilderStore((s) => s.updateHighlight)
+  const removeHighlight = useProductBuilderStore((s) => s.removeHighlight)
   const errors = useStepErrors(4)
   const [tipDismissed, setTipDismissed] = useState(false)
 
@@ -94,7 +95,7 @@ export default function Step04Descriptions() {
 
       <div className="mb-5">
         <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-base font-semibold text-slate-900">Highlights</h3>
+          <h3 className="text-base font-semibold text-slate-900">Highlights <span className="text-red-500">*</span></h3>
           <HelpCircle className="w-4 h-4 text-slate-400" />
         </div>
         <p className="text-sm text-slate-500 mb-4">
@@ -106,18 +107,30 @@ export default function Step04Descriptions() {
             const atLimit = item.length >= HIGHLIGHT_MAX_CHARS
             return (
               <div key={i}>
-                <input
-                  data-field="highlights"
-                  className={`w-full rounded-lg border bg-white px-3.5 py-2.5 text-sm transition-all focus-ring ${
-                    atLimit ? 'border-red-300 text-red-600' : 'border-slate-200'
-                  }`}
-                  type="text"
-                  value={item}
-                  maxLength={HIGHLIGHT_MAX_CHARS}
-                  onChange={(e) => updateHighlight(i, e.target.value)}
-                  aria-invalid={atLimit}
-                  placeholder="Describe a highlight of your activity..."
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    data-field="highlights"
+                    className={`flex-1 rounded-lg border bg-white px-3.5 py-2.5 text-sm transition-all focus-ring ${
+                      atLimit ? 'border-red-300 text-red-600' : 'border-slate-200'
+                    }`}
+                    type="text"
+                    value={item}
+                    maxLength={HIGHLIGHT_MAX_CHARS}
+                    onChange={(e) => updateHighlight(i, e.target.value)}
+                    aria-invalid={atLimit}
+                    placeholder="Describe a highlight of your activity..."
+                  />
+                  {i > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => removeHighlight(i)}
+                      className="shrink-0 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Remove highlight"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
                 <div className="flex justify-end mt-1">
                   <span className={`text-xs tabular-nums ${atLimit ? 'text-red-600 font-medium' : 'text-slate-400'}`}>
                     {item.length} / {HIGHLIGHT_MAX_CHARS}

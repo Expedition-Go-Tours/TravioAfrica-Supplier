@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select'
 import { Pencil, GripVertical, ChevronDown, Bed, UtensilsCrossed, MoonStar, Plus, X, RotateCcw, Ban, Check, Flag } from 'lucide-react'
 import LocationAutocomplete from '@/components/shared/LocationAutocomplete'
+import PlaceAutocomplete from '@/components/shared/PlaceAutocomplete'
 import {
   sumStopMinutes,
   productDurationMinutes,
@@ -907,6 +908,13 @@ function LocationRow({ loc, position, globalIdx, onEdit, onRemove, dragRef, onDr
 
 function LocationModal({ index, loc, locations, duration, durationUnit, dayCount, onClose, onUpdate }) {
   const [errors, setErrors] = useState({})
+  // A "custom" location has no city/region from the geocoder or the XLSX, so we
+  // surface a required City field for it. It is visible while the stop has no
+  // city: from mount for city-less stops, and for the duration of a custom name
+  // (that name has no catalog place behind it, so any inherited city/region is
+  // stale). Picking a real catalog place collapses it again, since the pick
+  // supplies its own city/region.
+  const [showCityField, setShowCityField] = useState(() => !(loc.city || '').trim())
 
   const totalStopMinutes = sumStopMinutes(locations)
   const productMinutes = productDurationMinutes(duration, durationUnit)
@@ -920,9 +928,35 @@ function LocationModal({ index, loc, locations, duration, durationUnit, dayCount
     }
   }
 
+  // Picking a custom name means the stop no longer maps to a catalog place, so
+  // any city/region it inherited from an earlier pick is stale. Clearing them
+  // forces a deliberate choice via the City field the change reveals.
+  function handleAddCustomName(value) {
+    onUpdate(index, { name: value, city: '', region: '' })
+    setShowCityField(true)
+    setErrors((prev) => ({ ...prev, name: undefined, city: undefined }))
+  }
+
+  // A catalog pick carries its own city/region, so the manual City field is only
+  // needed while the stop ends up without one. This collapses the field again
+  // after a custom name was replaced by a real catalog place.
+  function handleNameSelect(place) {
+    update('name', place.name)
+    if (place.city) update('city', place.city)
+    if (place.region) update('region', place.region)
+
+    if ((place.city || '').trim()) {
+      setShowCityField(false)
+      setErrors((prev) => ({ ...prev, city: undefined }))
+    } else {
+      setShowCityField(!(loc.city || '').trim())
+    }
+  }
+
   function validate() {
     const next = {}
     if (!loc.name || !loc.name.trim()) next.name = 'Name is required'
+    if (showCityField && !(loc.city || '').trim()) next.city = 'City is required'
     if (!loc.description || !loc.description.trim()) next.description = 'Description is required'
     if (loc.timeSpent == null || Number(loc.timeSpent) <= 0) next.timeSpent = 'Estimated time spent is required'
     if (exceedsProductDuration && productMinutes != null) {
@@ -933,7 +967,8 @@ function LocationModal({ index, loc, locations, duration, durationUnit, dayCount
   }
 
   function handleDone() {
-    if (validate()) onClose()
+    if (!validate()) return
+    onClose()
   }
 
   return (
@@ -993,19 +1028,41 @@ function LocationModal({ index, loc, locations, duration, durationUnit, dayCount
               Name <span className="text-red-500">*</span>
             </label>
             <p className="text-[12px] text-slate-400 mb-1.5">
-              Use a clear, recognizable name so travelers can identify this stop at a glance.
+              Search for an attraction, city or town, or type a custom name. Picking a result fills the city and region automatically.
             </p>
-            <input
-              className={`w-full h-11 border bg-white px-3 text-sm outline-none focus:border-emerald-500 transition-colors ${
-                errors.name ? 'border-red-400' : 'border-slate-300'
-              }`}
-              type="text"
-              value={loc.name}
-              onChange={(e) => update('name', e.target.value)}
-              placeholder="e.g. Komfo Anokye Teaching Hospital"
+            <PlaceAutocomplete
+              value={loc.name || ''}
+              onSelect={handleNameSelect}
+              onChange={(v) => update('name', v)}
+              onAddCustom={handleAddCustomName}
+              placeholder="Search for a place or type a name…"
+              hasError={!!errors.name}
             />
             {errors.name && <span className="block text-[13px] text-red-600 font-medium mt-1">{errors.name}</span>}
           </div>
+
+          {showCityField && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                City <span className="text-red-500">*</span>
+              </label>
+              <p className="text-[12px] text-slate-400 mb-1.5">
+                This stop doesn&apos;t have a city yet. Search and pick the closest city or town.
+              </p>
+              <PlaceAutocomplete
+                value={loc.city || ''}
+                types={['city', 'town']}
+                onSelect={(place) => {
+                  update('city', place.name)
+                  if (place.region) update('region', place.region)
+                }}
+                onChange={(v) => update('city', v)}
+                placeholder="Search for a city or town…"
+                hasError={!!errors.city}
+              />
+              {errors.city && <span className="block text-[13px] text-red-600 font-medium mt-1">{errors.city}</span>}
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">

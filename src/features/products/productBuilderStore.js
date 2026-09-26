@@ -579,6 +579,24 @@ export const useProductBuilderStore = create(
           }),
         })),
 
+      // Reload the editor buffers from the selected option's committed data
+      // WITHOUT flushing the current (possibly reset) buffers into the option.
+      // Used when the schedule wizard is cancelled/backed out of, so a
+      // subsequent syncSelectedOption (on navigation) cannot overwrite the
+      // option's committed pricing/availability with a half-built scratchpad.
+      reloadSelectedOptionBuffers: () =>
+        set((s) => {
+          if (!s.selectedOptionId) return s
+          const target = s.options.find((o) => o.id === s.selectedOptionId)
+          if (!target) return s
+          const data = {
+            pricing: target.pricing || s.pricingTemplate || pricingFromBuffers(s),
+            availability: target.availability || s.availabilityTemplate || availabilityFromBuffers(s),
+            cutoff: target.cutoff || s.cutoffTemplate || cutoffFromBuffers(s),
+          }
+          return { ...buffersFromData(s, data) }
+        }),
+
       addPricingCategory: (template) =>
         set((s) => ({
           pricingCategories: [...s.pricingCategories, template || { name: '', price: null, minAge: 0, maxAge: 99, notAllowed: false, ticketNotRequired: false, needsAdult: false, idRequired: false, idType: '', tiers: [] }],
@@ -812,13 +830,17 @@ export const useProductBuilderStore = create(
         })),
 
       addWeeklyHours: (day) =>
-        set((s) => ({
-          weeklySchedule: {
-            ...s.weeklySchedule,
-            [day]: [...(s.weeklySchedule[day] || []), { startTime: '08:00', endTime: '18:00' }],
-          },
-          isDirty: true,
-        })),
+        set((s) => {
+          const existing = s.weeklySchedule[day] || []
+          if (existing.length >= 1) return {}
+          return {
+            weeklySchedule: {
+              ...s.weeklySchedule,
+              [day]: [...existing, { startTime: '08:00', endTime: '18:00' }],
+            },
+            isDirty: true,
+          }
+        }),
       updateWeeklyHours: (day, index, updates) =>
         set((s) => ({
           weeklySchedule: {
@@ -932,7 +954,28 @@ export const useProductBuilderStore = create(
           } else {
             newSchedules.push(schedule)
           }
+          // The wizard edits the option's live editor buffers (pricing /
+          // availability / cutoff). Commit them onto the selected option now so
+          // the wizard-close path — which calls reloadSelectedOptionBuffers() —
+          // reloads the just-saved data instead of the stale pre-edit snapshot.
+          // Without this, "Save and continue" silently discarded every pricing
+          // edit (the buffers reverted to the option's old committed values),
+          // which is why changed prices never reached the preview, the autosave
+          // payload, or the submit-for-review diff.
+          const options = s.selectedOptionId
+            ? s.options.map((o) =>
+                o.id === s.selectedOptionId
+                  ? {
+                      ...o,
+                      pricing: pricingFromBuffers(s),
+                      availability: availabilityFromBuffers({ ...s, schedules: newSchedules }),
+                      cutoff: cutoffFromBuffers(s),
+                    }
+                  : o
+              )
+            : s.options
           return {
+            options,
             schedules: newSchedules,
             editingScheduleIndex: null,
             currentScheduleStep: 1,

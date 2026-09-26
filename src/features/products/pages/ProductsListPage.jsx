@@ -94,6 +94,20 @@ function DraftStatusBadge({ product }) {
   return null;
 }
 
+function StorefrontBadge({ storefront }) {
+  if (!storefront || storefront === "AFRICA") return null;
+  const isBoth = storefront === "BOTH";
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
+      isBoth
+        ? "bg-sky-50 text-sky-700 border-sky-200"
+        : "bg-indigo-50 text-indigo-700 border-indigo-200"
+    }`}>
+      {isBoth ? "Both storefronts" : "Expedition"}
+    </span>
+  );
+}
+
 function ProductCardSkeleton() {
   return (
     <div className="bg-white border border-slate-100 rounded-xl overflow-hidden animate-pulse">
@@ -190,7 +204,7 @@ export default function ProductsListPage() {
     const rejected = products.filter((p) => p.status === "REJECTED").length;
     const draft = products.filter((p) => p.status === "DRAFT").length;
     const pendingEdits = products.filter((p) => p.status === "ACTIVE" && p.draftStatus === "PENDING_APPROVAL").length;
-    const totalBookings = products.reduce((sum, p) => sum + (p._count?.bookings || 0), 0);
+    const totalBookings = products.reduce((sum, p) => sum + (p.bookings || 0), 0);
     return { total, active, pending, rejected, draft, pendingEdits, totalBookings };
   }, [products]);
 
@@ -395,7 +409,7 @@ export default function ProductsListPage() {
       {/* Loading */}
       {isLoading && (
         viewMode === "table" ? <TableSkeleton /> : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4">
             {Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}
           </div>
         )
@@ -410,7 +424,7 @@ export default function ProductsListPage() {
             initial="hidden"
             animate="show"
             exit={{ opacity: 0 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+            className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4"
           >
             {filteredProducts.map((product) => {
               const src = product.coverPhoto || product.photos?.find(p => p);
@@ -425,11 +439,11 @@ export default function ProductsListPage() {
                   key={product.id}
                   variants={FADE_UP}
                   layout
-                  className="group bg-white border border-slate-100 rounded-lg sm:rounded-xl overflow-hidden hover:border-slate-200 hover:shadow-md hover:shadow-slate-900/5 transition-all duration-200 w-full max-w-[22rem] justify-self-center sm:max-w-none sm:justify-self-auto grid grid-rows-2 sm:block"
+                  className="group bg-white border border-slate-100 rounded-lg sm:rounded-xl overflow-hidden hover:border-slate-200 hover:shadow-md hover:shadow-slate-900/5 transition-all duration-200 w-full"
                 >
                   {/* Image */}
                   <div
-                    className="bg-slate-50 relative cursor-pointer overflow-hidden min-h-0 sm:aspect-[4/3]"
+                    className="bg-slate-50 relative cursor-pointer overflow-hidden aspect-[4/3]"
                     onClick={() => navigate(`/products/${product.id}`)}
                   >
                     {src ? (
@@ -460,12 +474,17 @@ export default function ProductsListPage() {
                         {category}
                       </span>
                     )}
+                    {product.storefront && product.storefront !== "AFRICA" && (
+                      <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-600/90 text-white backdrop-blur-sm border border-white/20 shadow-sm">
+                        {product.storefront === "BOTH" ? "Both storefronts" : "Expedition"}
+                      </span>
+                    )}
                   </div>
 
                   {/* Body */}
-                  <div className="p-4 sm:p-4 min-h-[50vw] sm:min-h-0">
+                  <div className="p-3 sm:p-4">
                     <h3
-                      className="text-sm sm:text-sm font-semibold text-slate-800 line-clamp-2 sm:line-clamp-1 min-h-[2.5rem] sm:min-h-0 cursor-pointer hover:text-emerald-700 transition-colors"
+                      className="text-sm font-semibold text-slate-800 line-clamp-1 cursor-pointer hover:text-emerald-700 transition-colors"
                       title={product.title}
                       onClick={() => navigate(`/products/${product.id}`)}
                     >
@@ -494,16 +513,19 @@ export default function ProductsListPage() {
                     {/* Footer */}
                     <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-100">
                       <div className="flex items-center gap-3 text-xs text-slate-500">
-                        <span className="font-medium">{product._count?.bookings ?? 0} bookings</span>
+                        <span className="font-medium">{product.bookings ?? 0} bookings</span>
                         {product.averageRating > 0 && (
                           <span className="flex items-center gap-1 font-medium text-emerald-600">
                             <Star size={12} className="fill-emerald-400 text-emerald-400" />
                             {product.averageRating}
                           </span>
                         )}
+                        {product.reviewCount > 0 && (
+                          <span className="hidden sm:inline font-medium">({product.reviewCount} reviews)</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-1 opacity-100 transition-opacity">
-                        {(product.status === "ACTIVE" || product.status === "PAUSED") && (
+                        {(product.status === "ACTIVE" || product.status === "PAUSED") && product.storefront !== "EXPEDITION" && (
                           <button
                             onClick={() => navigate(`/special-offers/build/new/products?productId=${product.id}`)}
                             className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
@@ -520,7 +542,7 @@ export default function ProductsListPage() {
                           <Eye size={14} />
                         </button>
                         <PreviewMenu product={product} />
-                        {usingSupplierEndpoint && (
+                        {usingSupplierEndpoint && product.storefront !== "EXPEDITION" && (
                           <>
                             <button
                               onClick={() => navigate(`/products/build/${product.id}/type`)}
@@ -579,9 +601,12 @@ export default function ProductsListPage() {
                             {(() => { const rawUrl = product.coverPhoto || product.photos?.find(p => p); return rawUrl ? <OptimizedImage src={rawUrl} alt="" width={36} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Package size={14} className="text-slate-300" /></div>; })()}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-slate-800 truncate cursor-pointer hover:text-emerald-700 transition-colors" onClick={() => navigate(`/products/${product.id}`)}>
-                              {product.title}
-                            </p>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <p className="text-sm font-medium text-slate-800 truncate cursor-pointer hover:text-emerald-700 transition-colors" onClick={() => navigate(`/products/${product.id}`)}>
+                                {product.title}
+                              </p>
+                              <StorefrontBadge storefront={product.storefront} />
+                            </div>
                             <p className="text-xs text-slate-500 truncate">{getSupplierLabel(product)}</p>
                           </div>
                         </div>
@@ -600,7 +625,7 @@ export default function ProductsListPage() {
                           ? <span className="text-sm font-semibold text-slate-800">{formatCurrency(extractPrice(product), extractCurrency(product))}</span>
                           : <span className="text-xs text-slate-400">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-700">{product._count?.bookings ?? 0}</td>
+                      <td className="px-4 py-3 text-sm text-slate-700">{product.bookings ?? 0}</td>
                       <td className="px-4 py-3">
                         {product.averageRating > 0
                           ? <span className="flex items-center gap-1 text-sm text-amber-600 font-medium"><Star size={12} className="fill-amber-400 text-amber-400" />{product.averageRating}</span>
@@ -609,12 +634,12 @@ export default function ProductsListPage() {
                       <td className="px-4 py-3 text-xs text-slate-500">{formatDate(product.updatedAt)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
-                          {(product.status === "ACTIVE" || product.status === "PAUSED") && (
+                          {(product.status === "ACTIVE" || product.status === "PAUSED") && product.storefront !== "EXPEDITION" && (
                             <button onClick={() => navigate(`/special-offers/build/new/products?productId=${product.id}`)} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Create special offer"><Percent size={14} /></button>
                           )}
                           <button onClick={() => navigate(`/products/${product.id}`)} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="View"><Eye size={14} /></button>
                           <PreviewMenu product={product} />
-                          {usingSupplierEndpoint && (
+                          {usingSupplierEndpoint && product.storefront !== "EXPEDITION" && (
                             <>
                               <button onClick={() => navigate(`/products/build/${product.id}/type`)} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Edit"><Edit size={14} /></button>
                               <button

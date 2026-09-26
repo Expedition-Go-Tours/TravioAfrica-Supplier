@@ -17,6 +17,8 @@ import StatusBadge from "@/components/shared/StatusBadge";
 import { PRODUCT_STATUSES } from "@/lib/constants";
 import { formatCurrency, formatDate, formatTime, cn } from "@/lib/utils";
 import OptimizedImage from "@/components/shared/OptimizedImage";
+import { lightboxImageUrls } from "@/lib/image";
+import { prefetchLightboxImages } from "@/lib/prefetchImages";
 import { PickupGeoshapePreview } from "@/components/shared/PickupGeoshapeDrawer";
 import PreviewMenu from "@/components/shared/PreviewMenu";
 import { getUniqueCities } from "@/features/products/utils/getUniqueCities";
@@ -73,23 +75,23 @@ function validityLabel(option) {
    ====================================================================== */
 
 const SECTION_EDIT_MAP = {
-  "Description": { section: "basics", step: "language-and-title" },
-  "What Makes This Unique": { section: "product-content", step: "unique-selling-points" },
-  "Highlights": { section: "product-content", step: "tour-details" },
-  "What's Included": { section: "product-content", step: "inclusions-exclusions" },
-  "What to Bring": { section: "product-content", step: "info-travelers-need" },
-  "What to Know": { section: "product-content", step: "info-travelers-need" },
-  "Accessibility & Health": { section: "product-content", step: "info-travelers-need" },
-  "Pricing": { section: "schedules-and-pricing", step: "pricing-schedules" },
-  "Details": { section: "basics", step: "categorization" },
-  "Traveler Info Required": { section: "booking-and-tickets", step: "traveler-required-info" },
+  "Description": { section: "product-content", step: "descriptions" },
+  "What Makes This Unique": { section: "product-content", step: "descriptions" },
+  "Highlights": { section: "product-content", step: "descriptions" },
+  "What's Included": { section: "product-content", step: "inclusions" },
+  "What to Bring": { section: "product-content", step: "extra-info" },
+  "What to Know": { section: "product-content", step: "extra-info" },
+  "Accessibility & Health": { section: "product-content", step: "extra-info" },
+  "Pricing": { section: "option-setup", step: "pricing" },
+  "Details": { section: "getting-started", step: "category" },
+  "Traveler Info Required": { section: "product-content", step: "extra-info" },
   "Location": { section: "product-content", step: "locations" },
-  "Schedule": { section: "schedules-and-pricing", step: "pricing-schedules" },
+  "Schedule": { section: "option-setup", step: "pricing" },
   "Booking Options": { section: "option-setup", step: "options" },
-  "Booking Rules": { section: "booking-and-tickets", step: "booking-process" },
-  "Meeting & Pickup": { section: "booking-and-tickets", step: "meeting-point-pickup" },
-  "Languages": { section: "product-content", step: "languages-offered" },
-  "Tags": { section: "basics", step: "theme" },
+  "Booking Rules": { section: "product-content", step: "cancellation-policy" },
+  "Meeting & Pickup": { section: "option-setup", step: "meeting-point" },
+  "Languages": { section: "getting-started", step: "language" },
+  "Tags": { section: "product-content", step: "keywords" },
 };
 
 function SectionCard({ title, children, className, onEdit }) {
@@ -141,6 +143,9 @@ function PhotoGalleryModal({ displayPhotos, index: lightboxIndex, setLightboxInd
   if (lightboxIndex === null) return null;
   const photo = displayPhotos[lightboxIndex];
   if (!photo) return null;
+  // Shared with the prefetcher (see `prefetchLightboxImages`), so these are
+  // already in cache by the time the viewer opens.
+  const image = lightboxImageUrls(photo);
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 p-4 md:p-8"
@@ -170,11 +175,11 @@ function PhotoGalleryModal({ displayPhotos, index: lightboxIndex, setLightboxInd
       )}
       <div className="flex flex-col items-center max-w-6xl w-full" onClick={(e) => e.stopPropagation()}>
         <div className="relative w-full flex items-center justify-center">
-          <OptimizedImage
-            src={photo}
-            width={1600}
+          <img
+            src={image?.src}
+            srcSet={image?.srcSet}
             alt={`${tour?.title} - Photo ${lightboxIndex + 1}`}
-            fit="fill"
+            decoding="async"
             className="max-h-[80vh] w-auto max-w-full object-contain rounded-xl shadow-2xl"
           />
         </div>
@@ -380,6 +385,10 @@ export default function ProductDetailPage() {
   }, []);
 
   const displayPhotos = useMemo(() => tour ? reorderPhotos(tour) : [], [tour]);
+
+  // Warm the lightbox photos while the page is idle so "next"/"prev" in
+  // "View all photos" is a cache hit rather than a fresh download per click.
+  useEffect(() => prefetchLightboxImages(displayPhotos), [displayPhotos]);
 
   useEffect(() => {
     if (!menuOpen) return;

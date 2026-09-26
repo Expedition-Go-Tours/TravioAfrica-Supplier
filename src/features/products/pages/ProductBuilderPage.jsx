@@ -29,6 +29,9 @@ import Step14PricingAvailability from '@/features/products/steps/Step14PricingAv
 import Step15Cutoff from '@/features/products/steps/Step15Cutoff'
 import Step17CancellationPolicy from '@/features/products/steps/Step17CancellationPolicy'
 import Step05ItineraryPreview from '@/features/products/steps/Step05ItineraryPreview'
+import Step17ProductPreview from '@/features/products/steps/Step17ProductPreview'
+import SupplierAgreementModal from '@/features/products/SupplierAgreementModal'
+import SubmitSuccessOverlay from '@/features/products/SubmitSuccessOverlay'
 import { safeId } from '@/lib/utils'
 import { SHELL_GUTTER } from '@/components/layout/shell'
 
@@ -49,6 +52,7 @@ const STEP_COMPONENTS = {
   14: Step05ItineraryPreview,
   15: Step14PricingAvailability,
   16: Step15Cutoff,
+  17: Step17ProductPreview,
 }
 
 const STEP_LABELS = {
@@ -68,6 +72,7 @@ const STEP_LABELS = {
   14: 'Itinerary Preview',
   15: 'Pricing & Availability',
   16: 'Cut-off',
+  17: 'Product Preview',
 }
 
 function getGygStepIndex(sectionId, stepId) {
@@ -90,7 +95,10 @@ function flattenTransportModeObject(value) {
   return modes
 }
 
-function tourToProduct(tour) {
+// Pure server-row -> builder-state mapper (not a component). Exported so it can
+// be unit tested against real API payloads.
+// eslint-disable-next-line react-refresh/only-export-components
+export function tourToProduct(tour) {
   if (!tour) return null
   const content = tour.productContent || {}
   const categorization = tour.categorization || {}
@@ -171,7 +179,33 @@ function tourToProduct(tour) {
     }),
     copyrightConfirmed: !!content.copyrightConfirmed,
     coverPhoto: tour.coverPhoto || '',
-    options: (content.options || []).map((o) => ({ ...o, wheelchairAccessible: false, validityType: o.validityType === 'open_ended' ? 'from_activation' : (o.validityType || 'from_activation') })),
+    options: (content.options || []).map((o) => {
+      // The backend enforces one price list per option and strips schedule-level
+      // pricingCategories on save (see buildPayload). On load, re-derive each
+      // schedule's price list from the option's own pricing so the schedule
+      // wizard's Pricing Categories step prefills correctly. Without this,
+      // editSchedule() reads an empty list, the wizard shows no categories and
+      // the next autosave is rejected with "no price list configured".
+      const optionCats = (Array.isArray(o.pricing?.pricingCategories) && o.pricing.pricingCategories.length > 0)
+        ? o.pricing.pricingCategories
+        : (Array.isArray(td.pricingCategories) ? td.pricingCategories : [])
+      const availability = o.availability && Array.isArray(o.availability.schedules)
+        ? {
+            ...o.availability,
+            schedules: o.availability.schedules.map((sched) =>
+              (Array.isArray(sched.pricingCategories) && sched.pricingCategories.length > 0) || optionCats.length === 0
+                ? sched
+                : { ...sched, pricingCategories: optionCats },
+            ),
+          }
+        : o.availability
+      return {
+        ...o,
+        availability,
+        wheelchairAccessible: false,
+        validityType: o.validityType === 'open_ended' ? 'from_activation' : (o.validityType || 'from_activation'),
+      }
+    }),
     meetingMode: content.meetingMode || 'meeting_point',
     meetingPoint: meetingPoint.lat
       ? {
@@ -311,6 +345,10 @@ export default function ProductBuilderPage() {
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [mobileStepsOpen, setMobileStepsOpen] = useState(false)
+  const [showAgreement, setShowAgreement] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [submittedProductName, setSubmittedProductName] = useState('')
+  const [productStatus, setProductStatus] = useState(null)
   const queryClient = useQueryClient()
   const savedProductId = useProductBuilderStore((s) => s.savedProductId)
   const setStoreSavedProductId = useProductBuilderStore((s) => s.setSavedProductId)
@@ -395,6 +433,7 @@ export default function ProductBuilderPage() {
   useEffect(() => {
     if (id !== 'new' || !hasHydrated) return
     reset()
+    queueMicrotask(() => setProductStatus(null))
   }, [id, hasHydrated, navigate, reset])
 
   useEffect(() => {
@@ -457,6 +496,7 @@ export default function ProductBuilderPage() {
           setProductError('Product not found')
           return
         }
+        setProductStatus(tour.status || null)
         const usedDraft = await hydrateFromDraft(tour)
         if (cancelled || usedDraft) return
         // No pending draft — a NEW tour awaiting approval has status
@@ -587,7 +627,8 @@ export default function ProductBuilderPage() {
       // are now referenced by the submitted draft on the server.
       storeAfter.clearUploadedUrls()
       await queryClient.invalidateQueries({ queryKey: ['products', 'list'] })
-      navigate('/products')
+      setSubmittedProductName(state.title || '')
+      setSubmitted(true)
     } finally {
       setSubmitting(false)
     }
@@ -842,6 +883,8 @@ export default function ProductBuilderPage() {
                 onNext={handleNext}
                 onSave={handleSave}
                 onSubmitForReview={handleSubmitForReview}
+                onOpenAgreement={() => setShowAgreement(true)}
+                isUpdate={productStatus === 'ACTIVE'}
                 saving={saving}
                 submitting={submitting}
                 isEditing={id && id !== 'new'}
@@ -876,6 +919,25 @@ export default function ProductBuilderPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Supplier Agreement — opened from "Submit Product" on the preview step */}
+        <SupplierAgreementModal
+          isOpen={showAgreement}
+          productName={submittedProductName || store.title || ''}
+          isUpdate={productStatus === 'ACTIVE'}
+          onConfirm={() => { handleSubmitForReview().catch(() => {}) }}
+          onClose={() => setShowAgreement(false)}
+          isLoading={submitting}
+        />
+
+        {/* Post-submission success screen */}
+        {submitted && (
+          <SubmitSuccessOverlay
+            productName={submittedProductName}
+            isUpdate={productStatus === 'ACTIVE'}
+            onBackToProducts={() => navigate('/products')}
+          />
         )}
       </motion.div>
   )

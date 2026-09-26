@@ -1,4 +1,4 @@
-import { useProductBuilderStore } from '@/features/products/productBuilderStore'
+﻿import { useProductBuilderStore } from '@/features/products/productBuilderStore'
 import { useStepErrors } from '@/features/products/useStepErrors'
 import { TITLE_MAX_CHARS, REFERENCE_CODE_MAX_CHARS, limitMessage } from '@/features/products/productFormSchema'
 

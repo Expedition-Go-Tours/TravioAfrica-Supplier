@@ -6,7 +6,7 @@ import { builderSignature } from './useAutoSave'
 import { scrollToField, getFieldLabel } from './fieldLabels'
 import { GYG_STEPS } from './gygSteps'
 
-export default function WizardNavFooter({ currentStep, totalSteps, onBack, onNext, onSave, onSubmitForReview, saving, submitting, isEditing }) {
+export default function WizardNavFooter({ currentStep, totalSteps, onBack, onNext, onSave, onSubmitForReview, onOpenAgreement, isUpdate, saving, submitting, isEditing }) {
   const formData = useProductBuilderStore()
   const setStepErrors = useProductBuilderStore((s) => s.setStepErrors)
   const clearStepErrors = useProductBuilderStore((s) => s.clearStepErrors)
@@ -105,6 +105,12 @@ export default function WizardNavFooter({ currentStep, totalSteps, onBack, onNex
         return
       }
     }
+    // All steps valid. When an agreement hand-off is wired up, open it instead
+    // of submitting immediately — the agreement modal drives the final submit.
+    if (onOpenAgreement) {
+      onOpenAgreement()
+      return
+    }
     try {
       await onSubmitForReview?.()
       completeStep(GYG_STEPS[currentStep - 1]?.stepId)
@@ -112,7 +118,6 @@ export default function WizardNavFooter({ currentStep, totalSteps, onBack, onNex
       // Error already handled upstream
     }
   }
-
   const handleFinalClick = onSubmitForReview ? handleSubmitForReview : handleSubmit
 
   return (
@@ -161,12 +166,12 @@ export default function WizardNavFooter({ currentStep, totalSteps, onBack, onNex
         )}
         {isPendingReview && (
           <span className="text-xs text-amber-700 font-semibold max-w-[420px] text-center">
-            This product is locked while pending review �?" withdraw it above to make changes.
+            This product is locked while pending review — withdraw it above to make changes.
           </span>
         )}
         {!isPendingReview && noChangesToSubmit && (
           <span className="text-xs text-slate-500 font-semibold max-w-[420px] text-center">
-            No changes to submit �?" the current content was already submitted for review.
+            No changes to submit — the current content was already submitted for review.
           </span>
         )}
         {!saving && !hasDisplayErrors && !autosaveError && savedText && (
@@ -198,7 +203,9 @@ export default function WizardNavFooter({ currentStep, totalSteps, onBack, onNex
                 : isPendingReview
                   ? 'Locked'
                   : onSubmitForReview
-                    ? 'Submit for Review'
+                    ? (onOpenAgreement
+                        ? (isUpdate ? 'Submit Update' : 'Submit Product')
+                        : 'Submit for Review')
                     : isEditing
                       ? 'Update'
                       : 'Save'}
